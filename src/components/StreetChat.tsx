@@ -22,13 +22,15 @@ export const StreetChat = ({ street }: StreetChatProps) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [notificationsEnabled, setNotificationsEnabled] = useState(() => {
-    // Load notification preference from localStorage
-    const saved = localStorage.getItem(`notifications-${street}`);
-    return saved === 'true';
-  });
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const initialLoadRef = useRef(true);
+
+  // Load notification preference when street changes
+  useEffect(() => {
+    const saved = localStorage.getItem(`notifications-${street}`);
+    setNotificationsEnabled(saved === 'true');
+  }, [street]);
 
   const scrollToBottom = () => {
     const el = messagesContainerRef.current;
@@ -70,6 +72,12 @@ export const StreetChat = ({ street }: StreetChatProps) => {
   };
 
   const showNotification = (message: string) => {
+    console.log('showNotification called:', {
+      notificationsEnabled,
+      permission: Notification.permission,
+      message: message.substring(0, 50)
+    });
+    
     if (notificationsEnabled && Notification.permission === "granted") {
       const notification = new Notification("Nowa wiadomość na czacie ejedzie.pl", {
         body: message,

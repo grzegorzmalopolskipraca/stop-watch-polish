@@ -146,20 +146,30 @@ export const StreetChat = ({ street }: StreetChatProps) => {
     setIsSubmitting(true);
 
     try {
-      const fingerprint = `user_${Math.random().toString(36).substring(7)}`;
+      const userFingerprint = `user_${Math.random().toString(36).substring(2, 9)}`;
 
-      const { error } = await supabase.from("street_chat_messages").insert({
-        street,
-        message: newMessage.trim(),
-        user_fingerprint: fingerprint,
+      const { data, error } = await supabase.functions.invoke('submit-chat-message', {
+        body: {
+          street,
+          message: newMessage.trim(),
+          userFingerprint,
+        },
       });
 
-      if (error) throw error;
+      if (error) {
+        throw new Error(error.message || 'Failed to send message');
+      }
+
+      if (data?.error) {
+        toast.error(data.error);
+        return;
+      }
 
       setNewMessage("");
-    } catch (error) {
+      toast.success("Wiadomość wysłana!");
+    } catch (error: any) {
       console.error("Error sending message:", error);
-      toast.error("Błąd podczas wysyłania wiadomości");
+      toast.error(error.message || "Błąd podczas wysyłania wiadomości");
     } finally {
       setIsSubmitting(false);
     }

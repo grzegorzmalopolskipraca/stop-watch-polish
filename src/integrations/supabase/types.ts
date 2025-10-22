@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      rate_limits: {
+        Row: {
+          action_count: number
+          action_type: string
+          created_at: string
+          id: string
+          identifier: string
+          last_action_at: string
+        }
+        Insert: {
+          action_count?: number
+          action_type: string
+          created_at?: string
+          id?: string
+          identifier: string
+          last_action_at?: string
+        }
+        Update: {
+          action_count?: number
+          action_type?: string
+          created_at?: string
+          id?: string
+          identifier?: string
+          last_action_at?: string
+        }
+        Relationships: []
+      }
       street_chat_messages: {
         Row: {
           created_at: string

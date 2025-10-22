@@ -158,24 +158,30 @@ const Index = () => {
 
   const submitReport = async (status: string) => {
     try {
-      // Generate a simple fingerprint (in production, use a more sophisticated method)
-      const fingerprint = `user_${Math.random().toString(36).substring(7)}`;
-
-      const { error } = await supabase.from("traffic_reports").insert({
-        street: selectedStreet,
-        status,
-        user_fingerprint: fingerprint,
+      const userFingerprint = `user_${Math.random().toString(36).substring(2, 9)}`;
+      
+      const { data, error } = await supabase.functions.invoke('submit-traffic-report', {
+        body: {
+          street: selectedStreet,
+          status,
+          userFingerprint,
+        },
       });
 
-      if (error) throw error;
+      if (error) {
+        throw new Error(error.message || 'Failed to submit report');
+      }
+
+      if (data?.error) {
+        toast.error(data.error);
+        return;
+      }
 
       toast.success("Dziękujemy za zgłoszenie!");
-      
-      // Optimistic update
       fetchReports(selectedStreet);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error submitting report:", error);
-      toast.error("Błąd podczas wysyłania zgłoszenia");
+      toast.error(error.message || "Błąd podczas wysyłania zgłoszenia");
     }
   };
 

@@ -8,6 +8,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { WeeklyTimeline } from "@/components/WeeklyTimeline";
 import { TodayTimeline } from "@/components/TodayTimeline";
@@ -72,6 +79,7 @@ const Index = () => {
   const [totalVisitors, setTotalVisitors] = useState<number>(0);
   const [incidentCounts, setIncidentCounts] = useState<Record<string, number>>({});
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [showInstallDialog, setShowInstallDialog] = useState(false);
 
   // Capture the install prompt event
   useEffect(() => {
@@ -87,20 +95,113 @@ const Index = () => {
     };
   }, []);
 
+  const detectPlatform = () => {
+    const userAgent = navigator.userAgent.toLowerCase();
+    const isIOS = /iphone|ipad|ipod/.test(userAgent);
+    const isAndroid = /android/.test(userAgent);
+    const isSafari = /safari/.test(userAgent) && !/chrome/.test(userAgent);
+    const isChrome = /chrome/.test(userAgent) && !/edge/.test(userAgent);
+    const isFirefox = /firefox/.test(userAgent);
+    const isEdge = /edge/.test(userAgent);
+    const isMobile = isIOS || isAndroid;
+    
+    return { isIOS, isAndroid, isSafari, isChrome, isFirefox, isEdge, isMobile };
+  };
+
   const handleInstallClick = async () => {
-    if (!deferredPrompt) {
-      toast.info("Aplikacja jest już zainstalowana lub Twoja przeglądarka nie obsługuje tej funkcji");
+    const platform = detectPlatform();
+    
+    // For Chrome/Edge with install prompt support
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      
+      if (outcome === 'accepted') {
+        toast.success("Dziękujemy za dodanie skrótu!");
+      }
+      
+      setDeferredPrompt(null);
       return;
     }
-
-    deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
     
-    if (outcome === 'accepted') {
-      toast.success("Dziękujemy za dodanie skrótu!");
+    // For iOS Safari or other browsers without install prompt
+    if (platform.isIOS && platform.isSafari) {
+      setShowInstallDialog(true);
+      return;
     }
     
-    setDeferredPrompt(null);
+    // For other platforms/browsers
+    if (platform.isMobile) {
+      setShowInstallDialog(true);
+    } else {
+      // Desktop browsers
+      setShowInstallDialog(true);
+    }
+  };
+
+  const getInstallInstructions = () => {
+    const platform = detectPlatform();
+    
+    if (platform.isIOS && platform.isSafari) {
+      return (
+        <div className="space-y-3 text-sm">
+          <p className="font-semibold">Aby dodać aplikację na iPhone/iPad:</p>
+          <ol className="list-decimal list-inside space-y-2 ml-2">
+            <li>Kliknij przycisk "Udostępnij" <span className="inline-block">📤</span> na dole ekranu</li>
+            <li>Przewiń w dół i wybierz "Dodaj do ekranu początkowego"</li>
+            <li>Kliknij "Dodaj" w prawym górnym rogu</li>
+          </ol>
+        </div>
+      );
+    }
+    
+    if (platform.isAndroid) {
+      if (platform.isChrome) {
+        return (
+          <div className="space-y-3 text-sm">
+            <p className="font-semibold">Aby dodać aplikację na Androida (Chrome):</p>
+            <ol className="list-decimal list-inside space-y-2 ml-2">
+              <li>Kliknij menu (trzy kropki) w prawym górnym rogu</li>
+              <li>Wybierz "Dodaj do ekranu głównego"</li>
+              <li>Potwierdź przyciskiem "Dodaj"</li>
+            </ol>
+          </div>
+        );
+      } else if (platform.isFirefox) {
+        return (
+          <div className="space-y-3 text-sm">
+            <p className="font-semibold">Aby dodać aplikację na Androida (Firefox):</p>
+            <ol className="list-decimal list-inside space-y-2 ml-2">
+              <li>Kliknij menu (trzy kropki) w prawym górnym rogu</li>
+              <li>Wybierz "Zainstaluj"</li>
+              <li>Potwierdź instalację</li>
+            </ol>
+          </div>
+        );
+      }
+    }
+    
+    // Desktop instructions
+    if (platform.isChrome || platform.isEdge) {
+      return (
+        <div className="space-y-3 text-sm">
+          <p className="font-semibold">Aby dodać aplikację na komputerze:</p>
+          <ol className="list-decimal list-inside space-y-2 ml-2">
+            <li>Kliknij ikonę instalacji <span className="inline-block">⊕</span> w pasku adresu</li>
+            <li>Lub kliknij menu (trzy kropki) → "Zainstaluj eJedzie.pl"</li>
+            <li>Potwierdź instalację</li>
+          </ol>
+        </div>
+      );
+    }
+    
+    // Fallback for other browsers
+    return (
+      <div className="space-y-3 text-sm">
+        <p className="font-semibold">Aby dodać aplikację:</p>
+        <p>Dodaj tę stronę do zakładek lub użyj funkcji "Dodaj do ekranu głównego" dostępnej w menu przeglądarki.</p>
+      </div>
+    );
   };
 
   const fetchReports = async (street: string) => {
@@ -740,6 +841,24 @@ const Index = () => {
           Ulepszenia i sugestie: kontakt @ ejedzie.pl
         </p>
       </footer>
+      
+      {/* Install Dialog */}
+      <Dialog open={showInstallDialog} onOpenChange={setShowInstallDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Dodaj eJedzie.pl na pulpit</DialogTitle>
+            <DialogDescription>
+              Zainstaluj aplikację, aby mieć szybki dostęp i móc korzystać z niej offline.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="mt-4">
+            {getInstallInstructions()}
+          </div>
+          <Button onClick={() => setShowInstallDialog(false)} className="mt-4 w-full">
+            Rozumiem
+          </Button>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

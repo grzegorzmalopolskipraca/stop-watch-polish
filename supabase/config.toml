@@ -3,6 +3,9 @@ project_id = "talqitzvchxggkqnnmbf"
 [functions.submit-traffic-report]
 verify_jwt = false
 
+[functions.submit-incident-report]
+verify_jwt = false
+
 [functions.submit-chat-message]
 verify_jwt = false
 

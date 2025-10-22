@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      incident_reports: {
+        Row: {
+          created_at: string
+          direction: string
+          id: string
+          incident_type: string
+          reported_at: string
+          street: string
+          user_fingerprint: string | null
+        }
+        Insert: {
+          created_at?: string
+          direction?: string
+          id?: string
+          incident_type: string
+          reported_at?: string
+          street: string
+          user_fingerprint?: string | null
+        }
+        Update: {
+          created_at?: string
+          direction?: string
+          id?: string
+          incident_type?: string
+          reported_at?: string
+          street?: string
+          user_fingerprint?: string | null
+        }
+        Relationships: []
+      }
       page_visits: {
         Row: {
           created_at: string

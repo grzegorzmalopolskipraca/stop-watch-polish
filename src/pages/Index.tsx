@@ -68,6 +68,7 @@ const Index = () => {
   });
   const [todayVisitors, setTodayVisitors] = useState<number>(0);
   const [totalVisitors, setTotalVisitors] = useState<number>(0);
+  const [incidentCounts, setIncidentCounts] = useState<Record<string, number>>({});
 
   const fetchReports = async (street: string) => {
     setIsLoading(true);
@@ -167,6 +168,31 @@ const Index = () => {
     }
   };
 
+  const fetchIncidentCounts = async () => {
+    try {
+      const twentyMinutesAgo = new Date();
+      twentyMinutesAgo.setMinutes(twentyMinutesAgo.getMinutes() - 20);
+
+      const { data, error } = await supabase
+        .from("incident_reports")
+        .select("incident_type")
+        .eq("street", selectedStreet)
+        .eq("direction", direction)
+        .gte("reported_at", twentyMinutesAgo.toISOString());
+
+      if (error) throw error;
+
+      const counts = (data || []).reduce((acc, r) => {
+        acc[r.incident_type] = (acc[r.incident_type] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+
+      setIncidentCounts(counts);
+    } catch (error) {
+      console.error("Error fetching incident counts:", error);
+    }
+  };
+
   const recordVisit = async () => {
     try {
       let userFingerprint = localStorage.getItem('userFingerprint');
@@ -192,12 +218,14 @@ const Index = () => {
   useEffect(() => {
     fetchReports(selectedStreet);
     fetchVisitorStats();
+    fetchIncidentCounts();
     recordVisit();
 
     // Auto-refresh every 60 seconds
     const interval = setInterval(() => {
       fetchReports(selectedStreet);
       fetchVisitorStats();
+      fetchIncidentCounts();
     }, 60000);
 
     // Subscribe to realtime updates
@@ -254,6 +282,40 @@ const Index = () => {
       fetchReports(selectedStreet);
     } catch (error: any) {
       console.error("Error submitting report:", error);
+      toast.error(error.message || "Błąd podczas wysyłania zgłoszenia");
+    }
+  };
+
+  const submitIncidentReport = async (incidentType: string) => {
+    try {
+      let userFingerprint = localStorage.getItem('userFingerprint');
+      if (!userFingerprint) {
+        userFingerprint = `user_${Math.random().toString(36).substring(2, 15)}_${Date.now()}`;
+        localStorage.setItem('userFingerprint', userFingerprint);
+      }
+
+      const { data, error } = await supabase.functions.invoke('submit-incident-report', {
+        body: {
+          street: selectedStreet,
+          incidentType,
+          userFingerprint,
+          direction,
+        },
+      });
+
+      if (error) {
+        throw new Error(error.message || 'Failed to submit incident report');
+      }
+
+      if (data?.error) {
+        toast.error(data.error);
+        return;
+      }
+
+      toast.success("Zgłoszenie zapisane!");
+      fetchIncidentCounts();
+    } catch (error: any) {
+      console.error("Error submitting incident report:", error);
       toast.error(error.message || "Błąd podczas wysyłania zgłoszenia");
     }
   };
@@ -408,6 +470,40 @@ const Index = () => {
           <p>
             Łącznie: <strong>{totalVisitors}</strong> wizyt
           </p>
+        </section>
+
+        {/* Incident Reports */}
+        <section className="bg-card rounded-lg p-5 border border-border space-y-4">
+          <h3 className="text-lg font-semibold text-center">
+            Zgłoś zdarzenie na drodze
+          </h3>
+          <p className="text-sm text-muted-foreground text-center">
+            Licznik pokazuje zgłoszenia z ostatnich 20 minut
+          </p>
+          <div className="grid grid-cols-4 gap-2">
+            {[
+              { type: "Blokada", emoji: "🚧" },
+              { type: "Wypadek", emoji: "🚨" },
+              { type: "Objazd", emoji: "↪️" },
+              { type: "Roboty", emoji: "🚜" },
+              { type: "Ślisko", emoji: "❄️" },
+              { type: "Dziury", emoji: "🕳️" },
+              { type: "Zwierze", emoji: "🦌" },
+            ].map((incident) => (
+              <Button
+                key={incident.type}
+                onClick={() => submitIncidentReport(incident.type)}
+                variant="outline"
+                className="h-20 flex flex-col gap-1 text-xs"
+              >
+                <span className="text-xl font-bold text-primary">
+                  {incidentCounts[incident.type] || 0}
+                </span>
+                <span className="text-lg">{incident.emoji}</span>
+                <span className="font-medium">{incident.type}</span>
+              </Button>
+            ))}
+          </div>
         </section>
 
         {/* Weekly Timeline */}

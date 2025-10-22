@@ -5,6 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { pl } from "date-fns/locale";
+import { Bell, BellOff } from "lucide-react";
 
 interface Message {
   id: string;
@@ -21,10 +22,55 @@ export const StreetChat = ({ street }: StreetChatProps) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  const requestNotificationPermission = async () => {
+    if (!("Notification" in window)) {
+      toast.error("Twoja przeglądarka nie obsługuje powiadomień");
+      return;
+    }
+
+    if (Notification.permission === "granted") {
+      setNotificationsEnabled(!notificationsEnabled);
+      if (!notificationsEnabled) {
+        toast.success("Powiadomienia włączone");
+      } else {
+        toast.success("Powiadomienia wyłączone");
+      }
+      return;
+    }
+
+    if (Notification.permission !== "denied") {
+      const permission = await Notification.requestPermission();
+      if (permission === "granted") {
+        setNotificationsEnabled(true);
+        toast.success("Powiadomienia włączone");
+      } else {
+        toast.error("Odmówiono dostępu do powiadomień");
+      }
+    } else {
+      toast.error("Powiadomienia są zablokowane w ustawieniach przeglądarki");
+    }
+  };
+
+  const showNotification = (message: string) => {
+    if (notificationsEnabled && Notification.permission === "granted") {
+      const notification = new Notification("Nowa wiadomość na czacie ejedzie.pl", {
+        body: message,
+        icon: "/favicon.ico",
+        tag: "chat-notification",
+      });
+
+      notification.onclick = () => {
+        window.focus();
+        notification.close();
+      };
+    }
   };
 
   const fetchMessages = async () => {
@@ -59,11 +105,13 @@ export const StreetChat = ({ street }: StreetChatProps) => {
           filter: `street=eq.${street}`,
         },
         (payload) => {
+          const newMsg = payload.new as Message;
           setMessages((current) => {
-            const updated = [...current, payload.new as Message];
+            const updated = [...current, newMsg];
             // Keep only last 20 messages
             return updated.slice(-20);
           });
+          showNotification(newMsg.message);
           scrollToBottom();
         }
       )
@@ -167,9 +215,21 @@ export const StreetChat = ({ street }: StreetChatProps) => {
               disabled={isSubmitting}
             />
             <div className="flex justify-between items-center">
-              <span className="text-xs text-muted-foreground">
-                {newMessage.length}/500
-              </span>
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={requestNotificationPermission}
+                  className="gap-2"
+                >
+                  {notificationsEnabled ? <Bell className="h-4 w-4" /> : <BellOff className="h-4 w-4" />}
+                  <span className="text-xs">Powiadom mnie</span>
+                </Button>
+                <span className="text-xs text-muted-foreground">
+                  {newMessage.length}/500
+                </span>
+              </div>
               <Button type="submit" disabled={isSubmitting || !newMessage.trim()}>
                 {isSubmitting ? "Wysyłanie..." : "Wyślij"}
               </Button>

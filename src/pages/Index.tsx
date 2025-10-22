@@ -836,9 +836,20 @@ const Index = () => {
       </main>
 
       {/* Footer */}
-      <footer className="container max-w-2xl mx-auto px-4 py-6 text-center text-sm text-muted-foreground">
+      <footer className="container max-w-2xl mx-auto px-4 py-6 text-center text-sm text-muted-foreground space-y-3">
         <p>
-          Ulepszenia i sugestie: kontakt @ ejedzie.pl
+          Ulepszenia i sugestie piszcie na: grzegorzmalopolskipraca@gmail.com
+        </p>
+        <p>
+          Stronę i serwery opłaciłem ze swojej kaski. Jesli doceniasz moja prace i chcesz by serwis sie rozwijal, mozesz postawic mi kawe, bym nie zasnal w nocy kodując{" "}
+          <Button
+            variant="link"
+            className="p-0 h-auto text-sm underline"
+            onClick={() => window.open('https://buycoffee.to/grzegorz', '_blank')}
+          >
+            TUTAJ
+          </Button>
+          .
         </p>
       </footer>
       

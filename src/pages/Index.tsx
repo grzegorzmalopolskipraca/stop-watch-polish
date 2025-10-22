@@ -17,10 +17,13 @@ import { pl } from "date-fns/locale";
 
 const STREETS = [
   "Zwycięska",
-  "Grunwaldzka",
-  "Gdańska",
-  "Słowackiego",
-  "3 Maja",
+  "Ołtaszyńska",
+  "Karkonoska",
+  "Ślężna",
+  "Powstańców Śląskich",
+  "Grabiszyńska",
+  "Borowska",
+  "Buforowa",
 ];
 
 const STATUS_CONFIG = {

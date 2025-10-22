@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { pl } from "date-fns/locale";
 import { Bell, BellOff } from "lucide-react";
+import { subscribeToPushNotifications, unsubscribeFromPushNotifications, isPushSubscribed } from "@/utils/pushNotifications";
 
 interface Message {
   id: string;
@@ -28,8 +29,7 @@ export const StreetChat = ({ street }: StreetChatProps) => {
 
   // Load notification preference when street changes
   useEffect(() => {
-    const saved = localStorage.getItem(`notifications-${street}`);
-    setNotificationsEnabled(saved === 'true');
+    setNotificationsEnabled(isPushSubscribed(street));
   }, [street]);
 
   const scrollToBottom = () => {
@@ -45,52 +45,27 @@ export const StreetChat = ({ street }: StreetChatProps) => {
       return;
     }
 
-    if (Notification.permission === "granted") {
-      const newState = !notificationsEnabled;
-      setNotificationsEnabled(newState);
-      localStorage.setItem(`notifications-${street}`, String(newState));
-      if (newState) {
-        toast.success("Powiadomienia włączone");
-      } else {
+    if (notificationsEnabled) {
+      // Unsubscribe
+      const success = await unsubscribeFromPushNotifications(street);
+      if (success) {
+        setNotificationsEnabled(false);
         toast.success("Powiadomienia wyłączone");
-      }
-      return;
-    }
-
-    if (Notification.permission !== "denied") {
-      const permission = await Notification.requestPermission();
-      if (permission === "granted") {
-        setNotificationsEnabled(true);
-        localStorage.setItem(`notifications-${street}`, 'true');
-        toast.success("Powiadomienia włączone");
       } else {
-        toast.error("Odmówiono dostępu do powiadomień");
+        toast.error("Błąd podczas wyłączania powiadomień");
       }
     } else {
-      toast.error("Powiadomienia są zablokowane w ustawieniach przeglądarki");
+      // Subscribe
+      const success = await subscribeToPushNotifications(street);
+      if (success) {
+        setNotificationsEnabled(true);
+        toast.success("Powiadomienia włączone");
+      } else {
+        toast.error("Nie udało się włączyć powiadomień. Sprawdź ustawienia przeglądarki.");
+      }
     }
   };
 
-  const showNotification = (message: string) => {
-    console.log('showNotification called:', {
-      notificationsEnabled,
-      permission: Notification.permission,
-      message: message.substring(0, 50)
-    });
-    
-    if (notificationsEnabled && Notification.permission === "granted") {
-      const notification = new Notification("Nowa wiadomość na czacie ejedzie.pl", {
-        body: message,
-        icon: "/favicon.ico",
-        tag: "chat-notification",
-      });
-
-      notification.onclick = () => {
-        window.focus();
-        notification.close();
-      };
-    }
-  };
 
   const fetchMessages = async () => {
     try {
@@ -131,7 +106,6 @@ export const StreetChat = ({ street }: StreetChatProps) => {
             // Keep only last 20 messages
             return updated.slice(-20);
           });
-          showNotification(newMsg.message);
           scrollToBottom();
         }
       )

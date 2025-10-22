@@ -23,10 +23,14 @@ export const StreetChat = ({ street }: StreetChatProps) => {
   const [newMessage, setNewMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const initialLoadRef = useRef(true);
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    const el = messagesContainerRef.current;
+    if (el) {
+      el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+    }
   };
 
   const requestNotificationPermission = async () => {
@@ -91,6 +95,7 @@ export const StreetChat = ({ street }: StreetChatProps) => {
   };
 
   useEffect(() => {
+    initialLoadRef.current = true;
     fetchMessages();
 
     // Subscribe to realtime updates
@@ -123,7 +128,11 @@ export const StreetChat = ({ street }: StreetChatProps) => {
   }, [street]);
 
   useEffect(() => {
-    // Only scroll to bottom if there are messages and this isn't the initial load
+    // Skip auto-scroll on initial load
+    if (initialLoadRef.current) {
+      initialLoadRef.current = false;
+      return;
+    }
     if (messages.length > 0) {
       const timeoutId = setTimeout(scrollToBottom, 100);
       return () => clearTimeout(timeoutId);
@@ -192,7 +201,7 @@ export const StreetChat = ({ street }: StreetChatProps) => {
       </div>
 
       <div className="bg-card rounded-lg border border-border">
-        <div className="h-80 overflow-y-auto p-4 space-y-3">
+        <div className="h-80 overflow-y-auto p-4 space-y-3" ref={messagesContainerRef}>
           {messages.length === 0 ? (
             <p className="text-center text-muted-foreground text-sm py-8">
               Brak wiadomości. Bądź pierwszy!
@@ -210,7 +219,7 @@ export const StreetChat = ({ street }: StreetChatProps) => {
               </div>
             ))
           )}
-          <div ref={messagesEndRef} />
+          
         </div>
 
         <form onSubmit={handleSubmit} className="p-4 border-t border-border">

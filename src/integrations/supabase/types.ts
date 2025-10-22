@@ -14,6 +14,30 @@ export type Database = {
   }
   public: {
     Tables: {
+      page_visits: {
+        Row: {
+          created_at: string
+          id: string
+          street: string | null
+          user_fingerprint: string | null
+          visited_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          street?: string | null
+          user_fingerprint?: string | null
+          visited_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          street?: string | null
+          user_fingerprint?: string | null
+          visited_at?: string
+        }
+        Relationships: []
+      }
       prohibited_words: {
         Row: {
           created_at: string

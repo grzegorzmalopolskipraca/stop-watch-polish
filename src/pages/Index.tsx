@@ -66,6 +66,8 @@ const Index = () => {
     const currentHour = new Date().getHours();
     return currentHour < 13 ? "to_center" : "from_center";
   });
+  const [todayVisitors, setTodayVisitors] = useState<number>(0);
+  const [totalVisitors, setTotalVisitors] = useState<number>(0);
 
   const fetchReports = async (street: string) => {
     setIsLoading(true);
@@ -142,12 +144,60 @@ const Index = () => {
     }
   };
 
+  const fetchVisitorStats = async () => {
+    try {
+      // Fetch today's visitors count
+      const startOfDay = new Date();
+      startOfDay.setHours(0, 0, 0, 0);
+
+      const { count: todayCount } = await supabase
+        .from("page_visits")
+        .select("*", { count: "exact", head: true })
+        .gte("visited_at", startOfDay.toISOString());
+
+      // Fetch total visitors count
+      const { count: totalCount } = await supabase
+        .from("page_visits")
+        .select("*", { count: "exact", head: true });
+
+      setTodayVisitors(todayCount || 0);
+      setTotalVisitors(totalCount || 0);
+    } catch (error) {
+      console.error("Error fetching visitor stats:", error);
+    }
+  };
+
+  const recordVisit = async () => {
+    try {
+      let userFingerprint = localStorage.getItem('userFingerprint');
+      if (!userFingerprint) {
+        userFingerprint = `user_${Math.random().toString(36).substring(2, 15)}_${Date.now()}`;
+        localStorage.setItem('userFingerprint', userFingerprint);
+      }
+
+      await supabase.functions.invoke('record-visit', {
+        body: {
+          userFingerprint,
+          street: selectedStreet,
+        },
+      });
+
+      // Fetch updated stats after recording visit
+      fetchVisitorStats();
+    } catch (error) {
+      console.error("Error recording visit:", error);
+    }
+  };
+
   useEffect(() => {
     fetchReports(selectedStreet);
+    fetchVisitorStats();
+    recordVisit();
 
     // Auto-refresh every 60 seconds
     const interval = setInterval(() => {
       fetchReports(selectedStreet);
+      fetchVisitorStats();
     }, 60000);
 
     // Subscribe to realtime updates
@@ -347,10 +397,16 @@ const Index = () => {
         </section>
 
         {/* Last Update Info */}
-        <section className="text-center text-sm text-muted-foreground">
+        <section className="text-center text-sm text-muted-foreground space-y-1">
           <p>
             Dane społecznościowe. Ostatnia aktualizacja:{" "}
             {format(lastUpdate, "dd.MM.yyyy, HH:mm", { locale: pl })}
+          </p>
+          <p>
+            Dzisiaj odwiedziło nas: <strong>{todayVisitors}</strong> osób
+          </p>
+          <p>
+            Łącznie: <strong>{totalVisitors}</strong> wizyt
           </p>
         </section>
 

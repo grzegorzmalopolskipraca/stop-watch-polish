@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.submit-chat-message]
 verify_jwt = false
+
+[functions.record-visit]
+verify_jwt = false

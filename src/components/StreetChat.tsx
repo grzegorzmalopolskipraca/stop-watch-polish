@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { pl } from "date-fns/locale";
@@ -20,7 +20,7 @@ interface StreetChatProps {
 export const StreetChat = ({ street }: StreetChatProps) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
-  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -38,12 +38,9 @@ export const StreetChat = ({ street }: StreetChatProps) => {
 
       if (error) throw error;
 
-      // Reverse to show oldest first
       setMessages((data || []).reverse());
     } catch (error) {
       console.error("Error fetching messages:", error);
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -63,11 +60,11 @@ export const StreetChat = ({ street }: StreetChatProps) => {
         },
         (payload) => {
           setMessages((current) => {
-            const newMessages = [...current, payload.new as Message];
+            const updated = [...current, payload.new as Message];
             // Keep only last 20 messages
-            return newMessages.slice(-20);
+            return updated.slice(-20);
           });
-          setTimeout(scrollToBottom, 100);
+          scrollToBottom();
         }
       )
       .subscribe();
@@ -81,7 +78,7 @@ export const StreetChat = ({ street }: StreetChatProps) => {
     scrollToBottom();
   }, [messages]);
 
-  const handleSendMessage = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!newMessage.trim()) {
@@ -90,9 +87,11 @@ export const StreetChat = ({ street }: StreetChatProps) => {
     }
 
     if (newMessage.length > 500) {
-      toast.error("Wiadomość może mieć maksymalnie 500 znaków");
+      toast.error("Wiadomość jest za długa (max 500 znaków)");
       return;
     }
+
+    setIsSubmitting(true);
 
     try {
       const fingerprint = `user_${Math.random().toString(36).substring(7)}`;
@@ -106,43 +105,34 @@ export const StreetChat = ({ street }: StreetChatProps) => {
       if (error) throw error;
 
       setNewMessage("");
-      toast.success("Wiadomość wysłana");
     } catch (error) {
       console.error("Error sending message:", error);
       toast.error("Błąd podczas wysyłania wiadomości");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   return (
     <div className="space-y-4">
-      <div className="bg-muted/50 rounded-lg p-4 text-sm">
-        <h4 className="font-semibold mb-2">💬 Chat sąsiedzki</h4>
-        <p className="text-muted-foreground mb-2">
-          Komunikuj się z sąsiadami! Czekasz na przystanku i chcesz dojechać do
-          centrum? Napisz gdzie jesteś i dokąd jedziesz.
+      <div className="bg-muted/50 rounded-lg p-4 text-sm space-y-2">
+        <h4 className="font-semibold">Chat sąsiedzki - {street}</h4>
+        <p>
+          Ten chat służy do komunikacji między sąsiadami. Jeśli stoisz na
+          przystanku i czekasz na autobus, możesz napisać dokąd jedziesz, a ktoś
+          jadący samochodem może Cię zabrać, zmniejszając korki.
         </p>
-        <div className="bg-background/50 rounded p-3 space-y-1 text-xs">
-          <p className="font-medium">Przykład:</p>
-          <p className="text-muted-foreground">
-            → "Uprzejmy 22-latek w czerwonej kurtce na przystanku przy Atalu
-            chce dojechać na Plac Grunwaldzki"
-          </p>
-          <p className="text-muted-foreground">
-            → "Cześć, jadę czerwoną Mazdą 6, będę za 5 minut, zabiorę Cię tam"
-          </p>
-        </div>
+        <p className="text-muted-foreground text-xs">
+          <strong>Przykład:</strong> "Grzeczny 22-latek w czerwonej kurtce na
+          przystanku przy Atalu chce dojechać na Plac Grunwaldzki" → Odpowiedź:
+          "Cześć, jadę czerwoną Mazdą 6, będę za 5 minut, mogę Cię zabrać"
+        </p>
       </div>
 
       <div className="bg-card rounded-lg border border-border">
-        <div className="p-4 border-b border-border">
-          <h4 className="font-semibold">Ostatnie wiadomości</h4>
-        </div>
-
         <div className="h-80 overflow-y-auto p-4 space-y-3">
-          {isLoading ? (
-            <p className="text-center text-muted-foreground">Ładowanie...</p>
-          ) : messages.length === 0 ? (
-            <p className="text-center text-muted-foreground">
+          {messages.length === 0 ? (
+            <p className="text-center text-muted-foreground text-sm py-8">
               Brak wiadomości. Bądź pierwszy!
             </p>
           ) : (
@@ -151,30 +141,36 @@ export const StreetChat = ({ street }: StreetChatProps) => {
                 key={msg.id}
                 className="bg-muted/30 rounded-lg p-3 space-y-1"
               >
-                <p className="text-xs text-muted-foreground">
+                <div className="text-xs text-muted-foreground">
                   {format(new Date(msg.created_at), "HH:mm", { locale: pl })}
-                </p>
-                <p className="text-sm">{msg.message}</p>
+                </div>
+                <div className="text-sm break-words">{msg.message}</div>
               </div>
             ))
           )}
           <div ref={messagesEndRef} />
         </div>
 
-        <form onSubmit={handleSendMessage} className="p-4 border-t border-border">
-          <div className="flex gap-2">
-            <Input
+        <form onSubmit={handleSubmit} className="p-4 border-t border-border">
+          <div className="space-y-2">
+            <Textarea
               value={newMessage}
               onChange={(e) => setNewMessage(e.target.value)}
-              placeholder="Napisz wiadomość..."
+              placeholder="Napisz wiadomość... (max 500 znaków)"
+              className="resize-none"
+              rows={3}
               maxLength={500}
-              className="flex-1"
+              disabled={isSubmitting}
             />
-            <Button type="submit">Wyślij</Button>
+            <div className="flex justify-between items-center">
+              <span className="text-xs text-muted-foreground">
+                {newMessage.length}/500
+              </span>
+              <Button type="submit" disabled={isSubmitting || !newMessage.trim()}>
+                {isSubmitting ? "Wysyłanie..." : "Wyślij"}
+              </Button>
+            </div>
           </div>
-          <p className="text-xs text-muted-foreground mt-2">
-            {newMessage.length}/500 znaków
-          </p>
         </form>
       </div>
     </div>

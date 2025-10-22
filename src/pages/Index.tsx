@@ -13,6 +13,7 @@ import { WeeklyTimeline } from "@/components/WeeklyTimeline";
 import { TodayTimeline } from "@/components/TodayTimeline";
 import { Legend } from "@/components/Legend";
 import { StreetChat } from "@/components/StreetChat";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from "date-fns";
 import { pl } from "date-fns/locale";
 
@@ -61,6 +62,10 @@ const Index = () => {
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
   const [isLoading, setIsLoading] = useState(true);
   const [lastTenStats, setLastTenStats] = useState<Record<string, number>>({});
+  const [direction, setDirection] = useState<string>(() => {
+    const currentHour = new Date().getHours();
+    return currentHour < 13 ? "to-center" : "from-center";
+  });
 
   const fetchReports = async (street: string) => {
     setIsLoading(true);
@@ -243,6 +248,16 @@ const Index = () => {
 
       {/* Main Content */}
       <main className="container max-w-2xl mx-auto px-4 py-6 space-y-8">
+        {/* Direction Toggle */}
+        <section>
+          <Tabs value={direction} onValueChange={setDirection} className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="to-center">Do centrum</TabsTrigger>
+              <TabsTrigger value="from-center">Od centrum</TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </section>
+
         {/* Current Status */}
         <section
           className={`rounded-lg p-6 text-center transition-colors ${

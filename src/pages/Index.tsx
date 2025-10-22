@@ -80,6 +80,8 @@ const Index = () => {
   const [incidentCounts, setIncidentCounts] = useState<Record<string, number>>({});
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [showInstallDialog, setShowInstallDialog] = useState(false);
+  const [showDonationDialog, setShowDonationDialog] = useState(false);
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
 
   // Capture the install prompt event
   useEffect(() => {
@@ -451,6 +453,41 @@ const Index = () => {
     } catch (error: any) {
       console.error("Error submitting incident report:", error);
       toast.error(error.message || "Błąd podczas wysyłania zgłoszenia");
+    }
+  };
+
+  const handleDonationPayment = async (amount: number) => {
+    setIsProcessingPayment(true);
+    try {
+      const priceIds: Record<number, string> = {
+        5: 'price_1SLBryJwZG4PdjqZKpErrKLk',
+        10: 'price_1SLBsCJwZG4PdjqZidR5Vq4Q',
+        50: 'price_1SLBsQJwZG4PdjqZDTK78vvi',
+      };
+
+      const { data, error } = await supabase.functions.invoke('create-donation-payment', {
+        body: { priceId: priceIds[amount] },
+      });
+
+      if (error) {
+        throw new Error(error.message || 'Failed to create payment session');
+      }
+
+      if (data?.error) {
+        toast.error(data.error);
+        return;
+      }
+
+      if (data?.url) {
+        window.open(data.url, '_blank');
+        setShowDonationDialog(false);
+        toast.success("Dziękujemy za wsparcie!");
+      }
+    } catch (error: any) {
+      console.error("Error creating payment:", error);
+      toast.error(error.message || "Błąd podczas tworzenia płatności");
+    } finally {
+      setIsProcessingPayment(false);
     }
   };
 
@@ -847,7 +884,7 @@ const Index = () => {
           <Button
             variant="link"
             className="p-0 h-auto text-sm underline"
-            onClick={() => window.open('https://buycoffee.to/grzegorz', '_blank')}
+            onClick={() => setShowDonationDialog(true)}
           >
             TUTAJ
           </Button>
@@ -869,6 +906,51 @@ const Index = () => {
           </div>
           <Button onClick={() => setShowInstallDialog(false)} className="mt-4 w-full">
             Rozumiem
+          </Button>
+        </DialogContent>
+      </Dialog>
+
+      {/* Donation Dialog */}
+      <Dialog open={showDonationDialog} onOpenChange={setShowDonationDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Wesprzyj eJedzie.pl</DialogTitle>
+            <DialogDescription>
+              Wybierz kwotę wsparcia. Dziękujemy za każdą pomoc!
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-3 mt-4">
+            <Button
+              onClick={() => handleDonationPayment(5)}
+              disabled={isProcessingPayment}
+              className="h-16 text-lg"
+              variant="outline"
+            >
+              ☕ 5 zł - Mała kawa
+            </Button>
+            <Button
+              onClick={() => handleDonationPayment(10)}
+              disabled={isProcessingPayment}
+              className="h-16 text-lg"
+              variant="outline"
+            >
+              ☕☕ 10 zł - Duża kawa
+            </Button>
+            <Button
+              onClick={() => handleDonationPayment(50)}
+              disabled={isProcessingPayment}
+              className="h-16 text-lg"
+              variant="outline"
+            >
+              ☕☕☕ 50 zł - Wspaniałomyślne wsparcie
+            </Button>
+          </div>
+          <Button 
+            onClick={() => setShowDonationDialog(false)} 
+            className="mt-4 w-full"
+            variant="ghost"
+          >
+            Anuluj
           </Button>
         </DialogContent>
       </Dialog>

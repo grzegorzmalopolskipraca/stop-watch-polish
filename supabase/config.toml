@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.record-visit]
 verify_jwt = false
+
+[functions.create-donation-payment]
+verify_jwt = false

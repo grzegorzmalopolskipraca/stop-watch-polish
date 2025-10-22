@@ -259,8 +259,7 @@ const Index = () => {
               </p>
               {Object.keys(lastTenStats).length > 0 && (
                 <p className={`text-xs mt-2 ${statusConfig.textColor} opacity-80`}>
-                  Ostatnie zgłoszenia użytkowników: 
-                  {lastTenStats.stoi && ` Stoi: ${lastTenStats.stoi}`}
+                  {lastTenStats.stoi && `Stoi: ${lastTenStats.stoi}`}
                   {lastTenStats.toczy_sie && ` Toczy się: ${lastTenStats.toczy_sie}`}
                   {lastTenStats.jedzie && ` Jedzie: ${lastTenStats.jedzie}`}
                 </p>

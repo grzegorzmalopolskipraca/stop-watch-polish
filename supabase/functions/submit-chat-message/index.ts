@@ -119,6 +119,27 @@ Deno.serve(async (req) => {
     // Sanitize the message to prevent XSS
     const sanitizedMessage = sanitizeMessage(message);
 
+    // Check for prohibited words
+    const { data: prohibitedWords, error: prohibitedError } = await supabase
+      .from('prohibited_words')
+      .select('word');
+
+    if (prohibitedError) {
+      console.error('Error fetching prohibited words:', prohibitedError);
+    } else if (prohibitedWords && prohibitedWords.length > 0) {
+      const messageLower = message.toLowerCase();
+      const foundProhibitedWord = prohibitedWords.find(({ word }) => 
+        messageLower.includes(word.toLowerCase())
+      );
+
+      if (foundProhibitedWord) {
+        return new Response(
+          JSON.stringify({ error: 'Wiadomość zawiera niedozwolone słowa' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
     // Insert the chat message
     const { data, error } = await supabase
       .from('street_chat_messages')

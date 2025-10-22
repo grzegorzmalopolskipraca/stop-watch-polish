@@ -583,6 +583,58 @@ const Index = () => {
         <section>
           <StreetChat street={selectedStreet} />
         </section>
+
+        {/* Chat Use Cases */}
+        <section className="bg-card rounded-lg p-6 border border-border space-y-4">
+          <h3 className="text-lg font-semibold text-center">
+            Przykłady wiadomości na czacie
+          </h3>
+          <p className="text-sm text-muted-foreground text-center">
+            Jak możesz korzystać z czatu ulicy:
+          </p>
+          <ul className="space-y-2 text-sm">
+            <li className="flex items-start gap-2 p-2 bg-muted/50 rounded">
+              <span className="text-primary mt-0.5">💬</span>
+              <span className="italic">"Potrzebuję transportu na ulicę X Jestem koło Y Zapłacę, bo spieszy mi się"</span>
+            </li>
+            <li className="flex items-start gap-2 p-2 bg-muted/50 rounded">
+              <span className="text-primary mt-0.5">💬</span>
+              <span className="italic">"Szukam na tej ulicy obiektu X, jak tu wjechać?"</span>
+            </li>
+            <li className="flex items-start gap-2 p-2 bg-muted/50 rounded">
+              <span className="text-primary mt-0.5">💬</span>
+              <span className="italic">"Podwiozę do Galerii Dominikańskiej osobę w wieku X"</span>
+            </li>
+            <li className="flex items-start gap-2 p-2 bg-muted/50 rounded">
+              <span className="text-primary mt-0.5">💬</span>
+              <span className="italic">"Potrzebuję pomocy z samochodem / motocyklem!"</span>
+            </li>
+            <li className="flex items-start gap-2 p-2 bg-muted/50 rounded">
+              <span className="text-primary mt-0.5">💬</span>
+              <span className="italic">"Nie mogę odpalić samochodu, ma ktoś prostownik?"</span>
+            </li>
+            <li className="flex items-start gap-2 p-2 bg-muted/50 rounded">
+              <span className="text-primary mt-0.5">💬</span>
+              <span className="italic">"Ktoś mnie zablokował przy Zwycięskiej X, proszę o szybki kontakt"</span>
+            </li>
+            <li className="flex items-start gap-2 p-2 bg-muted/50 rounded">
+              <span className="text-primary mt-0.5">💬</span>
+              <span className="italic">"Uważajcie na tą osobę, może wejść na drogę"</span>
+            </li>
+            <li className="flex items-start gap-2 p-2 bg-muted/50 rounded">
+              <span className="text-primary mt-0.5">💬</span>
+              <span className="italic">"Uwaga, na drodze leży gwóźdź, omijajcie go koło X"</span>
+            </li>
+            <li className="flex items-start gap-2 p-2 bg-muted/50 rounded">
+              <span className="text-primary mt-0.5">💬</span>
+              <span className="italic">"Ile czasu zajęło Wam przejechanie korka od adresu X do Adresu Y?"</span>
+            </li>
+            <li className="flex items-start gap-2 p-2 bg-muted/50 rounded">
+              <span className="text-primary mt-0.5">💬</span>
+              <span className="italic">"Jest blokada, drogę należy objechać przez ulicę X, Y, Z"</span>
+            </li>
+          </ul>
+        </section>
       </main>
 
       {/* Footer */}

@@ -19,62 +19,45 @@ const reportSchema = z.object({
   userFingerprint: z.string().min(1).max(100),
 });
 
-// Rate limiting: max 5 reports per IP per hour
-const RATE_LIMIT_WINDOW = 60 * 60 * 1000; // 1 hour in milliseconds
-const MAX_REPORTS_PER_HOUR = 5;
+// Rate limiting: max 1 report per user per street per minute
+const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute in milliseconds
 
-async function checkRateLimit(
+async function checkUserStreetRateLimit(
   supabase: any,
-  identifier: string,
-  actionType: string
-): Promise<{ allowed: boolean; message?: string }> {
-  const oneHourAgo = new Date(Date.now() - RATE_LIMIT_WINDOW).toISOString();
+  userFingerprint: string,
+  street: string
+): Promise<boolean> {
+  const oneMinuteAgo = new Date(Date.now() - RATE_LIMIT_WINDOW).toISOString();
+  
+  const identifier = `${userFingerprint}_${street}`;
 
-  // Get recent actions from this identifier
+  // Get recent action from this user on this street
   const { data, error } = await supabase
     .from('rate_limits')
     .select('*')
     .eq('identifier', identifier)
-    .eq('action_type', actionType)
-    .gte('last_action_at', oneHourAgo)
+    .eq('action_type', 'traffic_report_user_street')
+    .gte('last_action_at', oneMinuteAgo)
     .order('last_action_at', { ascending: false })
     .limit(1);
 
   if (error) {
     console.error('Rate limit check error:', error);
-    return { allowed: true }; // Fail open
+    return true; // Fail open - allow the action
   }
 
   if (!data || data.length === 0) {
-    // First action from this identifier
+    // First action from this user on this street in the last minute
     await supabase.from('rate_limits').insert({
       identifier,
-      action_type: actionType,
+      action_type: 'traffic_report_user_street',
       action_count: 1,
     });
-    return { allowed: true };
+    return true; // Allow
   }
 
-  const record = data[0];
-  
-  if (record.action_count >= MAX_REPORTS_PER_HOUR) {
-    const resetTime = new Date(new Date(record.last_action_at).getTime() + RATE_LIMIT_WINDOW);
-    return {
-      allowed: false,
-      message: `Limit przekroczony. Możesz zgłosić maksymalnie ${MAX_REPORTS_PER_HOUR} raportów na godzinę. Spróbuj ponownie po ${resetTime.toLocaleTimeString('pl-PL')}.`,
-    };
-  }
-
-  // Update the count
-  await supabase
-    .from('rate_limits')
-    .update({
-      action_count: record.action_count + 1,
-      last_action_at: new Date().toISOString(),
-    })
-    .eq('id', record.id);
-
-  return { allowed: true };
+  // User has already submitted a report for this street in the last minute
+  return false; // Don't allow
 }
 
 Deno.serve(async (req) => {
@@ -103,37 +86,30 @@ Deno.serve(async (req) => {
 
     const { street, status, userFingerprint } = validationResult.data;
 
-    // Check rate limit
-    const rateLimitCheck = await checkRateLimit(supabase, clientIP, 'traffic_report');
-    if (!rateLimitCheck.allowed) {
-      return new Response(
-        JSON.stringify({ error: rateLimitCheck.message }),
-        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    // Check user-street rate limit (1 report per minute)
+    const canSubmit = await checkUserStreetRateLimit(supabase, userFingerprint, street);
+    
+    if (canSubmit) {
+      // Insert the traffic report only if rate limit allows
+      const { error } = await supabase
+        .from('traffic_reports')
+        .insert({
+          street,
+          status,
+          user_fingerprint: userFingerprint,
+          reported_at: new Date().toISOString(),
+        });
+
+      if (error) {
+        console.error('Insert error:', error);
+      }
+    } else {
+      console.log(`Rate limit: User ${userFingerprint} tried to submit again for ${street} within 1 minute`);
     }
 
-    // Insert the traffic report
-    const { data, error } = await supabase
-      .from('traffic_reports')
-      .insert({
-        street,
-        status,
-        user_fingerprint: userFingerprint,
-        reported_at: new Date().toISOString(),
-      })
-      .select()
-      .single();
-
-    if (error) {
-      console.error('Insert error:', error);
-      return new Response(
-        JSON.stringify({ error: 'Nie udało się zapisać raportu' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
+    // Always return success to show "thank you" message
     return new Response(
-      JSON.stringify({ data }),
+      JSON.stringify({ success: true }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {

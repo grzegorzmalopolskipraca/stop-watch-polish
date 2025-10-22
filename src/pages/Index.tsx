@@ -167,7 +167,12 @@ const Index = () => {
 
   const submitReport = async (status: string) => {
     try {
-      const userFingerprint = `user_${Math.random().toString(36).substring(2, 9)}`;
+      // Get or create persistent user fingerprint
+      let userFingerprint = localStorage.getItem('userFingerprint');
+      if (!userFingerprint) {
+        userFingerprint = `user_${Math.random().toString(36).substring(2, 15)}_${Date.now()}`;
+        localStorage.setItem('userFingerprint', userFingerprint);
+      }
       
       const { data, error } = await supabase.functions.invoke('submit-traffic-report', {
         body: {

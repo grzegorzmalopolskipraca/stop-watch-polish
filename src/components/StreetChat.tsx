@@ -186,7 +186,7 @@ export const StreetChat = ({ street }: StreetChatProps) => {
 
   return (
     <div className="space-y-4">
-      <div className="bg-primary/10 border-2 border-primary/20 rounded-lg p-5 text-sm space-y-2">
+      <div className="bg-primary/10 border-2 border-blue-400 rounded-lg p-5 text-sm space-y-2">
         <h4 className="text-lg font-bold text-primary">💬 Chat sąsiedzki - {street}</h4>
         <p>
           Ten chat służy do komunikacji między sąsiadami. Jeśli stoisz na
@@ -200,7 +200,7 @@ export const StreetChat = ({ street }: StreetChatProps) => {
         </p>
       </div>
 
-      <div className="bg-card rounded-lg border border-border">
+      <div className="bg-card rounded-lg border-2 border-blue-400">
         <div className="h-80 overflow-y-auto p-4 space-y-3" ref={messagesContainerRef}>
           {messages.length === 0 ? (
             <p className="text-center text-muted-foreground text-sm py-8">
@@ -222,7 +222,7 @@ export const StreetChat = ({ street }: StreetChatProps) => {
           
         </div>
 
-        <form onSubmit={handleSubmit} className="p-4 border-t border-border">
+        <form onSubmit={handleSubmit} className="p-4 border-t-2 border-blue-400">
           <div className="space-y-2">
             <Textarea
               value={newMessage}

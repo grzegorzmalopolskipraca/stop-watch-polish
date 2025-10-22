@@ -127,10 +127,13 @@ Deno.serve(async (req) => {
     if (prohibitedError) {
       console.error('Error fetching prohibited words:', prohibitedError);
     } else if (prohibitedWords && prohibitedWords.length > 0) {
-      const messageLower = message.toLowerCase();
-      const foundProhibitedWord = prohibitedWords.find(({ word }) => 
-        messageLower.includes(word.toLowerCase())
-      );
+      const messageLower = message.toLowerCase().trim();
+      const foundProhibitedWord = prohibitedWords.find(({ word }) => {
+        const wordLower = word.toLowerCase();
+        // Check for whole word or as part of a word (strict filtering)
+        const regex = new RegExp(`\\b${wordLower}\\b|${wordLower}`, 'i');
+        return regex.test(messageLower);
+      });
 
       if (foundProhibitedWord) {
         return new Response(

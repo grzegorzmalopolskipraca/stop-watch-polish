@@ -75,8 +75,12 @@ export const StreetChat = ({ street }: StreetChatProps) => {
   }, [street]);
 
   useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
+    // Only scroll to bottom if there are messages and this isn't the initial load
+    if (messages.length > 0) {
+      const timeoutId = setTimeout(scrollToBottom, 100);
+      return () => clearTimeout(timeoutId);
+    }
+  }, [messages.length > 1 ? messages[messages.length - 1]?.id : null]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

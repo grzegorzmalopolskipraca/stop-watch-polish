@@ -326,7 +326,7 @@ const Index = () => {
           </ul>
           <Button
             onClick={async () => {
-              const url = window.location.href;
+              const url = "https://ejedzie.pl";
               const title = "Czy stoi?";
               const text = "Zobacz aktualny stan ruchu na Twojej ulicy!";
               

@@ -28,6 +28,7 @@ const STREETS = [
   "Buforowa",
   "Grota Roweckiego",
   "Radosna",
+  "Sudecka",
 ];
 
 const STATUS_CONFIG = {

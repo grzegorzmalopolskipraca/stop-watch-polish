@@ -192,7 +192,7 @@ const Index = () => {
           </h1>
           
           <div className="space-y-2">
-            <label className="text-sm font-medium">Wybierz ulicę</label>
+            <label className="text-sm font-medium">Wybierz ulicę w Wrocławiu</label>
             <Select value={selectedStreet} onValueChange={setSelectedStreet}>
               <SelectTrigger className="w-full">
                 <SelectValue />

@@ -489,7 +489,7 @@ const Index = () => {
               { type: "Ślisko", emoji: "❄️" },
               { type: "Dziury", emoji: "🕳️" },
               { type: "Zwierze", emoji: "🦌" },
-              { type: "Awaria świateł", emoji: "🚦" },
+              { type: "Awaria", emoji: "🚦" },
             ].map((incident) => (
               <Button
                 key={incident.type}

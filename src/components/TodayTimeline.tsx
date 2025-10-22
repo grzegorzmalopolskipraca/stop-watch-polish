@@ -1,0 +1,91 @@
+import { useMemo } from "react";
+import { format } from "date-fns";
+import { pl } from "date-fns/locale";
+
+interface Report {
+  status: string;
+  reported_at: string;
+}
+
+interface TodayTimelineProps {
+  reports: Report[];
+  street: string;
+}
+
+const COLORS = {
+  stoi: "bg-traffic-stoi",
+  toczy_sie: "bg-traffic-toczy",
+  jedzie: "bg-traffic-jedzie",
+  neutral: "bg-traffic-neutral",
+};
+
+export const TodayTimeline = ({ reports, street }: TodayTimelineProps) => {
+  const todayData = useMemo(() => {
+    const now = new Date();
+    const startOfDay = new Date(now.setHours(0, 0, 0, 0));
+    
+    const hours: string[] = [];
+    
+    for (let hour = 0; hour < 24; hour++) {
+      const hourStart = new Date(startOfDay);
+      hourStart.setHours(hour);
+      const hourEnd = new Date(hourStart);
+      hourEnd.setHours(hour + 1);
+      
+      // Filter reports for this hour
+      const hourReports = reports.filter((r) => {
+        const reportTime = new Date(r.reported_at);
+        return reportTime >= hourStart && reportTime < hourEnd;
+      });
+      
+      // Calculate majority status
+      if (hourReports.length === 0) {
+        hours.push("neutral");
+      } else {
+        const statusCounts = hourReports.reduce((acc, r) => {
+          acc[r.status] = (acc[r.status] || 0) + 1;
+          return acc;
+        }, {} as Record<string, number>);
+        
+        const majorityStatus = Object.entries(statusCounts).sort(
+          ([, a], [, b]) => b - a
+        )[0][0];
+        
+        hours.push(majorityStatus);
+      }
+    }
+    
+    return hours;
+  }, [reports]);
+
+  const currentHour = new Date().getHours();
+
+  return (
+    <div className="space-y-3">
+      <h2 className="text-lg font-semibold">Dziś: stan ruchu na {street}</h2>
+      
+      <div className="space-y-2">
+        <div className="flex justify-between text-xs text-muted-foreground px-1">
+          <span>0:00</span>
+          <span>12:00</span>
+          <span>23:59</span>
+        </div>
+        <div className="flex gap-0.5">
+          {todayData.map((status, hour) => (
+            <div
+              key={hour}
+              className={`flex-1 h-8 rounded transition-colors relative ${
+                COLORS[status as keyof typeof COLORS]
+              } ${hour === currentHour ? "ring-2 ring-primary ring-offset-1" : ""}`}
+              title={`${hour}:00 - ${status}`}
+            >
+              {hour === currentHour && (
+                <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-b-4 border-transparent border-b-primary" />
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};

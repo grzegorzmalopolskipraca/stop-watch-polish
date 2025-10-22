@@ -47,6 +47,16 @@ export default {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        traffic: {
+          stoi: "hsl(var(--traffic-stoi))",
+          "stoi-foreground": "hsl(var(--traffic-stoi-foreground))",
+          toczy: "hsl(var(--traffic-toczy))",
+          "toczy-foreground": "hsl(var(--traffic-toczy-foreground))",
+          jedzie: "hsl(var(--traffic-jedzie))",
+          "jedzie-foreground": "hsl(var(--traffic-jedzie-foreground))",
+          neutral: "hsl(var(--traffic-neutral))",
+          "neutral-foreground": "hsl(var(--traffic-neutral-foreground))",
+        },
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
           foreground: "hsl(var(--sidebar-foreground))",

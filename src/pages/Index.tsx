@@ -59,6 +59,7 @@ const Index = () => {
   const [todayReports, setTodayReports] = useState<Report[]>([]);
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
   const [isLoading, setIsLoading] = useState(true);
+  const [lastTenStats, setLastTenStats] = useState<Record<string, number>>({});
 
   const fetchReports = async (street: string) => {
     setIsLoading(true);
@@ -92,6 +93,14 @@ const Index = () => {
       if (todayError) throw todayError;
 
       setTodayReports(todayData || []);
+
+      // Calculate stats for last 10 reports
+      const lastTen = (todayData || []).slice(0, 10);
+      const stats = lastTen.reduce((acc, r) => {
+        acc[r.status] = (acc[r.status] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+      setLastTenStats(stats);
 
       // Calculate current status (last 60 minutes)
       const sixtyMinutesAgo = new Date();
@@ -248,6 +257,14 @@ const Index = () => {
               >
                 Stan aktualizowany na podstawie zgłoszeń użytkowników.
               </p>
+              {Object.keys(lastTenStats).length > 0 && (
+                <p className={`text-xs mt-2 ${statusConfig.textColor} opacity-80`}>
+                  Ostatnie zgłoszenia użytkowników: 
+                  {lastTenStats.stoi && ` Stoi: ${lastTenStats.stoi}`}
+                  {lastTenStats.toczy_sie && ` Toczy się: ${lastTenStats.toczy_sie}`}
+                  {lastTenStats.jedzie && ` Jedzie: ${lastTenStats.jedzie}`}
+                </p>
+              )}
             </>
           ) : (
             <>

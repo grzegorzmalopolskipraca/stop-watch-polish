@@ -64,7 +64,7 @@ const Index = () => {
   const [lastTenStats, setLastTenStats] = useState<Record<string, number>>({});
   const [direction, setDirection] = useState<string>(() => {
     const currentHour = new Date().getHours();
-    return currentHour < 13 ? "to-center" : "from-center";
+    return currentHour < 13 ? "to_center" : "from_center";
   });
 
   const fetchReports = async (street: string) => {
@@ -255,8 +255,8 @@ const Index = () => {
         <section>
           <Tabs value={direction} onValueChange={setDirection} className="w-full">
             <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="to-center">Do centrum</TabsTrigger>
-              <TabsTrigger value="from-center">Od centrum</TabsTrigger>
+              <TabsTrigger value="to_center">Do centrum</TabsTrigger>
+              <TabsTrigger value="from_center">Od centrum</TabsTrigger>
             </TabsList>
           </Tabs>
         </section>

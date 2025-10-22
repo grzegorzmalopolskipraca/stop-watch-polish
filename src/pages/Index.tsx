@@ -71,6 +71,37 @@ const Index = () => {
   const [todayVisitors, setTodayVisitors] = useState<number>(0);
   const [totalVisitors, setTotalVisitors] = useState<number>(0);
   const [incidentCounts, setIncidentCounts] = useState<Record<string, number>>({});
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+
+  // Capture the install prompt event
+  useEffect(() => {
+    const handler = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    };
+    
+    window.addEventListener('beforeinstallprompt', handler);
+    
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handler);
+    };
+  }, []);
+
+  const handleInstallClick = async () => {
+    if (!deferredPrompt) {
+      toast.info("Aplikacja jest już zainstalowana lub Twoja przeglądarka nie obsługuje tej funkcji");
+      return;
+    }
+
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    
+    if (outcome === 'accepted') {
+      toast.success("Dziękujemy za dodanie skrótu!");
+    }
+    
+    setDeferredPrompt(null);
+  };
 
   const fetchReports = async (street: string) => {
     setIsLoading(true);
@@ -578,6 +609,14 @@ const Index = () => {
             variant="outline"
           >
             Udostępnij znajomemu
+          </Button>
+          
+          <Button
+            onClick={handleInstallClick}
+            className="w-full"
+            variant="outline"
+          >
+            Dodaj skrót na pulpit
           </Button>
         </section>
 

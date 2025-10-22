@@ -22,7 +22,11 @@ export const StreetChat = ({ street }: StreetChatProps) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(() => {
+    // Load notification preference from localStorage
+    const saved = localStorage.getItem(`notifications-${street}`);
+    return saved === 'true';
+  });
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const initialLoadRef = useRef(true);
 
@@ -40,8 +44,10 @@ export const StreetChat = ({ street }: StreetChatProps) => {
     }
 
     if (Notification.permission === "granted") {
-      setNotificationsEnabled(!notificationsEnabled);
-      if (!notificationsEnabled) {
+      const newState = !notificationsEnabled;
+      setNotificationsEnabled(newState);
+      localStorage.setItem(`notifications-${street}`, String(newState));
+      if (newState) {
         toast.success("Powiadomienia włączone");
       } else {
         toast.success("Powiadomienia wyłączone");
@@ -53,6 +59,7 @@ export const StreetChat = ({ street }: StreetChatProps) => {
       const permission = await Notification.requestPermission();
       if (permission === "granted") {
         setNotificationsEnabled(true);
+        localStorage.setItem(`notifications-${street}`, 'true');
         toast.success("Powiadomienia włączone");
       } else {
         toast.error("Odmówiono dostępu do powiadomień");

@@ -14,6 +14,30 @@ export type Database = {
   }
   public: {
     Tables: {
+      street_chat_messages: {
+        Row: {
+          created_at: string
+          id: string
+          message: string
+          street: string
+          user_fingerprint: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          message: string
+          street: string
+          user_fingerprint?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          message?: string
+          street?: string
+          user_fingerprint?: string | null
+        }
+        Relationships: []
+      }
       traffic_reports: {
         Row: {
           created_at: string

@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { WeeklyTimeline } from "@/components/WeeklyTimeline";
 import { TodayTimeline } from "@/components/TodayTimeline";
 import { Legend } from "@/components/Legend";
+import { StreetChat } from "@/components/StreetChat";
 import { format } from "date-fns";
 import { pl } from "date-fns/locale";
 
@@ -356,6 +357,11 @@ const Index = () => {
           >
             Udostępnij znajomemu
           </Button>
+        </section>
+
+        {/* Street Chat */}
+        <section>
+          <StreetChat street={selectedStreet} />
         </section>
       </main>
 

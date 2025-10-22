@@ -7,9 +7,8 @@ const corsHeaders = {
 };
 
 const VALID_STREETS = [
-  'Zwycięska', 'Grabiszyńska', 'Powstańców Śląskich', 'Legnicka',
-  'Bielany', 'Muchoborska', 'Kamienna', 'Osobowicka', 'Podwale',
-  'Ślężna', 'Krakowska', 'Strzegomska', 'Wrocławska', 'Armii Krajowej'
+  'Zwycięska', 'Ołtaszyńska', 'Karkonoska', 'Ślężna',
+  'Powstańców Śląskich', 'Grabiszyńska', 'Borowska', 'Buforowa'
 ];
 
 const messageSchema = z.object({

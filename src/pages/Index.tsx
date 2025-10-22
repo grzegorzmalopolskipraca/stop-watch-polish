@@ -360,9 +360,14 @@ const Index = () => {
       </main>
 
       {/* Footer */}
-      <footer className="container max-w-2xl mx-auto px-4 py-6 text-center text-sm text-muted-foreground">
-        Dane społecznościowe. Ostatnia aktualizacja:{" "}
-        {format(lastUpdate, "dd.MM.yyyy, HH:mm", { locale: pl })}
+      <footer className="container max-w-2xl mx-auto px-4 py-6 text-center text-sm text-muted-foreground space-y-2">
+        <p>
+          Dane społecznościowe. Ostatnia aktualizacja:{" "}
+          {format(lastUpdate, "dd.MM.yyyy, HH:mm", { locale: pl })}
+        </p>
+        <p>
+          Ulepszenia i sugestie: kontakt @ ejedzie.pl
+        </p>
       </footer>
     </div>
   );

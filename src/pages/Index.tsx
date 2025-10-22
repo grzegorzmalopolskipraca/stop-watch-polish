@@ -254,9 +254,19 @@ const Index = () => {
         {/* Direction Toggle */}
         <section>
           <Tabs value={direction} onValueChange={setDirection} className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="to_center">Do centrum</TabsTrigger>
-              <TabsTrigger value="from_center">Od centrum</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-2 h-12 bg-muted">
+              <TabsTrigger 
+                value="to_center" 
+                className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:font-bold data-[state=active]:shadow-md"
+              >
+                Do centrum
+              </TabsTrigger>
+              <TabsTrigger 
+                value="from_center"
+                className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:font-bold data-[state=active]:shadow-md"
+              >
+                Od centrum
+              </TabsTrigger>
             </TabsList>
           </Tabs>
         </section>

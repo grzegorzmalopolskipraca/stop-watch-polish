@@ -23,28 +23,35 @@ export const WeeklyTimeline = ({ reports }: WeeklyTimelineProps) => {
     const now = new Date();
     const weekStart = startOfWeek(now, { locale: pl, weekStartsOn: 1 });
     
-    // Create 7 days × 24 hours grid
+    // Create 7 days × 48 blocks (30-minute intervals)
     const grid: { day: Date; hours: string[] }[] = [];
     
     for (let day = 0; day < 7; day++) {
       const currentDay = addDays(weekStart, day);
-      const hours: string[] = [];
+      const blocks: string[] = [];
       
-      for (let hour = 0; hour < 24; hour++) {
-        const hourStart = addHours(new Date(currentDay.setHours(hour, 0, 0, 0)), 0);
-        const hourEnd = addHours(hourStart, 1);
+      // 48 blocks per day (24 hours * 2)
+      for (let block = 0; block < 48; block++) {
+        const hour = Math.floor(block / 2);
+        const minute = (block % 2) * 30;
         
-        // Filter reports for this hour
-        const hourReports = reports.filter((r) => {
+        const blockStart = new Date(currentDay);
+        blockStart.setHours(hour, minute, 0, 0);
+        
+        const blockEnd = new Date(blockStart);
+        blockEnd.setMinutes(blockEnd.getMinutes() + 30);
+        
+        // Filter reports for this 30-minute block
+        const blockReports = reports.filter((r) => {
           const reportTime = new Date(r.reported_at);
-          return reportTime >= hourStart && reportTime < hourEnd;
+          return reportTime >= blockStart && reportTime < blockEnd;
         });
         
         // Calculate majority status
-        if (hourReports.length === 0) {
-          hours.push("neutral");
+        if (blockReports.length === 0) {
+          blocks.push("neutral");
         } else {
-          const statusCounts = hourReports.reduce((acc, r) => {
+          const statusCounts = blockReports.reduce((acc, r) => {
             acc[r.status] = (acc[r.status] || 0) + 1;
             return acc;
           }, {} as Record<string, number>);
@@ -53,11 +60,11 @@ export const WeeklyTimeline = ({ reports }: WeeklyTimelineProps) => {
             ([, a], [, b]) => b - a
           )[0][0];
           
-          hours.push(majorityStatus);
+          blocks.push(majorityStatus);
         }
       }
       
-      grid.push({ day: currentDay, hours });
+      grid.push({ day: currentDay, hours: blocks });
     }
     
     return grid;
@@ -83,7 +90,7 @@ export const WeeklyTimeline = ({ reports }: WeeklyTimelineProps) => {
                   className={`flex-1 h-4 rounded-sm transition-colors ${
                     COLORS[status as keyof typeof COLORS]
                   }`}
-                  title={`${format(day, "dd.MM")} ${hourIndex}:00 - ${status}`}
+                  title={`${format(day, "dd.MM")} ${Math.floor(hourIndex / 2)}:${(hourIndex % 2) * 30 === 0 ? '00' : '30'} - ${status}`}
                 />
               ))}
             </div>
@@ -94,7 +101,7 @@ export const WeeklyTimeline = ({ reports }: WeeklyTimelineProps) => {
         <div className="flex items-center gap-2 pt-1">
           <div className="w-8" />
           <div className="flex-1 flex justify-between text-xs text-muted-foreground">
-            {[0, 6, 12, 18, 23].map((hour) => (
+            {[0, 3, 6, 9, 12, 15, 18, 21, 24].map((hour) => (
               <span key={hour} className="text-center" style={{ width: '1ch' }}>
                 {hour}
               </span>

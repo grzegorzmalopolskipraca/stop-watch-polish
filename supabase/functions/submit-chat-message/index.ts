@@ -138,6 +138,11 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Send push notifications in the background (don't wait for it)
+    supabase.functions.invoke('send-push-notifications', {
+      body: { street, message: sanitizedMessage }
+    }).catch(err => console.error('Push notification error:', err));
+
     return new Response(
       JSON.stringify({ data }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

@@ -243,7 +243,7 @@ export const StreetChat = ({ street }: StreetChatProps) => {
               </Button>
             </div>
             <p className="text-xs text-muted-foreground mt-2">
-              * Osoby używające wulgaryzmów i zachowujące się nieprzyzwoicie będą blokowane całkowicie, by nie mogły wejść na tą stronę
+              * Osoby używające wulgaryzmów i zachowujące się nieprzyzwoicie będą blokowane całkowicie, by nie mogły wejść na tą stronę już wcale. To jest strona niekomercyjna, można się wygłupiać ale trzeba zachować dobre obyczaje. Dziękuję
             </p>
           </div>
         </form>

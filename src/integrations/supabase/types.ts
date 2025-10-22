@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      push_subscriptions: {
+        Row: {
+          created_at: string
+          endpoint: string
+          id: string
+          street: string
+          subscription: Json
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          endpoint: string
+          id?: string
+          street: string
+          subscription: Json
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          endpoint?: string
+          id?: string
+          street?: string
+          subscription?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
       rate_limits: {
         Row: {
           action_count: number

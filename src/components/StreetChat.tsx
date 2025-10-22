@@ -242,6 +242,9 @@ export const StreetChat = ({ street }: StreetChatProps) => {
                 {isSubmitting ? "Wysyłanie..." : "Wyślij"}
               </Button>
             </div>
+            <p className="text-xs text-muted-foreground mt-2">
+              * Osoby używające wulgaryzmów i zachowujące się nieprzyzwoicie będą blokowane całkowicie, by nie mogły wejść na tą stronę
+            </p>
           </div>
         </form>
       </div>

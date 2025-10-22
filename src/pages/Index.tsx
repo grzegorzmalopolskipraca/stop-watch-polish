@@ -602,7 +602,7 @@ const Index = () => {
             Dzisiaj odwiedziło nas: <strong>{todayVisitors}</strong> osób
           </p>
           <p>
-            Łącznie: <strong>{totalVisitors}</strong> wizyt
+            Drogi Wrocławiu, odbylismy <strong>{totalVisitors}</strong> wizyt w korku.
           </p>
         </section>
 

@@ -113,6 +113,7 @@ export type Database = {
       traffic_reports: {
         Row: {
           created_at: string
+          direction: string
           id: string
           reported_at: string
           status: string
@@ -121,6 +122,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          direction?: string
           id?: string
           reported_at?: string
           status: string
@@ -129,6 +131,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          direction?: string
           id?: string
           reported_at?: string
           status?: string

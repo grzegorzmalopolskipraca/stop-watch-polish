@@ -78,6 +78,7 @@ const Index = () => {
         .from("traffic_reports")
         .select("*")
         .eq("street", street)
+        .eq("direction", direction)
         .gte("reported_at", weekAgo.toISOString())
         .order("reported_at", { ascending: false });
 
@@ -93,6 +94,7 @@ const Index = () => {
         .from("traffic_reports")
         .select("*")
         .eq("street", street)
+        .eq("direction", direction)
         .gte("reported_at", startOfDay.toISOString())
         .order("reported_at", { ascending: false });
 
@@ -169,7 +171,7 @@ const Index = () => {
       clearInterval(interval);
       supabase.removeChannel(channel);
     };
-  }, [selectedStreet]);
+  }, [selectedStreet, direction]);
 
   const submitReport = async (status: string) => {
     try {
@@ -185,6 +187,7 @@ const Index = () => {
           street: selectedStreet,
           status,
           userFingerprint,
+          direction,
         },
       });
 

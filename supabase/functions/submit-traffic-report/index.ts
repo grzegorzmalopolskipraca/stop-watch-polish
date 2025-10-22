@@ -13,11 +13,13 @@ const VALID_STREETS = [
 ];
 
 const VALID_STATUSES = ['stoi', 'toczy_sie', 'jedzie'];
+const VALID_DIRECTIONS = ['to_center', 'from_center'];
 
 const reportSchema = z.object({
   street: z.enum(VALID_STREETS as [string, ...string[]]),
   status: z.enum(VALID_STATUSES as [string, ...string[]]),
   userFingerprint: z.string().min(1).max(100),
+  direction: z.enum(VALID_DIRECTIONS as [string, ...string[]]),
 });
 
 // Rate limiting: max 1 report per user per street per minute
@@ -85,7 +87,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    const { street, status, userFingerprint } = validationResult.data;
+    const { street, status, userFingerprint, direction } = validationResult.data;
 
     // Check user-street rate limit (1 report per minute)
     const canSubmit = await checkUserStreetRateLimit(supabase, userFingerprint, street);
@@ -99,6 +101,7 @@ Deno.serve(async (req) => {
           status,
           user_fingerprint: userFingerprint,
           reported_at: new Date().toISOString(),
+          direction,
         });
 
       if (error) {

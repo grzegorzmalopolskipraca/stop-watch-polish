@@ -336,6 +336,14 @@ const Index = () => {
           <TodayTimeline reports={todayReports} street={selectedStreet} />
         </section>
 
+        {/* Last Update Info */}
+        <section className="text-center text-sm text-muted-foreground">
+          <p>
+            Dane społecznościowe. Ostatnia aktualizacja:{" "}
+            {format(lastUpdate, "dd.MM.yyyy, HH:mm", { locale: pl })}
+          </p>
+        </section>
+
         {/* Weekly Timeline */}
         <section className="bg-card rounded-lg p-5 border border-border">
           <WeeklyTimeline reports={weeklyReports} />
@@ -415,11 +423,7 @@ const Index = () => {
       </main>
 
       {/* Footer */}
-      <footer className="container max-w-2xl mx-auto px-4 py-6 text-center text-sm text-muted-foreground space-y-2">
-        <p>
-          Dane społecznościowe. Ostatnia aktualizacja:{" "}
-          {format(lastUpdate, "dd.MM.yyyy, HH:mm", { locale: pl })}
-        </p>
+      <footer className="container max-w-2xl mx-auto px-4 py-6 text-center text-sm text-muted-foreground">
         <p>
           Ulepszenia i sugestie: kontakt @ ejedzie.pl
         </p>

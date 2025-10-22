@@ -279,7 +279,7 @@ const Index = () => {
               <p
                 className={`text-sm ${statusConfig.textColor} opacity-90`}
               >
-                Stan aktualizowany na podstawie zgłoszeń użytkowników.
+                Stan aktualizowany na podstawie zgłoszeń mieszkańców.
               </p>
               {Object.keys(lastTenStats).length > 0 && (
                 <p className={`text-xs mt-2 ${statusConfig.textColor} opacity-80`}>

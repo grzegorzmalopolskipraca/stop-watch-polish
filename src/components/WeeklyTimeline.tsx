@@ -89,6 +89,18 @@ export const WeeklyTimeline = ({ reports }: WeeklyTimelineProps) => {
             </div>
           </div>
         ))}
+        
+        {/* Hour scale */}
+        <div className="flex items-center gap-2 pt-1">
+          <div className="w-8" />
+          <div className="flex-1 flex justify-between text-xs text-muted-foreground">
+            {[0, 6, 12, 18, 23].map((hour) => (
+              <span key={hour} className="text-center" style={{ width: '1ch' }}>
+                {hour}
+              </span>
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   );

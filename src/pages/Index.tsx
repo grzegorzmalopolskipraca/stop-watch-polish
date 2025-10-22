@@ -288,6 +288,73 @@ const Index = () => {
         <section className="bg-card rounded-lg p-5 border border-border">
           <Legend />
         </section>
+
+        {/* Use Cases */}
+        <section className="bg-card rounded-lg p-6 border border-border space-y-4">
+          <h3 className="text-lg font-semibold text-center mb-4">
+            Jak korzystać z serwisu?
+          </h3>
+          <ul className="space-y-3 text-sm">
+            <li className="flex items-start gap-2">
+              <span className="text-primary mt-0.5">•</span>
+              <span>Dodaj info o korkach, informuj sąsiadów</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-primary mt-0.5">•</span>
+              <span>Zobacz czy jest korek, by zdecydować, kiedy pojechać na zakupy</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-primary mt-0.5">•</span>
+              <span>Zobacz czy ulica rano już stoi, by wyjechać wcześniej</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-primary mt-0.5">•</span>
+              <span>Spójrz, które godziny będą lepsze do wyjazdu i powrotu z miasta</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-primary mt-0.5">•</span>
+              <span>Zaplanuj lepsze godziny wyjazdu do pracy lub na basen</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-primary mt-0.5">•</span>
+              <span>Łączmy się w bólu i uśmiechu</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-primary mt-0.5">•</span>
+              <span>Bądźmy dla siebie mili i uprzejmi</span>
+            </li>
+          </ul>
+          <Button
+            onClick={async () => {
+              const url = window.location.href;
+              const title = "Czy stoi?";
+              const text = "Zobacz aktualny stan ruchu na Twojej ulicy!";
+              
+              if (navigator.share) {
+                try {
+                  await navigator.share({ title, text, url });
+                  toast.success("Dziękujemy za udostępnienie!");
+                } catch (error) {
+                  if ((error as Error).name !== "AbortError") {
+                    console.error("Error sharing:", error);
+                  }
+                }
+              } else {
+                try {
+                  await navigator.clipboard.writeText(url);
+                  toast.success("Link skopiowany do schowka!");
+                } catch (error) {
+                  console.error("Error copying to clipboard:", error);
+                  toast.error("Nie można skopiować linku");
+                }
+              }
+            }}
+            className="w-full"
+            variant="outline"
+          >
+            Udostępnij znajomemu
+          </Button>
+        </section>
       </main>
 
       {/* Footer */}

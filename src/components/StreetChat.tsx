@@ -123,7 +123,7 @@ export const StreetChat = ({ street }: StreetChatProps) => {
           jadący samochodem może Cię zabrać, zmniejszając korki.
         </p>
         <p className="text-muted-foreground text-xs">
-          <strong>Przykład:</strong> "Grzeczny 22-latek w czerwonej kurtce na
+          <strong>Przykład:</strong> "Uprzejmy 22-latek w czerwonej kurtce na
           przystanku przy Atalu chce dojechać na Plac Grunwaldzki" → Odpowiedź:
           "Cześć, jadę czerwoną Mazdą 6, będę za 5 minut, mogę Cię zabrać"
         </p>

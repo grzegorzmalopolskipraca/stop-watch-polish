@@ -339,7 +339,7 @@ const Index = () => {
               href="https://ejedzie.pl" 
               className="text-lg font-semibold text-primary hover:text-primary/80 transition-colors whitespace-nowrap"
             >
-              ejedzie.pl
+              e<span className="text-green-600">J</span>edzie.pl
             </a>
           </div>
           

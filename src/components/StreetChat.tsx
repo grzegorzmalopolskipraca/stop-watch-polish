@@ -176,7 +176,7 @@ export const StreetChat = ({ street }: StreetChatProps) => {
   return (
     <div className="space-y-4">
       <div className="bg-primary/10 border-2 border-blue-400 rounded-lg p-5 text-sm space-y-2">
-        <h4 className="text-lg font-bold text-primary">💬 Chat sąsiedzki - {street}</h4>
+        <h4 className="text-lg font-bold text-primary">💬 Chat sąsiedzki (cb radio) - {street}</h4>
         <p>
           Ten chat służy do komunikacji między sąsiadami. Jeśli stoisz na
           przystanku i czekasz na autobus, możesz napisać dokąd jedziesz, a ktoś

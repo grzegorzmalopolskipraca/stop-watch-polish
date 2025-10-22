@@ -323,11 +323,6 @@ const Index = () => {
           <WeeklyTimeline reports={weeklyReports} />
         </section>
 
-        {/* Legend */}
-        <section className="bg-card rounded-lg p-5 border border-border">
-          <Legend />
-        </section>
-
         {/* Use Cases */}
         <section className="bg-card rounded-lg p-6 border border-border space-y-4">
           <h3 className="text-lg font-semibold text-center mb-4">

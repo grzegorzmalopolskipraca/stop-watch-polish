@@ -267,21 +267,9 @@ const Index = () => {
       }, {} as Record<string, number>);
       setLastTenStats(stats);
 
-      // Calculate current status (last 60 minutes)
-      const sixtyMinutesAgo = new Date();
-      sixtyMinutesAgo.setMinutes(sixtyMinutesAgo.getMinutes() - 60);
-
-      const recentReports = (todayData || []).filter(
-        (r) => new Date(r.reported_at) >= sixtyMinutesAgo
-      );
-
-      if (recentReports.length > 0) {
-        const statusCounts = recentReports.reduce((acc, r) => {
-          acc[r.status] = (acc[r.status] || 0) + 1;
-          return acc;
-        }, {} as Record<string, number>);
-
-        const majorityStatus = Object.entries(statusCounts).sort(
+      // Determine current status based on highest count from last 10 minutes
+      if (recentTenMinutes.length > 0 && Object.keys(stats).length > 0) {
+        const majorityStatus = Object.entries(stats).sort(
           ([, a], [, b]) => b - a
         )[0][0];
 

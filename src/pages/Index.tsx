@@ -786,7 +786,7 @@ const Index = () => {
           <h3 className="text-lg font-semibold text-center">
             Przykłady wiadomości na czacie
           </h3>
-          <div className="relative h-32 overflow-hidden">
+          <div className="relative h-64 overflow-hidden">
             <style dangerouslySetInnerHTML={{__html: `
               @keyframes scroll-messages {
                 0% { transform: translateY(0); }

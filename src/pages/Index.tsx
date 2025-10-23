@@ -23,7 +23,7 @@ import { StreetChat } from "@/components/StreetChat";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from "date-fns";
 import { pl } from "date-fns/locale";
-import { ArrowUp } from "lucide-react";
+import { ArrowUp, ArrowDown } from "lucide-react";
 
 const STREETS = [
   "Zwycięska",
@@ -548,8 +548,9 @@ const Index = () => {
               </TabsTrigger>
               <TabsTrigger 
                 value="from_center"
-                className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:font-bold data-[state=active]:shadow-md"
+                className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:font-bold data-[state=active]:shadow-md flex items-center gap-2"
               >
+                <ArrowDown className="w-4 h-4" />
                 Od centrum
               </TabsTrigger>
             </TabsList>

@@ -14,6 +14,30 @@ export type Database = {
   }
   public: {
     Tables: {
+      daily_visit_stats: {
+        Row: {
+          created_at: string
+          id: string
+          updated_at: string
+          visit_count: number
+          visit_date: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          updated_at?: string
+          visit_count?: number
+          visit_date: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          updated_at?: string
+          visit_count?: number
+          visit_date?: string
+        }
+        Relationships: []
+      }
       incident_reports: {
         Row: {
           created_at: string
@@ -41,30 +65,6 @@ export type Database = {
           reported_at?: string
           street?: string
           user_fingerprint?: string | null
-        }
-        Relationships: []
-      }
-      page_visits: {
-        Row: {
-          created_at: string
-          id: string
-          street: string | null
-          user_fingerprint: string | null
-          visited_at: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          street?: string | null
-          user_fingerprint?: string | null
-          visited_at?: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          street?: string | null
-          user_fingerprint?: string | null
-          visited_at?: string
         }
         Relationships: []
       }

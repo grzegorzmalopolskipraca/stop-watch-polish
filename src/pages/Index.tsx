@@ -289,22 +289,25 @@ const Index = () => {
 
   const fetchVisitorStats = async () => {
     try {
-      // Fetch today's visitors count
-      const startOfDay = new Date();
-      startOfDay.setHours(0, 0, 0, 0);
+      // Get today's date in YYYY-MM-DD format
+      const today = new Date().toISOString().split('T')[0];
 
-      const { count: todayCount } = await supabase
-        .from("page_visits")
-        .select("*", { count: "exact", head: true })
-        .gte("visited_at", startOfDay.toISOString());
+      // Fetch today's visitor count
+      const { data: todayData } = await supabase
+        .from("daily_visit_stats")
+        .select("visit_count")
+        .eq("visit_date", today)
+        .maybeSingle();
 
-      // Fetch total visitors count
-      const { count: totalCount } = await supabase
-        .from("page_visits")
-        .select("*", { count: "exact", head: true });
+      // Fetch total visitors count (sum of all visit_count)
+      const { data: allData } = await supabase
+        .from("daily_visit_stats")
+        .select("visit_count");
 
-      setTodayVisitors(todayCount || 0);
-      setTotalVisitors(totalCount || 0);
+      const totalCount = allData?.reduce((sum, record) => sum + record.visit_count, 0) || 0;
+
+      setTodayVisitors(todayData?.visit_count || 0);
+      setTotalVisitors(totalCount);
     } catch (error) {
       console.error("Error fetching visitor stats:", error);
     }
@@ -346,7 +349,6 @@ const Index = () => {
       await supabase.functions.invoke('record-visit', {
         body: {
           userFingerprint,
-          street: selectedStreet,
         },
       });
 

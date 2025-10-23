@@ -16,7 +16,7 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    const { userFingerprint, street } = await req.json();
+    const { userFingerprint } = await req.json();
 
     if (!userFingerprint) {
       return new Response(
@@ -29,14 +29,17 @@ Deno.serve(async (req) => {
     const oneHourAgo = new Date();
     oneHourAgo.setHours(oneHourAgo.getHours() - 1);
 
-    const { data: recentVisits } = await supabase
-      .from('page_visits')
-      .select('id')
-      .eq('user_fingerprint', userFingerprint)
-      .gte('visited_at', oneHourAgo.toISOString())
+    const identifier = `visit_${userFingerprint}`;
+    
+    const { data: recentLimit } = await supabase
+      .from('rate_limits')
+      .select('*')
+      .eq('identifier', identifier)
+      .eq('action_type', 'page_visit')
+      .gte('last_action_at', oneHourAgo.toISOString())
       .limit(1);
 
-    if (recentVisits && recentVisits.length > 0) {
+    if (recentLimit && recentLimit.length > 0) {
       console.log(`Rate limit: User ${userFingerprint} already visited within the last hour`);
       return new Response(
         JSON.stringify({ message: 'Visit already recorded recently' }),
@@ -44,19 +47,60 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Record the visit
-    const { error: insertError } = await supabase
-      .from('page_visits')
-      .insert({
-        user_fingerprint: userFingerprint,
-        street: street || null,
-        visited_at: new Date().toISOString(),
-      });
+    // Get today's date (YYYY-MM-DD format)
+    const today = new Date().toISOString().split('T')[0];
+    
+    // Check if today's record exists
+    const { data: existingRecord, error: fetchError } = await supabase
+      .from('daily_visit_stats')
+      .select('*')
+      .eq('visit_date', today)
+      .maybeSingle();
 
-    if (insertError) {
-      console.error('Insert error:', insertError);
-      throw insertError;
+    if (fetchError) {
+      console.error('Fetch error:', fetchError);
+      throw fetchError;
     }
+
+    if (existingRecord) {
+      // Increment the counter for today
+      const { error: updateError } = await supabase
+        .from('daily_visit_stats')
+        .update({ 
+          visit_count: existingRecord.visit_count + 1,
+          updated_at: new Date().toISOString()
+        })
+        .eq('visit_date', today);
+
+      if (updateError) {
+        console.error('Update error:', updateError);
+        throw updateError;
+      }
+      
+      console.log(`Incremented visit count for ${today} to ${existingRecord.visit_count + 1}`);
+    } else {
+      // Create new record for today with count 1
+      const { error: insertError } = await supabase
+        .from('daily_visit_stats')
+        .insert({
+          visit_date: today,
+          visit_count: 1,
+        });
+
+      if (insertError) {
+        console.error('Insert error:', insertError);
+        throw insertError;
+      }
+      
+      console.log(`Created new visit record for ${today} with count 1`);
+    }
+
+    // Update rate limit
+    await supabase.from('rate_limits').insert({
+      identifier,
+      action_type: 'page_visit',
+      action_count: 1,
+    });
 
     return new Response(
       JSON.stringify({ message: 'Visit recorded successfully' }),

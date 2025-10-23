@@ -15,6 +15,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { WeeklyTimeline } from "@/components/WeeklyTimeline";
 import { TodayTimeline } from "@/components/TodayTimeline";
@@ -83,6 +93,7 @@ const Index = () => {
   const [showInstallDialog, setShowInstallDialog] = useState(false);
   const [showDonationDialog, setShowDonationDialog] = useState(false);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+  const [pendingIncident, setPendingIncident] = useState<{type: string; emoji: string} | null>(null);
 
   // Capture the install prompt event
   useEffect(() => {
@@ -667,7 +678,7 @@ const Index = () => {
             ].map((incident) => (
               <Button
                 key={incident.type}
-                onClick={() => submitIncidentReport(incident.type)}
+                onClick={() => setPendingIncident(incident)}
                 variant="outline"
                 className="h-20 flex flex-col gap-1 text-xs"
               >
@@ -963,6 +974,33 @@ const Index = () => {
           </Button>
         </DialogContent>
       </Dialog>
+
+      {/* Incident Confirmation Dialog */}
+      <AlertDialog open={!!pendingIncident} onOpenChange={(open) => !open && setPendingIncident(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Czy chcesz zgłosić {pendingIncident?.type}?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {pendingIncident?.emoji} Twoje zgłoszenie będzie widoczne przez 20 minut.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Anuluj</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (pendingIncident) {
+                  submitIncidentReport(pendingIncident.type);
+                  setPendingIncident(null);
+                }
+              }}
+            >
+              Zgłoś
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

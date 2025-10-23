@@ -253,9 +253,15 @@ const Index = () => {
 
       setTodayReports(todayData || []);
 
-      // Calculate stats for last 10 reports
-      const lastTen = (todayData || []).slice(0, 10);
-      const stats = lastTen.reduce((acc, r) => {
+      // Calculate stats for reports from last 10 minutes
+      const tenMinutesAgo = new Date();
+      tenMinutesAgo.setMinutes(tenMinutesAgo.getMinutes() - 10);
+      
+      const recentTenMinutes = (todayData || []).filter(
+        (r) => new Date(r.reported_at) >= tenMinutesAgo
+      );
+      
+      const stats = recentTenMinutes.reduce((acc, r) => {
         acc[r.status] = (acc[r.status] || 0) + 1;
         return acc;
       }, {} as Record<string, number>);

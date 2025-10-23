@@ -987,7 +987,7 @@ const Index = () => {
               Czy chcesz zgłosić zdarzenie?
             </AlertDialogTitle>
             <AlertDialogDescription>
-              Upewniam się, czy nie klikłeś przypadkiem
+              Upewniam się, że nie kliknąłeś przypadkiem
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

@@ -460,9 +460,9 @@ const Index = () => {
     setIsProcessingPayment(true);
     try {
       const priceIds: Record<number, string> = {
-        5: 'price_1SLBryJwZG4PdjqZKpErrKLk',
-        10: 'price_1SLBsCJwZG4PdjqZidR5Vq4Q',
-        50: 'price_1SLBsQJwZG4PdjqZDTK78vvi',
+        5: 'price_1SLCZ52ZgeTNci3vXb9RPYCl',
+        10: 'price_1SLCZI2ZgeTNci3vMyBwkWwz',
+        50: 'price_1SLCZU2ZgeTNci3vqaOou3lL',
       };
 
       const { data, error } = await supabase.functions.invoke('create-donation-payment', {

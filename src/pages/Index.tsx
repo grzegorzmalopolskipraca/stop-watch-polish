@@ -984,7 +984,7 @@ const Index = () => {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              Czy chcesz zgłosić {pendingIncident?.type}?
+              Czy chcesz zgłosić zdarzenie?
             </AlertDialogTitle>
             <AlertDialogDescription>
               Upewniam się, czy nie klikłeś przypadkiem

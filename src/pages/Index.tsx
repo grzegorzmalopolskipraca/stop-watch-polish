@@ -456,7 +456,11 @@ const Index = () => {
       }
 
       if (data?.error) {
-        toast.error(data.error);
+        // Silently close dialog for rate limit spam prevention
+        if (data.error === 'rate_limit') {
+          return;
+        }
+        toast.error(data.message || data.error);
         return;
       }
 

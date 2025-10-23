@@ -27,19 +27,19 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Check rate limiting - max 1 incident report per user per street per 10 minutes
-    const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+    // Check rate limiting - max 1 incident report per user per incident type per street per 5 minutes
+    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
     
     const { data: recentReports } = await supabase
       .from('rate_limits')
       .select('*')
       .eq('identifier', userFingerprint)
-      .eq('action_type', `incident_street_${street}`)
-      .gte('last_action_at', tenMinutesAgo);
+      .eq('action_type', `incident_${street}_${incidentType}`)
+      .gte('last_action_at', fiveMinutesAgo);
 
     if (recentReports && recentReports.length > 0) {
       return new Response(
-        JSON.stringify({ error: 'rate_limit', message: 'Możesz zgłosić zdarzenie na tej ulicy ponownie za kilka minut' }),
+        JSON.stringify({ error: 'rate_limit', message: 'Możesz zgłosić to samo zdarzenie ponownie za kilka minut' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 429 }
       );
     }
@@ -64,7 +64,7 @@ Deno.serve(async (req) => {
       .from('rate_limits')
       .upsert({
         identifier: userFingerprint,
-        action_type: `incident_street_${street}`,
+        action_type: `incident_${street}_${incidentType}`,
         action_count: 1,
         last_action_at: new Date().toISOString(),
       });

@@ -893,6 +893,9 @@ const Index = () => {
         <p>
           Mam nadzieję, że strona Ci się podoba.
         </p>
+        <p>
+          Miłego dnia Sąsiedzie.
+        </p>
       </footer>
       
       {/* Install Dialog */}

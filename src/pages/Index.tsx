@@ -624,7 +624,7 @@ const Index = () => {
                     {lastTenStats.jedzie && ` Jedzie: ${lastTenStats.jedzie}`}
                   </p>
                   {trafficTrend && (
-                    <p className={`text-xs mt-1 font-semibold ${statusConfig.textColor}`}>
+                    <p className={`text-sm mt-3 font-semibold ${statusConfig.textColor}`}>
                       {trafficTrend}
                     </p>
                   )}

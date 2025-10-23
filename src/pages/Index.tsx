@@ -891,19 +891,6 @@ const Index = () => {
           Ulepszenia i sugestie piszcie na: grzegorzmalopolskipraca@gmail.com
         </p>
         <p>
-          Stronę i serwery opłacam z własnych pieniędzy.<br />
-          Chcesz by serwis się rozwijał i byś mniej stał w korku, tracił mniej czasu i pieniędzy na paliwo?<br />
-          Możesz postawić mi kawę, bym nie zasnął kodując w nocy{" "}
-          <Button
-            variant="link"
-            className="p-0 h-auto text-sm underline"
-            onClick={() => setShowDonationDialog(true)}
-          >
-            TUTAJ
-          </Button>
-          .
-        </p>
-        <p>
           Mam nadzieję, że strona Ci się podoba.
         </p>
         <p>

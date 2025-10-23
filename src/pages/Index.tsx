@@ -253,9 +253,9 @@ const Index = () => {
 
       setTodayReports(todayData || []);
 
-      // Calculate stats for reports from last 10 minutes
+      // Calculate stats for reports from last 20 minutes
       const tenMinutesAgo = new Date();
-      tenMinutesAgo.setMinutes(tenMinutesAgo.getMinutes() - 10);
+      tenMinutesAgo.setMinutes(tenMinutesAgo.getMinutes() - 20);
       
       const recentTenMinutes = (todayData || []).filter(
         (r) => new Date(r.reported_at) >= tenMinutesAgo
@@ -267,7 +267,7 @@ const Index = () => {
       }, {} as Record<string, number>);
       setLastTenStats(stats);
 
-      // Determine current status based on highest count from last 10 minutes
+      // Determine current status based on highest count from last 20 minutes
       if (recentTenMinutes.length > 0 && Object.keys(stats).length > 0) {
         const majorityStatus = Object.entries(stats).sort(
           ([, a], [, b]) => b - a

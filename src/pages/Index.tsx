@@ -450,8 +450,9 @@ const Index = () => {
       }
 
       if (data?.error) {
-        // Silently close dialog for rate limit spam prevention
+        // Show rate limit message to user
         if (data.error === 'rate_limit') {
+          toast.error(data.message || 'Maks 1 zgłoszenie na 5 minute');
           return;
         }
         toast.error(data.message || data.error);

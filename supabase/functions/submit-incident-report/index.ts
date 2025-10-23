@@ -39,7 +39,7 @@ Deno.serve(async (req) => {
 
     if (recentReports && recentReports.length > 0) {
       return new Response(
-        JSON.stringify({ error: 'rate_limit', message: 'Możesz zgłosić to samo zdarzenie ponownie za kilka minut' }),
+        JSON.stringify({ error: 'rate_limit', message: 'Maks 1 zgłoszenie na 5 minute' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 429 }
       );
     }

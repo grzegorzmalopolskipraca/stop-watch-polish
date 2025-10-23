@@ -22,17 +22,18 @@ const reportSchema = z.object({
   direction: z.enum(VALID_DIRECTIONS as [string, ...string[]]),
 });
 
-// Rate limiting: max 1 report per user per street per minute
-const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute in milliseconds
+// Rate limiting: max 1 report per user per street per direction per 5 minutes
+const RATE_LIMIT_WINDOW = 5 * 60 * 1000; // 5 minutes in milliseconds
 
 async function checkUserStreetRateLimit(
   supabase: any,
   userFingerprint: string,
-  street: string
+  street: string,
+  direction: string
 ): Promise<boolean> {
-  const oneMinuteAgo = new Date(Date.now() - RATE_LIMIT_WINDOW).toISOString();
+  const fiveMinutesAgo = new Date(Date.now() - RATE_LIMIT_WINDOW).toISOString();
   
-  const identifier = `${userFingerprint}_${street}`;
+  const identifier = `${userFingerprint}_${street}_${direction}`;
 
   // Get recent action from this user on this street
   const { data, error } = await supabase
@@ -40,7 +41,7 @@ async function checkUserStreetRateLimit(
     .select('*')
     .eq('identifier', identifier)
     .eq('action_type', 'traffic_report_user_street')
-    .gte('last_action_at', oneMinuteAgo)
+    .gte('last_action_at', fiveMinutesAgo)
     .order('last_action_at', { ascending: false })
     .limit(1);
 
@@ -50,7 +51,7 @@ async function checkUserStreetRateLimit(
   }
 
   if (!data || data.length === 0) {
-    // First action from this user on this street in the last minute
+    // First action from this user on this street and direction in the last 5 minutes
     await supabase.from('rate_limits').insert({
       identifier,
       action_type: 'traffic_report_user_street',
@@ -59,7 +60,7 @@ async function checkUserStreetRateLimit(
     return true; // Allow
   }
 
-  // User has already submitted a report for this street in the last minute
+  // User has already submitted a report for this street and direction in the last 5 minutes
   return false; // Don't allow
 }
 
@@ -89,8 +90,8 @@ Deno.serve(async (req) => {
 
     const { street, status, userFingerprint, direction } = validationResult.data;
 
-    // Check user-street rate limit (1 report per minute)
-    const canSubmit = await checkUserStreetRateLimit(supabase, userFingerprint, street);
+    // Check user-street-direction rate limit (1 report per 5 minutes)
+    const canSubmit = await checkUserStreetRateLimit(supabase, userFingerprint, street, direction);
     
     if (canSubmit) {
       // Insert the traffic report only if rate limit allows
@@ -108,7 +109,7 @@ Deno.serve(async (req) => {
         console.error('Insert error:', error);
       }
     } else {
-      console.log(`Rate limit: User ${userFingerprint} tried to submit again for ${street} within 1 minute`);
+      console.log(`Rate limit: User ${userFingerprint} tried to submit again for ${street} (${direction}) within 5 minutes`);
     }
 
     // Always return success to show "thank you" message

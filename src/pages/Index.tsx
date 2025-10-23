@@ -983,7 +983,7 @@ const Index = () => {
               Czy chcesz zgłosić {pendingIncident?.type}?
             </AlertDialogTitle>
             <AlertDialogDescription>
-              {pendingIncident?.emoji} Twoje zgłoszenie będzie widoczne przez 20 minut.
+              Upewniam się, czy nie klikłeś przypadkiem
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

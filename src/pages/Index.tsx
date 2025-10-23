@@ -880,7 +880,7 @@ const Index = () => {
         <p>
           Stronę i serwery opłacam z własnych pieniędzy.<br />
           Chcesz by serwis się rozwijał i byś mniej stał w korku, tracił mniej czasu i pieniędzy na paliwo?<br />
-          Możesz postawić mi kawę, bym nie zasnął kodując w nocy{" "}
+          Mam nadzieję, że strona Ci się podoba.{" "}
           <Button
             variant="link"
             className="p-0 h-auto text-sm underline"

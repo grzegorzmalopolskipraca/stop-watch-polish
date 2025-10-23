@@ -667,7 +667,7 @@ const Index = () => {
             Zgłoś zdarzenie na drodze
           </h3>
           <p className="text-sm text-muted-foreground text-center">
-            Licznik pokazuje zgłoszenia z ostatnich 20 minut
+            Licznik pokazuje ile osób potwierdziło zgłoszenie
           </p>
           <div className="grid grid-cols-4 gap-2">
             {[

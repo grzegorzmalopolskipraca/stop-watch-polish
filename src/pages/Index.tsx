@@ -878,7 +878,7 @@ const Index = () => {
           Ulepszenia i sugestie piszcie na: grzegorzmalopolskipraca@gmail.com
         </p>
         <p>
-          Stronę i serwery opłacam z prywatnych pieniędzy.<br />
+          Stronę i serwery opłacam z własnych pieniędzy.<br />
           Chcesz by serwis się rozwijał i byś mniej stał w korku, tracił mniej czasu u pieniędzy na paliwo?<br />
           Możesz postawić mi kawę, bym nie zasnął kodując w nocy{" "}
           <Button

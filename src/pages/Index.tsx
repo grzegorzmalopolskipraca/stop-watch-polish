@@ -94,6 +94,7 @@ const Index = () => {
   const [showDonationDialog, setShowDonationDialog] = useState(false);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [pendingIncident, setPendingIncident] = useState<{type: string; emoji: string} | null>(null);
+  const [trafficTrend, setTrafficTrend] = useState<string | null>(null);
 
   // Capture the install prompt event
   useEffect(() => {
@@ -266,6 +267,32 @@ const Index = () => {
         return acc;
       }, {} as Record<string, number>);
       setLastTenStats(stats);
+
+      // Calculate traffic trend based on last two statuses
+      if (recentTenMinutes.length >= 2) {
+        const lastStatus = recentTenMinutes[0].status;
+        const previousStatus = recentTenMinutes[1].status;
+        
+        // Traffic levels: stoi=3 (worst), toczy_sie=2, jedzie=1 (best)
+        const statusLevels: Record<string, number> = {
+          'jedzie': 1,
+          'toczy_sie': 2,
+          'stoi': 3
+        };
+        
+        const lastLevel = statusLevels[lastStatus] || 0;
+        const previousLevel = statusLevels[previousStatus] || 0;
+        
+        if (lastLevel < previousLevel) {
+          setTrafficTrend("Korek maleje");
+        } else if (lastLevel > previousLevel) {
+          setTrafficTrend("Korek rośnie");
+        } else {
+          setTrafficTrend(null);
+        }
+      } else {
+        setTrafficTrend(null);
+      }
 
       // Determine current status based on highest count from last 20 minutes
       if (recentTenMinutes.length > 0 && Object.keys(stats).length > 0) {
@@ -590,11 +617,18 @@ const Index = () => {
                 Stan aktualizowany na podstawie zgłoszeń mieszkańców.
               </p>
               {Object.keys(lastTenStats).length > 0 && (
-                <p className={`text-xs mt-2 ${statusConfig.textColor} opacity-80`}>
-                  {lastTenStats.stoi && `Stoi: ${lastTenStats.stoi}`}
-                  {lastTenStats.toczy_sie && ` Toczy się: ${lastTenStats.toczy_sie}`}
-                  {lastTenStats.jedzie && ` Jedzie: ${lastTenStats.jedzie}`}
-                </p>
+                <>
+                  <p className={`text-xs mt-2 ${statusConfig.textColor} opacity-80`}>
+                    {lastTenStats.stoi && `Stoi: ${lastTenStats.stoi}`}
+                    {lastTenStats.toczy_sie && ` Toczy się: ${lastTenStats.toczy_sie}`}
+                    {lastTenStats.jedzie && ` Jedzie: ${lastTenStats.jedzie}`}
+                  </p>
+                  {trafficTrend && (
+                    <p className={`text-xs mt-1 font-semibold ${statusConfig.textColor}`}>
+                      {trafficTrend}
+                    </p>
+                  )}
+                </>
               )}
             </>
           ) : (

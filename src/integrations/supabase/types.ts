@@ -164,6 +164,24 @@ export type Database = {
         }
         Relationships: []
       }
+      total_visit_counter: {
+        Row: {
+          id: string
+          total_visits: number
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          total_visits?: number
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          total_visits?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       traffic_reports: {
         Row: {
           created_at: string

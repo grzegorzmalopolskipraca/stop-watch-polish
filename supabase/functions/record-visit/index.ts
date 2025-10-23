@@ -95,6 +95,30 @@ Deno.serve(async (req) => {
       console.log(`Created new visit record for ${today} with count 1`);
     }
 
+    // Increment total visit counter
+    const { data: totalCounter } = await supabase
+      .from('total_visit_counter')
+      .select('*')
+      .limit(1)
+      .maybeSingle();
+
+    if (totalCounter) {
+      const { error: updateTotalError } = await supabase
+        .from('total_visit_counter')
+        .update({ 
+          total_visits: totalCounter.total_visits + 1,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', totalCounter.id);
+
+      if (updateTotalError) {
+        console.error('Update total counter error:', updateTotalError);
+        throw updateTotalError;
+      }
+      
+      console.log(`Incremented total visit count to ${totalCounter.total_visits + 1}`);
+    }
+
     // Update rate limit
     await supabase.from('rate_limits').insert({
       identifier,

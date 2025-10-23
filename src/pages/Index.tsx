@@ -299,15 +299,15 @@ const Index = () => {
         .eq("visit_date", today)
         .maybeSingle();
 
-      // Fetch total visitors count (sum of all visit_count)
-      const { data: allData } = await supabase
-        .from("daily_visit_stats")
-        .select("visit_count");
-
-      const totalCount = allData?.reduce((sum, record) => sum + record.visit_count, 0) || 0;
+      // Fetch total visitors count from single record
+      const { data: totalData } = await supabase
+        .from("total_visit_counter")
+        .select("total_visits")
+        .limit(1)
+        .maybeSingle();
 
       setTodayVisitors(todayData?.visit_count || 0);
-      setTotalVisitors(totalCount);
+      setTotalVisitors(totalData?.total_visits || 0);
     } catch (error) {
       console.error("Error fetching visitor stats:", error);
     }

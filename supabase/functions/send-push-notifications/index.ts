@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import webpush from "npm:web-push@3.6.7";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -9,6 +10,13 @@ const corsHeaders = {
 // VAPID keys for Web Push - these should match the public key in pushNotifications.ts
 const VAPID_PUBLIC_KEY = "BMqzXH7fFBP0HEsJV_6KHYLKxEp-gZHDvEYqM0JF9x8xKLmN4VnQV_HBQPYd8ZKjF9WvZ8pN7qLmKJHGFd9sRwU";
 const VAPID_PRIVATE_KEY = Deno.env.get("VAPID_PRIVATE_KEY") || "";
+
+// Configure web-push with VAPID keys
+webpush.setVapidDetails(
+  'mailto:support@ejedzie.pl',
+  VAPID_PUBLIC_KEY,
+  VAPID_PRIVATE_KEY
+);
 
 async function sendPushNotification(subscription: any, payload: any) {
   try {
@@ -24,18 +32,12 @@ async function sendPushNotification(subscription: any, payload: any) {
       },
     });
 
-    // Use Web Push API to send notification
-    const endpoint = subscriptionData.endpoint;
-    const p256dh = subscriptionData.keys.p256dh;
-    const auth = subscriptionData.keys.auth;
+    console.log("Sending push notification to:", subscriptionData.endpoint);
 
-    // For now, we'll just log this - full Web Push implementation requires web-push library
-    console.log("Would send push notification to:", endpoint);
-    console.log("Payload:", notificationPayload);
+    // Send the notification using web-push library
+    await webpush.sendNotification(subscriptionData, notificationPayload);
 
-    // TODO: Implement full Web Push with VAPID
-    // This requires the web-push npm package or equivalent Deno implementation
-    
+    console.log("Push notification sent successfully");
     return true;
   } catch (error) {
     console.error("Error sending push notification:", error);

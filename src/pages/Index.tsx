@@ -311,35 +311,42 @@ const Index = () => {
         }
         
         setCurrentStatus(determinedStatus);
+      } else {
+        // No data in any time window
+        setCurrentStatus(null);
+      }
 
-        // Calculate traffic trend based on last two reports
-        if (result.data && result.data.length >= 2) {
-          const lastStatus = result.data[0].status;
-          const previousStatus = result.data[1].status;
-          
-          // Traffic levels: stoi=3 (worst), toczy_sie=2, jedzie=1 (best)
-          const statusLevels: Record<string, number> = {
-            'jedzie': 1,
-            'toczy_sie': 2,
-            'stoi': 3
-          };
-          
-          const lastLevel = statusLevels[lastStatus] || 0;
-          const previousLevel = statusLevels[previousStatus] || 0;
-          
-          if (lastLevel < previousLevel) {
-            setTrafficTrend("Ruch przyspiesza");
-          } else if (lastLevel > previousLevel) {
-            setTrafficTrend("Ruch zwalnia");
-          } else {
-            setTrafficTrend(null);
-          }
+      // Calculate traffic trend based on last two reports
+      const { data: lastTwoReports, error: trendError } = await supabase
+        .from('traffic_reports')
+        .select('status')
+        .eq('street', street)
+        .eq('direction', direction)
+        .order('reported_at', { ascending: false })
+        .limit(2);
+
+      if (!trendError && lastTwoReports && lastTwoReports.length === 2) {
+        const lastStatus = lastTwoReports[0].status;
+        const previousStatus = lastTwoReports[1].status;
+        
+        // Status hierarchy: jedzie > toczy_sie > stoi
+        const statusLevels: Record<string, number> = {
+          'jedzie': 3,
+          'toczy_sie': 2,
+          'stoi': 1
+        };
+        
+        const lastLevel = statusLevels[lastStatus] || 0;
+        const previousLevel = statusLevels[previousStatus] || 0;
+        
+        if (lastLevel > previousLevel) {
+          setTrafficTrend("Ruch przyspiesza");
+        } else if (lastLevel < previousLevel) {
+          setTrafficTrend("Ruch zwalnia");
         } else {
           setTrafficTrend(null);
         }
       } else {
-        // No data in any time window
-        setCurrentStatus(null);
         setTrafficTrend(null);
       }
 

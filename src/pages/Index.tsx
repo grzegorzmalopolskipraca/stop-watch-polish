@@ -37,16 +37,16 @@ import { ArrowUp, ArrowDown } from "lucide-react";
 
 const STREETS = [
   "Zwycięska",
-  "Ołtaszyńska",
-  "Karkonoska",
-  "Ślężna",
-  "Powstańców Śląskich",
-  "Grabiszyńska",
   "Borowska",
   "Buforowa",
+  "Grabiszyńska",
   "Grota Roweckiego",
+  "Karkonoska",
+  "Ołtaszyńska",
+  "Powstańców Śląskich",
   "Radosna",
   "Sudecka",
+  "Ślężna",
 ];
 
 const STATUS_CONFIG = {

@@ -75,7 +75,10 @@ interface Report {
 }
 
 const Index = () => {
-  const [selectedStreet, setSelectedStreet] = useState<string>("Zwycięska");
+  const [selectedStreet, setSelectedStreet] = useState<string>(() => {
+    const savedStreet = localStorage.getItem('selectedStreet');
+    return savedStreet && STREETS.includes(savedStreet) ? savedStreet : "Zwycięska";
+  });
   const [currentStatus, setCurrentStatus] = useState<string | null>(null);
   const [weeklyReports, setWeeklyReports] = useState<Report[]>([]);
   const [todayReports, setTodayReports] = useState<Report[]>([]);
@@ -95,6 +98,11 @@ const Index = () => {
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [pendingIncident, setPendingIncident] = useState<{type: string; emoji: string} | null>(null);
   const [trafficTrend, setTrafficTrend] = useState<string | null>(null);
+
+  // Save selected street to localStorage
+  useEffect(() => {
+    localStorage.setItem('selectedStreet', selectedStreet);
+  }, [selectedStreet]);
 
   // Capture the install prompt event
   useEffect(() => {

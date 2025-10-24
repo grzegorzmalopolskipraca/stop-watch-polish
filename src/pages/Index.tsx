@@ -782,24 +782,12 @@ const Index = () => {
 
         {/* Incident Reports */}
         <section className="bg-card rounded-lg p-5 border border-border space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="flex-1">
-              <h3 className="text-lg font-semibold text-center">
-                Zgłoś zdarzenie na drodze
-              </h3>
-              <p className="text-sm text-muted-foreground text-center">
-                Licznik pokazuje ile osób potwierdziło zgłoszenie
-              </p>
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleIncidentNotifications}
-              className="gap-2 ml-2"
-            >
-              {incidentNotificationsEnabled ? <Bell className="h-4 w-4" /> : <BellOff className="h-4 w-4" />}
-            </Button>
-          </div>
+          <h3 className="text-lg font-semibold text-center">
+            Zgłoś zdarzenie na drodze
+          </h3>
+          <p className="text-sm text-muted-foreground text-center">
+            Licznik pokazuje ile osób potwierdziło zgłoszenie
+          </p>
           <div className="grid grid-cols-4 gap-2">
             {[
               { type: "Blokada", emoji: "🚧" },
@@ -825,6 +813,24 @@ const Index = () => {
               </Button>
             ))}
           </div>
+          <Button
+            variant="outline"
+            size="lg"
+            onClick={handleIncidentNotifications}
+            className="w-full gap-2 h-14"
+          >
+            {incidentNotificationsEnabled ? (
+              <>
+                <Bell className="h-5 w-5" />
+                <span>Powiadomienia włączone - otrzymasz alert o nowych zdarzeniach</span>
+              </>
+            ) : (
+              <>
+                <BellOff className="h-5 w-5" />
+                <span>Kliknij, aby otrzymywać powiadomienia o nowych zdarzeniach</span>
+              </>
+            )}
+          </Button>
         </section>
 
         {/* Weekly Timeline */}

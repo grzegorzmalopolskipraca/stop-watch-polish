@@ -97,7 +97,7 @@ export const StreetChat = ({ street }: StreetChatProps) => {
           event: "INSERT",
           schema: "public",
           table: "street_chat_messages",
-          filter: `street=eq.${street}`,
+          filter: `street=eq.${encodeURIComponent(street)}`,
         },
         (payload) => {
           const newMsg = payload.new as Message;

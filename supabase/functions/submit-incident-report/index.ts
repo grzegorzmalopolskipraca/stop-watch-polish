@@ -92,7 +92,7 @@ Deno.serve(async (req) => {
   } catch (error) {
     console.error('Error in submit-incident-report function:', error);
     return new Response(
-      JSON.stringify({ error: (error as Error).message }),
+      JSON.stringify({ error: 'Wystąpił błąd podczas zgłaszania zdarzenia' }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
     );
   }

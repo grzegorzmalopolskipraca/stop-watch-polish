@@ -47,8 +47,7 @@ serve(async (req) => {
     });
   } catch (error) {
     console.error("Error creating payment session:", error);
-    const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
-    return new Response(JSON.stringify({ error: errorMessage }), {
+    return new Response(JSON.stringify({ error: "Wystąpił błąd podczas tworzenia płatności" }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 500,
     });

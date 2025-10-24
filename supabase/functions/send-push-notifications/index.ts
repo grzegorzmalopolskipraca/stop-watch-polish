@@ -57,8 +57,7 @@ serve(async (req) => {
     );
   } catch (error) {
     console.error("Error in send-push-notifications:", error);
-    const errorMessage = error instanceof Error ? error.message : "Unknown error";
-    return new Response(JSON.stringify({ error: errorMessage }), {
+    return new Response(JSON.stringify({ error: "Wystąpił błąd podczas wysyłania powiadomień" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

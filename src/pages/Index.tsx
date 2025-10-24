@@ -450,7 +450,11 @@ const Index = () => {
       }
 
       toast.success("Dziękujemy za zgłoszenie!");
-      fetchReports(selectedStreet);
+      // Wait a bit for database to commit, then refresh
+      setTimeout(() => {
+        fetchReports(selectedStreet);
+        fetchIncidentCounts();
+      }, 500);
     } catch (error: any) {
       console.error("Error submitting report:", error);
       toast.error(error.message || "Błąd podczas wysyłania zgłoszenia");

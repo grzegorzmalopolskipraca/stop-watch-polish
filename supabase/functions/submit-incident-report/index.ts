@@ -69,6 +69,20 @@ Deno.serve(async (req) => {
         last_action_at: new Date().toISOString(),
       });
 
+    // Send push notifications to subscribers
+    try {
+      await supabase.functions.invoke('send-push-notifications', {
+        body: {
+          street: `incidents_${street}`,
+          message: `${incidentType} zgłoszony na ${street} (${direction === 'to_center' ? 'do centrum' : 'z centrum'})`,
+        },
+      });
+      console.log('Push notification sent for incident');
+    } catch (notificationError) {
+      console.error('Error sending push notification:', notificationError);
+      // Don't fail the whole request if notification fails
+    }
+
     console.log('Incident report submitted successfully');
 
     return new Response(

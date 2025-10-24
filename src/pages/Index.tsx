@@ -33,7 +33,8 @@ import { StreetChat } from "@/components/StreetChat";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from "date-fns";
 import { pl } from "date-fns/locale";
-import { ArrowUp, ArrowDown } from "lucide-react";
+import { ArrowUp, ArrowDown, Bell, BellOff } from "lucide-react";
+import { subscribeToWonderPush, unsubscribeFromWonderPush, isWonderPushSubscribed } from "@/utils/wonderpush";
 
 const STREETS = [
   "Zwycięska",
@@ -98,10 +99,13 @@ const Index = () => {
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [pendingIncident, setPendingIncident] = useState<{type: string; emoji: string} | null>(null);
   const [trafficTrend, setTrafficTrend] = useState<string | null>(null);
+  const [incidentNotificationsEnabled, setIncidentNotificationsEnabled] = useState(false);
 
   // Save selected street to localStorage
   useEffect(() => {
     localStorage.setItem('selectedStreet', selectedStreet);
+    // Load incident notification preference when street changes
+    setIncidentNotificationsEnabled(isWonderPushSubscribed(`incidents_${selectedStreet}`));
   }, [selectedStreet]);
 
   // Capture the install prompt event
@@ -514,6 +518,33 @@ const Index = () => {
     }
   };
 
+  const handleIncidentNotifications = async () => {
+    if (!("Notification" in window)) {
+      toast.error("Twoja przeglądarka nie obsługuje powiadomień");
+      return;
+    }
+
+    if (incidentNotificationsEnabled) {
+      // Unsubscribe
+      const success = await unsubscribeFromWonderPush(`incidents_${selectedStreet}`);
+      if (success) {
+        setIncidentNotificationsEnabled(false);
+        toast.success("Powiadomienia o zdarzeniach wyłączone");
+      } else {
+        toast.error("Błąd podczas wyłączania powiadomień");
+      }
+    } else {
+      // Subscribe
+      const success = await subscribeToWonderPush(`incidents_${selectedStreet}`);
+      if (success) {
+        setIncidentNotificationsEnabled(true);
+        toast.success("Powiadomienia o zdarzeniach włączone");
+      } else {
+        toast.error("Nie udało się włączyć powiadomień. Sprawdź ustawienia przeglądarki.");
+      }
+    }
+  };
+
   const submitIncidentReport = async (incidentType: string) => {
     try {
       let userFingerprint = localStorage.getItem('userFingerprint');
@@ -751,12 +782,24 @@ const Index = () => {
 
         {/* Incident Reports */}
         <section className="bg-card rounded-lg p-5 border border-border space-y-4">
-          <h3 className="text-lg font-semibold text-center">
-            Zgłoś zdarzenie na drodze
-          </h3>
-          <p className="text-sm text-muted-foreground text-center">
-            Licznik pokazuje ile osób potwierdziło zgłoszenie
-          </p>
+          <div className="flex items-center justify-between">
+            <div className="flex-1">
+              <h3 className="text-lg font-semibold text-center">
+                Zgłoś zdarzenie na drodze
+              </h3>
+              <p className="text-sm text-muted-foreground text-center">
+                Licznik pokazuje ile osób potwierdziło zgłoszenie
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleIncidentNotifications}
+              className="gap-2 ml-2"
+            >
+              {incidentNotificationsEnabled ? <Bell className="h-4 w-4" /> : <BellOff className="h-4 w-4" />}
+            </Button>
+          </div>
           <div className="grid grid-cols-4 gap-2">
             {[
               { type: "Blokada", emoji: "🚧" },

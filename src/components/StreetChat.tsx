@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { pl } from "date-fns/locale";
 import { Bell, BellOff } from "lucide-react";
-import { subscribeToPushNotifications, unsubscribeFromPushNotifications, isPushSubscribed } from "@/utils/pushNotifications";
+import { subscribeToWonderPush, unsubscribeFromWonderPush, isWonderPushSubscribed } from "@/utils/wonderpush";
 
 interface Message {
   id: string;
@@ -29,7 +29,7 @@ export const StreetChat = ({ street }: StreetChatProps) => {
 
   // Load notification preference when street changes
   useEffect(() => {
-    setNotificationsEnabled(isPushSubscribed(street));
+    setNotificationsEnabled(isWonderPushSubscribed(street));
   }, [street]);
 
   const scrollToBottom = () => {
@@ -47,7 +47,7 @@ export const StreetChat = ({ street }: StreetChatProps) => {
 
     if (notificationsEnabled) {
       // Unsubscribe
-      const success = await unsubscribeFromPushNotifications(street);
+      const success = await unsubscribeFromWonderPush(street);
       if (success) {
         setNotificationsEnabled(false);
         toast.success("Powiadomienia wyłączone");
@@ -56,7 +56,7 @@ export const StreetChat = ({ street }: StreetChatProps) => {
       }
     } else {
       // Subscribe
-      const success = await subscribeToPushNotifications(street);
+      const success = await subscribeToWonderPush(street);
       if (success) {
         setNotificationsEnabled(true);
         toast.success("Powiadomienia włączone");

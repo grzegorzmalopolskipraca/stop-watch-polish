@@ -822,12 +822,12 @@ const Index = () => {
             {incidentNotificationsEnabled ? (
               <>
                 <Bell className="h-5 w-5" />
-                <span>Powiadomienia włączone - otrzymasz alert o nowych zdarzeniach</span>
+                <span>Powiadomienia o zdarzeniach włączone</span>
               </>
             ) : (
               <>
                 <BellOff className="h-5 w-5" />
-                <span>Kliknij, aby otrzymywać powiadomienia o nowych zdarzeniach</span>
+                <span>Włącz powiadomienia o nowych zdarzeniach</span>
               </>
             )}
           </Button>

@@ -222,7 +222,7 @@ const Index = () => {
   const fetchReports = async (street: string) => {
     setIsLoading(true);
     try {
-      // Fetch last 7 days of reports
+      // Fetch last 7 days of reports for weekly timeline
       const weekAgo = new Date();
       weekAgo.setDate(weekAgo.getDate() - 7);
 
@@ -235,10 +235,9 @@ const Index = () => {
         .order("reported_at", { ascending: false });
 
       if (weekError) throw weekError;
-
       setWeeklyReports(weekData || []);
 
-      // Fetch today's reports
+      // Fetch today's reports for today timeline
       const startOfDay = new Date();
       startOfDay.setHours(0, 0, 0, 0);
 
@@ -251,58 +250,97 @@ const Index = () => {
         .order("reported_at", { ascending: false });
 
       if (todayError) throw todayError;
-
       setTodayReports(todayData || []);
 
-      // Calculate stats for reports from last 20 minutes
-      const tenMinutesAgo = new Date();
-      tenMinutesAgo.setMinutes(tenMinutesAgo.getMinutes() - 20);
+      // Helper function to get status counts for a time window
+      const getStatusCounts = async (minutesAgo: number) => {
+        const timeAgo = new Date();
+        timeAgo.setMinutes(timeAgo.getMinutes() - minutesAgo);
+        
+        const { data, error } = await supabase
+          .from('traffic_reports')
+          .select('*')
+          .eq('street', street)
+          .eq('direction', direction)
+          .gte('reported_at', timeAgo.toISOString());
+
+        if (error) throw error;
+
+        const stoiCount = data?.filter(r => r.status === 'stoi').length || 0;
+        const toczyCount = data?.filter(r => r.status === 'toczy_sie').length || 0;
+        const jedzieCount = data?.filter(r => r.status === 'jedzie').length || 0;
+        const total = stoiCount + toczyCount + jedzieCount;
+
+        return { stoiCount, toczyCount, jedzieCount, total, data };
+      };
+
+      // Try 20 minutes first
+      let result = await getStatusCounts(20);
       
-      const recentTenMinutes = (todayData || []).filter(
-        (r) => new Date(r.reported_at) >= tenMinutesAgo
-      );
+      // If no data, try 30 minutes
+      if (result.total === 0) {
+        result = await getStatusCounts(30);
+      }
       
-      const stats = recentTenMinutes.reduce((acc, r) => {
-        acc[r.status] = (acc[r.status] || 0) + 1;
-        return acc;
-      }, {} as Record<string, number>);
+      // If still no data, try 60 minutes
+      if (result.total === 0) {
+        result = await getStatusCounts(60);
+      }
+
+      // Set stats for the last time window that had data
+      const stats: Record<string, number> = {};
+      if (result.total > 0) {
+        if (result.stoiCount > 0) stats['stoi'] = result.stoiCount;
+        if (result.toczyCount > 0) stats['toczy_sie'] = result.toczyCount;
+        if (result.jedzieCount > 0) stats['jedzie'] = result.jedzieCount;
+      }
       setLastTenStats(stats);
 
-      // Calculate traffic trend based on last two statuses
-      if (recentTenMinutes.length >= 2) {
-        const lastStatus = recentTenMinutes[0].status;
-        const previousStatus = recentTenMinutes[1].status;
+      // Determine current status based on highest count
+      if (result.total > 0) {
+        const { stoiCount, toczyCount, jedzieCount } = result;
+        const maxCount = Math.max(stoiCount, toczyCount, jedzieCount);
         
-        // Traffic levels: stoi=3 (worst), toczy_sie=2, jedzie=1 (best)
-        const statusLevels: Record<string, number> = {
-          'jedzie': 1,
-          'toczy_sie': 2,
-          'stoi': 3
-        };
+        let determinedStatus: string;
+        if (stoiCount === maxCount) {
+          determinedStatus = 'stoi';
+        } else if (jedzieCount === maxCount) {
+          determinedStatus = 'jedzie';
+        } else {
+          determinedStatus = 'toczy_sie';
+        }
         
-        const lastLevel = statusLevels[lastStatus] || 0;
-        const previousLevel = statusLevels[previousStatus] || 0;
-        
-        if (lastLevel < previousLevel) {
-          setTrafficTrend("Ruch przyspiesza");
-        } else if (lastLevel > previousLevel) {
-          setTrafficTrend("Ruch zwalnia");
+        setCurrentStatus(determinedStatus);
+
+        // Calculate traffic trend based on last two reports
+        if (result.data && result.data.length >= 2) {
+          const lastStatus = result.data[0].status;
+          const previousStatus = result.data[1].status;
+          
+          // Traffic levels: stoi=3 (worst), toczy_sie=2, jedzie=1 (best)
+          const statusLevels: Record<string, number> = {
+            'jedzie': 1,
+            'toczy_sie': 2,
+            'stoi': 3
+          };
+          
+          const lastLevel = statusLevels[lastStatus] || 0;
+          const previousLevel = statusLevels[previousStatus] || 0;
+          
+          if (lastLevel < previousLevel) {
+            setTrafficTrend("Ruch przyspiesza");
+          } else if (lastLevel > previousLevel) {
+            setTrafficTrend("Ruch zwalnia");
+          } else {
+            setTrafficTrend(null);
+          }
         } else {
           setTrafficTrend(null);
         }
       } else {
-        setTrafficTrend(null);
-      }
-
-      // Determine current status based on highest count from last 20 minutes
-      if (recentTenMinutes.length > 0 && Object.keys(stats).length > 0) {
-        const majorityStatus = Object.entries(stats).sort(
-          ([, a], [, b]) => b - a
-        )[0][0];
-
-        setCurrentStatus(majorityStatus);
-      } else {
+        // No data in any time window
         setCurrentStatus(null);
+        setTrafficTrend(null);
       }
 
       setLastUpdate(new Date());

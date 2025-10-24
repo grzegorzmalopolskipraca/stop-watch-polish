@@ -284,9 +284,9 @@ const Index = () => {
         const previousLevel = statusLevels[previousStatus] || 0;
         
         if (lastLevel < previousLevel) {
-          setTrafficTrend("Korek maleje");
+          setTrafficTrend("Ruch przyspiesza");
         } else if (lastLevel > previousLevel) {
-          setTrafficTrend("Korek rośnie");
+          setTrafficTrend("Ruch zwalnia");
         } else {
           setTrafficTrend(null);
         }

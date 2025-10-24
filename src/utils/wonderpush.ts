@@ -23,20 +23,43 @@ export async function subscribeToWonderPush(street: string): Promise<boolean> {
       return false;
     }
 
-    // Wait for WonderPush to be ready
-    await new Promise<void>((resolve) => {
+    console.log("Notification permission granted, initializing WonderPush...");
+
+    // Wait for WonderPush to be ready with timeout
+    await new Promise<void>((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        reject(new Error("WonderPush initialization timeout"));
+      }, 10000); // 10 second timeout
+
       window.WonderPush = window.WonderPush || [];
       window.WonderPush.push(() => {
+        clearTimeout(timeout);
+        console.log("WonderPush is ready");
         resolve();
       });
     });
 
     // Subscribe user to street-specific tag
-    window.WonderPush.push(["subscribeToNotifications"]);
+    console.log("Subscribing to notifications for tag:", `street_${street}`);
+    
+    await new Promise<void>((resolve) => {
+      window.WonderPush.push(["subscribeToNotifications", () => {
+        console.log("Subscribed to notifications");
+        resolve();
+      }]);
+    });
+
     window.WonderPush.push(["putProperties", {
       string_street: street,
     }]);
-    window.WonderPush.push(["addTag", `street_${street}`]);
+    
+    window.WonderPush.push(["addTag", `street_${street}`, (error: any) => {
+      if (error) {
+        console.error("Error adding tag:", error);
+      } else {
+        console.log("Successfully added tag:", `street_${street}`);
+      }
+    }]);
 
     console.log("Subscribed to WonderPush for street:", street);
     

@@ -18,6 +18,13 @@ serve(async (req) => {
 
     console.log(`Sending WonderPush notification for street: ${street}`);
 
+    // Determine if this is an incident notification or chat notification
+    const isIncident = street.startsWith('incidents_');
+    const actualStreet = isIncident ? street.replace('incidents_', '') : street;
+    const title = isIncident 
+      ? `Zdarzenie drogowe - ${actualStreet}`
+      : `Nowa wiadomość na czacie - ${actualStreet}`;
+
     // Send notification via WonderPush REST API
     const response = await fetch(WONDERPUSH_API_URL, {
       method: "POST",
@@ -30,7 +37,7 @@ serve(async (req) => {
         notification: {
           alert: {
             text: message,
-            title: `Nowa wiadomość na czacie - ${street}`,
+            title: title,
           },
         },
         targetTags: [`street_${street}`],

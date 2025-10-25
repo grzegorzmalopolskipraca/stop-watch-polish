@@ -816,24 +816,6 @@ const Index = () => {
               </Button>
             ))}
           </div>
-          <Button
-            variant="outline"
-            size="lg"
-            onClick={handleIncidentNotifications}
-            className="w-full gap-2 h-14"
-          >
-            {incidentNotificationsEnabled ? (
-              <>
-                <Bell className="h-5 w-5" />
-                <span>Powiadomienia o zdarzeniach włączone</span>
-              </>
-            ) : (
-              <>
-                <BellOff className="h-5 w-5" />
-                <span>Włącz powiadomienia o nowych zdarzeniach</span>
-              </>
-            )}
-          </Button>
         </section>
 
         {/* Weekly Timeline */}

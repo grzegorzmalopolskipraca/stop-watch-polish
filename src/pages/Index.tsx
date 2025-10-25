@@ -717,6 +717,16 @@ const Index = () => {
                     {lastTenStats.toczy_sie && ` Toczy się: ${lastTenStats.toczy_sie}`}
                     {lastTenStats.jedzie && ` Jedzie: ${lastTenStats.jedzie}`}
                   </p>
+                  {Object.entries(incidentCounts).map(([incidentType, count]) => {
+                    if (count > 3) {
+                      return (
+                        <p key={incidentType} className={`text-sm mt-3 font-semibold ${statusConfig.textColor} bg-destructive/20 rounded px-3 py-2`}>
+                          ⚠️ Uwaga! {count} razy zgłoszono '{incidentType}' na drodze
+                        </p>
+                      );
+                    }
+                    return null;
+                  })}
                   {trafficTrend && (
                     <p className={`text-sm mt-3 font-semibold ${statusConfig.textColor}`}>
                       {trafficTrend}

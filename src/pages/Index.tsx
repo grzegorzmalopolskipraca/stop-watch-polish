@@ -645,7 +645,7 @@ const Index = () => {
               <label className="text-sm font-medium">Wybierz ulicę w Wrocławiu</label>
               <a 
                 href="https://ejedzie.pl" 
-                className="text-sm font-semibold text-primary hover:text-primary/80 transition-colors whitespace-nowrap"
+                className="text-base font-semibold text-primary hover:text-primary/80 transition-colors whitespace-nowrap"
               >
                 e<span className="text-green-600">J</span>edzie.pl
               </a>

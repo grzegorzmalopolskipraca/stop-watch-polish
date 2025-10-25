@@ -138,8 +138,8 @@ export const GreenWave = ({ reports }: GreenWaveProps) => {
       <p className="text-sm text-muted-foreground">
         Korzystaj z zielonej fali i wyjeżdżaj z domu w czasie mniejszego ruchu. Szybciej zajedziesz i odciążysz korki. Informuj jak wygląda ruch na Twojej ulicy a Zielona Fala będzie się aktualizować
       </p>
-      <p className="text-sm text-muted-foreground">
-        Najlepiej jechać w godzinach
+      <p className="text-sm font-semibold">
+        Najlepiej jechać w godzinach:
       </p>
       
       <div className="space-y-2">

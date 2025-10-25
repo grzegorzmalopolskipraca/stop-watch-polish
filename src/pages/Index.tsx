@@ -1030,9 +1030,6 @@ const Index = () => {
           Ulepszenia i sugestie piszcie na: grzegorzmalopolskipraca@gmail.com
         </p>
         <p>
-          Brakuje Twojej ulicy? Udostępnij tą stronę 5 znajomym z okolicy i napisz do mnie mail z nazwą ulicy.
-        </p>
-        <p>
           Mam nadzieję, że strona Ci się podoba.
         </p>
         <p>

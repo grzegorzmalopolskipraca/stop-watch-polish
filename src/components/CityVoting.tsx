@@ -172,7 +172,7 @@ export const CityVoting = () => {
       </h3>
       
       {/* Add new city */}
-      <div className="flex gap-2">
+      <div className="flex gap-2 hidden">
         <Input
           type="text"
           placeholder="Wpisz nazwę miasta..."

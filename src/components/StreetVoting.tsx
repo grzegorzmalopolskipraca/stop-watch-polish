@@ -77,49 +77,6 @@ export const StreetVoting = ({ existingStreets }: StreetVotingProps) => {
     };
   }, []);
 
-  // Normalize street name to check for duplicates
-  const normalizeStreetName = (name: string): string => {
-    return name.toLowerCase().trim();
-  };
-
-  // Check if street name is similar (without last 3 letters)
-  const isSimilarStreet = (name1: string, name2: string): boolean => {
-    const normalized1 = normalizeStreetName(name1);
-    const normalized2 = normalizeStreetName(name2);
-    
-    if (normalized1 === normalized2) return true;
-    
-    // Check if they're the same without last 3 letters (for Polish declensions)
-    if (normalized1.length > 3 && normalized2.length > 3) {
-      const prefix1 = normalized1.slice(0, -3);
-      const prefix2 = normalized2.slice(0, -3);
-      return prefix1 === prefix2;
-    }
-    
-    return false;
-  };
-
-  // Check if street already exists in the main list or in votes
-  const isStreetDuplicate = (streetName: string): boolean => {
-    const normalized = normalizeStreetName(streetName);
-    
-    // Check against existing streets
-    for (const existingStreet of existingStreets) {
-      if (isSimilarStreet(streetName, existingStreet)) {
-        return true;
-      }
-    }
-    
-    // Check against votes
-    for (const vote of votes) {
-      if (isSimilarStreet(streetName, vote.street_name)) {
-        return true;
-      }
-    }
-    
-    return false;
-  };
-
   // Add or vote for a street
   const handleVote = async (streetName: string, isNewStreet: boolean = false) => {
     if (!userIp) {
@@ -130,55 +87,30 @@ export const StreetVoting = ({ existingStreets }: StreetVotingProps) => {
     setIsLoading(true);
 
     try {
-      // Check if street already exists in main list or similar street exists
-      if (isNewStreet) {
-        if (isStreetDuplicate(streetName)) {
-          toast.error("Ta ulica już jest na liście lub istnieje podobna nazwa");
-          setIsLoading(false);
-          return;
-        }
+      // Call edge function to handle voting with content filtering
+      const { data, error } = await supabase.functions.invoke('submit-street-vote', {
+        body: {
+          streetName: streetName,
+          userFingerprint: userIp,
+          existingStreets: existingStreets,
+        },
+      });
+
+      if (error) {
+        console.error("Error from edge function:", error);
+        throw error;
       }
 
-      // Find existing vote
-      const existingVote = votes.find(
-        (v) => normalizeStreetName(v.street_name) === normalizeStreetName(streetName)
-      );
+      if (data?.error) {
+        toast.error(data.error);
+        setIsLoading(false);
+        return;
+      }
 
-      if (existingVote) {
-        // Check if user already voted
-        if (existingVote.voter_ips.includes(userIp)) {
-          toast.error("Już głosowałeś na tę ulicę");
-          setIsLoading(false);
-          return;
-        }
-
-        // Update vote count
-        const updatedVoterIps = [...existingVote.voter_ips, userIp];
-        const { error } = await supabase
-          .from("street_votes")
-          .update({
-            votes: existingVote.votes + 1,
-            voter_ips: updatedVoterIps,
-          })
-          .eq("id", existingVote.id);
-
-        if (error) throw error;
-        toast.success("Dziękujemy za głos!");
-      } else {
-        // Create new vote
-        const { error } = await supabase
-          .from("street_votes")
-          .insert({
-            street_name: streetName,
-            votes: 1,
-            voter_ips: [userIp],
-          });
-
-        if (error) throw error;
-        toast.success("Dziękujemy za dodanie nowej ulicy!");
+      toast.success(data.message);
+      if (isNewStreet) {
         setNewStreetName("");
       }
-
       await fetchVotes();
     } catch (error) {
       console.error("Error voting:", error);

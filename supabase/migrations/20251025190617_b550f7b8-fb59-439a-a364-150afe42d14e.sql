@@ -1,0 +1,1 @@
+DELETE FROM street_votes WHERE id IN ('80b7bf02-5f2a-47e5-8687-59199ef220a9', 'd47ed482-109c-4b63-95bb-80920c04cf42');

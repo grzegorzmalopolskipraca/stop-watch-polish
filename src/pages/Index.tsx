@@ -30,6 +30,7 @@ import { WeeklyTimeline } from "@/components/WeeklyTimeline";
 import { TodayTimeline } from "@/components/TodayTimeline";
 import { Legend } from "@/components/Legend";
 import { StreetChat } from "@/components/StreetChat";
+import { StreetVoting } from "@/components/StreetVoting";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from "date-fns";
 import { pl } from "date-fns/locale";
@@ -1009,6 +1010,11 @@ const Index = () => {
               </ul>
             </div>
           </div>
+        </section>
+
+        {/* Street Voting */}
+        <section>
+          <StreetVoting existingStreets={STREETS} />
         </section>
       </main>
 

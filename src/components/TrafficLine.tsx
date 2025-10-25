@@ -142,7 +142,7 @@ export const TrafficLine = ({ street, direction, width = "100%" }: Props) => {
   return (
     <div className="w-full space-y-1">
       <div className="flex items-center justify-between text-xs text-muted-foreground">
-        <span>Natężenie ruchu (Google Maps)</span>
+        <span>Natężenie ruchu wzdłuż drogi (Google Maps)</span>
         {!isLoading && <span className="font-medium">{labelMap[level]}</span>}
       </div>
       <div 

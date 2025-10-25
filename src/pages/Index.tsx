@@ -727,7 +727,7 @@ const Index = () => {
           ) : (
             <>
               <h2 className="text-2xl font-bold mb-2 text-muted-foreground">
-                Brak aktualnych danych
+                Brak aktualnych zgłoszeń, ulica przejezdna lub jeszcze mało zgłoszeń. Zaproś sąsiadów.
               </h2>
               <p className="text-sm text-muted-foreground">
                 Bądź pierwszy! Zgłoś aktualny stan ruchu poniżej.

@@ -31,6 +31,7 @@ import { TodayTimeline } from "@/components/TodayTimeline";
 import { Legend } from "@/components/Legend";
 import { StreetChat } from "@/components/StreetChat";
 import { StreetVoting } from "@/components/StreetVoting";
+import { CityVoting } from "@/components/CityVoting";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from "date-fns";
 import { pl } from "date-fns/locale";
@@ -1015,6 +1016,11 @@ const Index = () => {
         {/* Street Voting */}
         <section>
           <StreetVoting existingStreets={STREETS} />
+        </section>
+
+        {/* City Voting */}
+        <section>
+          <CityVoting />
         </section>
       </main>
 

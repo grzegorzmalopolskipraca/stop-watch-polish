@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      city_votes: {
+        Row: {
+          city_name: string
+          created_at: string | null
+          id: string
+          updated_at: string | null
+          voter_ips: Json | null
+          votes: number | null
+        }
+        Insert: {
+          city_name: string
+          created_at?: string | null
+          id?: string
+          updated_at?: string | null
+          voter_ips?: Json | null
+          votes?: number | null
+        }
+        Update: {
+          city_name?: string
+          created_at?: string | null
+          id?: string
+          updated_at?: string | null
+          voter_ips?: Json | null
+          votes?: number | null
+        }
+        Relationships: []
+      }
       daily_visit_stats: {
         Row: {
           created_at: string

@@ -5,20 +5,16 @@ import { Input } from "@/components/ui/input";
 import { ThumbsUp } from "lucide-react";
 import { toast } from "sonner";
 
-interface StreetVote {
+interface CityVote {
   id: string;
-  street_name: string;
+  city_name: string;
   votes: number;
   voter_ips: string[];
 }
 
-interface StreetVotingProps {
-  existingStreets: string[];
-}
-
-export const StreetVoting = ({ existingStreets }: StreetVotingProps) => {
-  const [votes, setVotes] = useState<StreetVote[]>([]);
-  const [newStreetName, setNewStreetName] = useState("");
+export const CityVoting = () => {
+  const [votes, setVotes] = useState<CityVote[]>([]);
+  const [newCityName, setNewCityName] = useState("");
   const [userIp, setUserIp] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
 
@@ -39,7 +35,7 @@ export const StreetVoting = ({ existingStreets }: StreetVotingProps) => {
   const fetchVotes = async () => {
     try {
       const { data, error } = await supabase
-        .from("street_votes")
+        .from("city_votes")
         .select("*")
         .order("votes", { ascending: false });
 
@@ -58,13 +54,13 @@ export const StreetVoting = ({ existingStreets }: StreetVotingProps) => {
 
     // Subscribe to realtime updates
     const channel = supabase
-      .channel("street-votes-updates")
+      .channel("city-votes-updates")
       .on(
         "postgres_changes",
         {
           event: "*",
           schema: "public",
-          table: "street_votes",
+          table: "city_votes",
         },
         () => {
           fetchVotes();
@@ -77,42 +73,17 @@ export const StreetVoting = ({ existingStreets }: StreetVotingProps) => {
     };
   }, []);
 
-  // Normalize street name to check for duplicates
-  const normalizeStreetName = (name: string): string => {
+  // Normalize city name
+  const normalizeCityName = (name: string): string => {
     return name.toLowerCase().trim();
   };
 
-  // Check if street name is similar (without last 3 letters)
-  const isSimilarStreet = (name1: string, name2: string): boolean => {
-    const normalized1 = normalizeStreetName(name1);
-    const normalized2 = normalizeStreetName(name2);
+  // Check if city already exists
+  const isCityDuplicate = (cityName: string): boolean => {
+    const normalized = normalizeCityName(cityName);
     
-    if (normalized1 === normalized2) return true;
-    
-    // Check if they're the same without last 3 letters (for Polish declensions)
-    if (normalized1.length > 3 && normalized2.length > 3) {
-      const prefix1 = normalized1.slice(0, -3);
-      const prefix2 = normalized2.slice(0, -3);
-      return prefix1 === prefix2;
-    }
-    
-    return false;
-  };
-
-  // Check if street already exists in the main list or in votes
-  const isStreetDuplicate = (streetName: string): boolean => {
-    const normalized = normalizeStreetName(streetName);
-    
-    // Check against existing streets
-    for (const existingStreet of existingStreets) {
-      if (isSimilarStreet(streetName, existingStreet)) {
-        return true;
-      }
-    }
-    
-    // Check against votes
     for (const vote of votes) {
-      if (isSimilarStreet(streetName, vote.street_name)) {
+      if (normalizeCityName(vote.city_name) === normalized) {
         return true;
       }
     }
@@ -120,8 +91,8 @@ export const StreetVoting = ({ existingStreets }: StreetVotingProps) => {
     return false;
   };
 
-  // Add or vote for a street
-  const handleVote = async (streetName: string, isNewStreet: boolean = false) => {
+  // Add or vote for a city
+  const handleVote = async (cityName: string, isNewCity: boolean = false) => {
     if (!userIp) {
       toast.error("Nie można zidentyfikować użytkownika");
       return;
@@ -130,32 +101,26 @@ export const StreetVoting = ({ existingStreets }: StreetVotingProps) => {
     setIsLoading(true);
 
     try {
-      // Check if street already exists in main list or similar street exists
-      if (isNewStreet) {
-        if (isStreetDuplicate(streetName)) {
-          toast.error("Ta ulica już jest na liście lub istnieje podobna nazwa");
-          setIsLoading(false);
-          return;
-        }
+      if (isNewCity && isCityDuplicate(cityName)) {
+        toast.error("To miasto już jest na liście");
+        setIsLoading(false);
+        return;
       }
 
-      // Find existing vote
       const existingVote = votes.find(
-        (v) => normalizeStreetName(v.street_name) === normalizeStreetName(streetName)
+        (v) => normalizeCityName(v.city_name) === normalizeCityName(cityName)
       );
 
       if (existingVote) {
-        // Check if user already voted
         if (existingVote.voter_ips.includes(userIp)) {
-          toast.error("Już głosowałeś na tę ulicę");
+          toast.error("Już głosowałeś na to miasto");
           setIsLoading(false);
           return;
         }
 
-        // Update vote count
         const updatedVoterIps = [...existingVote.voter_ips, userIp];
         const { error } = await supabase
-          .from("street_votes")
+          .from("city_votes")
           .update({
             votes: existingVote.votes + 1,
             voter_ips: updatedVoterIps,
@@ -165,18 +130,17 @@ export const StreetVoting = ({ existingStreets }: StreetVotingProps) => {
         if (error) throw error;
         toast.success("Dziękujemy za głos!");
       } else {
-        // Create new vote
         const { error } = await supabase
-          .from("street_votes")
+          .from("city_votes")
           .insert({
-            street_name: streetName,
+            city_name: cityName,
             votes: 1,
             voter_ips: [userIp],
           });
 
         if (error) throw error;
-        toast.success("Dziękujemy za dodanie nowej ulicy!");
-        setNewStreetName("");
+        toast.success("Dziękujemy za dodanie nowego miasta!");
+        setNewCityName("");
       }
 
       await fetchVotes();
@@ -188,42 +152,42 @@ export const StreetVoting = ({ existingStreets }: StreetVotingProps) => {
     }
   };
 
-  const handleAddNewStreet = () => {
-    const trimmedName = newStreetName.trim();
+  const handleAddNewCity = () => {
+    const trimmedName = newCityName.trim();
     if (!trimmedName) {
-      toast.error("Podaj nazwę ulicy");
+      toast.error("Podaj nazwę miasta");
       return;
     }
     handleVote(trimmedName, true);
   };
 
-  const hasUserVoted = (vote: StreetVote): boolean => {
+  const hasUserVoted = (vote: CityVote): boolean => {
     return vote.voter_ips.includes(userIp);
   };
 
   return (
     <div className="bg-card rounded-lg p-5 border border-border space-y-4">
       <h3 className="text-lg font-semibold text-center">
-        Głosuj na ulicę, którą należy tu dodać
+        Głosuj na miasto, które należy tu dodać
       </h3>
       
-      {/* Add new street */}
+      {/* Add new city */}
       <div className="flex gap-2">
         <Input
           type="text"
-          placeholder="Wpisz nazwę ulicy..."
-          value={newStreetName}
-          onChange={(e) => setNewStreetName(e.target.value)}
+          placeholder="Wpisz nazwę miasta..."
+          value={newCityName}
+          onChange={(e) => setNewCityName(e.target.value)}
           onKeyPress={(e) => {
             if (e.key === "Enter") {
-              handleAddNewStreet();
+              handleAddNewCity();
             }
           }}
           className="flex-1"
         />
         <Button
-          onClick={handleAddNewStreet}
-          disabled={isLoading || !newStreetName.trim()}
+          onClick={handleAddNewCity}
+          disabled={isLoading || !newCityName.trim()}
         >
           Dodaj
         </Button>
@@ -233,7 +197,7 @@ export const StreetVoting = ({ existingStreets }: StreetVotingProps) => {
       <div className="space-y-2 max-h-96 overflow-y-auto">
         {votes.length === 0 ? (
           <p className="text-center text-muted-foreground text-sm py-4">
-            Brak głosów. Dodaj pierwszą ulicę!
+            Brak głosów. Dodaj pierwsze miasto!
           </p>
         ) : (
           votes.map((vote) => (
@@ -241,7 +205,7 @@ export const StreetVoting = ({ existingStreets }: StreetVotingProps) => {
               key={vote.id}
               className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
             >
-              <span className="font-medium">{vote.street_name}</span>
+              <span className="font-medium">{vote.city_name}</span>
               <div className="flex items-center gap-2">
                 <span className="text-lg font-bold text-primary">
                   {vote.votes}
@@ -249,7 +213,7 @@ export const StreetVoting = ({ existingStreets }: StreetVotingProps) => {
                 <Button
                   size="sm"
                   variant={hasUserVoted(vote) ? "secondary" : "default"}
-                  onClick={() => handleVote(vote.street_name)}
+                  onClick={() => handleVote(vote.city_name)}
                   disabled={isLoading || hasUserVoted(vote)}
                   className="gap-1"
                 >

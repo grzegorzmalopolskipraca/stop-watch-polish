@@ -630,6 +630,7 @@ const Index = () => {
         <div className="container max-w-2xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between gap-4 mb-3">
             <a href="https://ejedzie.pl" className="block">
+              <p className="text-sm text-muted-foreground mb-1">Zanim wyjedziesz sprawdź</p>
               <h1 className="text-2xl font-bold hover:text-primary transition-colors cursor-pointer">
                 Czy {selectedStreet} stoi?
               </h1>

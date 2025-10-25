@@ -1035,6 +1035,9 @@ const Index = () => {
         <p>
           Miłego dnia Sąsiedzie.
         </p>
+        <p className="text-xs">
+          ps. Na stronie są reklamy by utrzymać serwery
+        </p>
       </footer>
       
       {/* Install Dialog */}

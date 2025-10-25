@@ -705,7 +705,7 @@ const Index = () => {
               <p
                 className={`text-sm ${statusConfig.textColor} opacity-90`}
               >
-                Stan aktualizowany na podstawie zgłoszeń mieszkańców.
+                Informacje na żywo na podstawie zgłoszeń mieszkańców.
               </p>
               {Object.keys(lastTenStats).length > 0 && (
                 <>

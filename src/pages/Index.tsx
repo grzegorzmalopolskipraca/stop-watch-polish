@@ -724,9 +724,6 @@ const Index = () => {
                   )}
                 </>
               )}
-              <div className="mt-4 pt-4 border-t border-white/20">
-                <TrafficLine street={selectedStreet} direction={direction as "to_center" | "from_center"} />
-              </div>
             </>
           ) : (
             <>
@@ -771,8 +768,9 @@ const Index = () => {
         </section>
 
         {/* Today's Timeline */}
-        <section className="bg-card rounded-lg p-5 border border-border">
+        <section className="bg-card rounded-lg p-5 border border-border space-y-4">
           <TodayTimeline reports={todayReports} street={selectedStreet} />
+          <TrafficLine street={selectedStreet} direction={direction as "to_center" | "from_center"} />
         </section>
 
         {/* Last Update Info */}

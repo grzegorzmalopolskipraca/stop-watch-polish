@@ -628,19 +628,21 @@ const Index = () => {
       {/* Sticky Header */}
       <header className="sticky top-0 z-10 bg-card border-b border-border shadow-sm">
         <div className="container max-w-2xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between gap-4 mb-3">
-            <a href="https://ejedzie.pl" className="block">
-              <p className="text-sm text-muted-foreground mb-1">Zanim wyjedziesz sprawdź</p>
-              <h1 className="text-2xl font-bold hover:text-primary transition-colors cursor-pointer">
-                Czy {selectedStreet} stoi?
-              </h1>
-            </a>
-            <a 
-              href="https://ejedzie.pl" 
-              className="text-lg font-semibold text-primary hover:text-primary/80 transition-colors whitespace-nowrap"
-            >
-              e<span className="text-green-600">J</span>edzie.pl
-            </a>
+          <div className="mb-3">
+            <p className="text-sm text-muted-foreground mb-1">Zanim wyjedziesz sprawdź</p>
+            <div className="flex items-center justify-between gap-4">
+              <a href="https://ejedzie.pl" className="block">
+                <h1 className="text-2xl font-bold hover:text-primary transition-colors cursor-pointer">
+                  Czy {selectedStreet} stoi?
+                </h1>
+              </a>
+              <a 
+                href="https://ejedzie.pl" 
+                className="text-2xl font-semibold text-primary hover:text-primary/80 transition-colors whitespace-nowrap"
+              >
+                e<span className="text-green-600">J</span>edzie.pl
+              </a>
+            </div>
           </div>
           
           <div className="space-y-2">

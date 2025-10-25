@@ -643,12 +643,15 @@ const Index = () => {
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <label className="text-sm font-medium">Wybierz ulicę w Wrocławiu</label>
-              <a 
-                href="https://ejedzie.pl" 
-                className="text-base font-semibold text-primary hover:text-primary/80 transition-colors whitespace-nowrap"
-              >
-                e<span className="text-green-600">J</span>edzie.pl
-              </a>
+              <div className="flex flex-col items-end -mt-1">
+                <a 
+                  href="https://ejedzie.pl" 
+                  className="text-base font-semibold text-primary hover:text-primary/80 transition-colors whitespace-nowrap leading-tight"
+                >
+                  e<span className="text-green-600">J</span>edzie.pl
+                </a>
+                <span className="text-[10px] text-muted-foreground">Alpha testy</span>
+              </div>
             </div>
             <Select value={selectedStreet} onValueChange={setSelectedStreet}>
               <SelectTrigger className="w-full">

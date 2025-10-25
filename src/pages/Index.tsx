@@ -630,23 +630,23 @@ const Index = () => {
         <div className="container max-w-2xl mx-auto px-4 py-4">
           <div className="mb-3">
             <p className="text-sm text-muted-foreground mb-1">Zanim wyjedziesz sprawdź</p>
-            <div className="flex items-center justify-between gap-4">
-              <a href="https://ejedzie.pl" className="block">
-                <h1 className="text-2xl font-bold hover:text-primary transition-colors cursor-pointer">
-                  Czy {selectedStreet} stoi?
-                </h1>
-              </a>
+            <a href="https://ejedzie.pl" className="block">
+              <h1 className="text-2xl font-bold hover:text-primary transition-colors cursor-pointer">
+                Czy {selectedStreet} stoi?
+              </h1>
+            </a>
+          </div>
+          
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="text-sm font-medium">Wybierz ulicę w Wrocławiu</label>
               <a 
                 href="https://ejedzie.pl" 
-                className="text-2xl font-semibold text-primary hover:text-primary/80 transition-colors whitespace-nowrap"
+                className="text-sm font-semibold text-primary hover:text-primary/80 transition-colors whitespace-nowrap"
               >
                 e<span className="text-green-600">J</span>edzie.pl
               </a>
             </div>
-          </div>
-          
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Wybierz ulicę w Wrocławiu</label>
             <Select value={selectedStreet} onValueChange={setSelectedStreet}>
               <SelectTrigger className="w-full">
                 <SelectValue />

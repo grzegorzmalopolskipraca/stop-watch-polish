@@ -194,7 +194,7 @@ export const CityVoting = () => {
       </div>
 
       {/* Votes list */}
-      <div className="space-y-2 max-h-96 overflow-y-auto">
+      <div className="space-y-2 max-h-48 overflow-y-auto">
         {votes.length === 0 ? (
           <p className="text-center text-muted-foreground text-sm py-4">
             Brak głosów. Dodaj pierwsze miasto!

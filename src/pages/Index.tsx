@@ -33,6 +33,7 @@ import { StreetChat } from "@/components/StreetChat";
 import { StreetVoting } from "@/components/StreetVoting";
 import { CityVoting } from "@/components/CityVoting";
 import { TrafficLine } from "@/components/TrafficLine";
+import { GreenWave } from "@/components/GreenWave";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from "date-fns";
 import { pl } from "date-fns/locale";
@@ -838,6 +839,11 @@ const Index = () => {
         {/* Weekly Timeline */}
         <section className="bg-card rounded-lg p-5 border border-border">
           <WeeklyTimeline reports={weeklyReports} />
+        </section>
+
+        {/* Green Wave */}
+        <section className="bg-card rounded-lg p-5 border border-border">
+          <GreenWave reports={weeklyReports} />
         </section>
 
         {/* Use Cases */}

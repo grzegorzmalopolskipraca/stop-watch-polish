@@ -797,7 +797,7 @@ const Index = () => {
             Dzisiaj odwiedziło nas: <strong>{todayVisitors}</strong> osób
           </p>
           <p>
-            Petycja: Drogi Wrocławiu, 7137 osób sprawdzało, czy są korki. Pomóż nam redukować korki
+            Petycja: Drogi Wrocławiu, <strong>{totalVisitors}</strong> osób sprawdzało, czy są korki. Pomóż nam redukować korki
           </p>
         </section>
 

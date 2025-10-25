@@ -39,7 +39,22 @@ Deno.serve(async (req) => {
 
     if (recentReports && recentReports.length > 0) {
       return new Response(
-        JSON.stringify({ error: 'rate_limit', message: 'Maks 1 zgłoszenie na 5 minute' }),
+        JSON.stringify({ error: 'rate_limit', message: 'Maks 1 zgłoszenie na 5 minut' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 429 }
+      );
+    }
+
+    // Check global rate limiting - max 2 different incident reports per user per 5 minutes
+    const { data: allRecentReports } = await supabase
+      .from('rate_limits')
+      .select('*')
+      .eq('identifier', userFingerprint)
+      .like('action_type', 'incident_%')
+      .gte('last_action_at', fiveMinutesAgo);
+
+    if (allRecentReports && allRecentReports.length >= 2) {
+      return new Response(
+        JSON.stringify({ error: 'rate_limit', message: 'Maks 2 zgłoszenia w ciągu 5 minut' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 429 }
       );
     }

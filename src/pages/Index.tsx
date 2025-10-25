@@ -32,6 +32,7 @@ import { Legend } from "@/components/Legend";
 import { StreetChat } from "@/components/StreetChat";
 import { StreetVoting } from "@/components/StreetVoting";
 import { CityVoting } from "@/components/CityVoting";
+import { TrafficLine } from "@/components/TrafficLine";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from "date-fns";
 import { pl } from "date-fns/locale";
@@ -723,6 +724,9 @@ const Index = () => {
                   )}
                 </>
               )}
+              <div className="mt-4 pt-4 border-t border-white/20">
+                <TrafficLine street={selectedStreet} direction={direction as "to_center" | "from_center"} />
+              </div>
             </>
           ) : (
             <>

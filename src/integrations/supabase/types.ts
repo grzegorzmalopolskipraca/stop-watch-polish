@@ -164,6 +164,33 @@ export type Database = {
         }
         Relationships: []
       }
+      street_votes: {
+        Row: {
+          created_at: string | null
+          id: string
+          street_name: string
+          updated_at: string | null
+          voter_ips: Json | null
+          votes: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          street_name: string
+          updated_at?: string | null
+          voter_ips?: Json | null
+          votes?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          street_name?: string
+          updated_at?: string | null
+          voter_ips?: Json | null
+          votes?: number | null
+        }
+        Relationships: []
+      }
       total_visit_counter: {
         Row: {
           id: string

@@ -17,3 +17,6 @@ verify_jwt = false
 
 [functions.send-push-notifications]
 verify_jwt = false
+
+[functions.get-traffic-data]
+verify_jwt = false

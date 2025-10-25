@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 type TrafficLevel = "low" | "medium" | "high";
 
@@ -78,60 +79,20 @@ export const TrafficLine = ({ street, direction, width = "100%" }: Props) => {
 
         // Reverse coordinates if direction is from center
         const origin = direction === "from_center" 
-          ? `${coords.end.lat},${coords.end.lng}`
-          : `${coords.start.lat},${coords.start.lng}`;
+          ? { lat: coords.end.lat, lng: coords.end.lng }
+          : { lat: coords.start.lat, lng: coords.start.lng };
         const destination = direction === "from_center"
-          ? `${coords.start.lat},${coords.start.lng}`
-          : `${coords.end.lat},${coords.end.lng}`;
+          ? { lat: coords.start.lat, lng: coords.start.lng }
+          : { lat: coords.end.lat, lng: coords.end.lng };
 
-        const apiKey = "AIzaSyB50VOgmvyil2k_VB9-bV4BBhMiCdhsjGY";
-        const url = `https://routes.googleapis.com/directions/v2:computeRoutes`;
-
-        const body = {
-          origin: {
-            location: {
-              latLng: {
-                latitude: parseFloat(origin.split(',')[0]),
-                longitude: parseFloat(origin.split(',')[1])
-              }
-            }
-          },
-          destination: {
-            location: {
-              latLng: {
-                latitude: parseFloat(destination.split(',')[0]),
-                longitude: parseFloat(destination.split(',')[1])
-              }
-            }
-          },
-          travelMode: "DRIVE",
-          routingPreference: "TRAFFIC_AWARE",
-          departureTime: new Date().toISOString(),
-          computeAlternativeRoutes: false,
-          routeModifiers: {
-            avoidTolls: false,
-            avoidHighways: false,
-            avoidFerries: false
-          },
-          languageCode: "pl",
-          units: "METRIC"
-        };
-
-        const resp = await fetch(url, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "X-Goog-Api-Key": apiKey,
-            "X-Goog-FieldMask": "routes.duration,routes.distanceMeters,routes.polyline.encodedPolyline"
-          },
-          body: JSON.stringify(body)
+        // Call edge function instead of Google API directly
+        const { data: json, error } = await supabase.functions.invoke('get-traffic-data', {
+          body: { origin, destination }
         });
 
-        if (!resp.ok) {
-          throw new Error(`API error: ${resp.status}`);
+        if (error) {
+          throw new Error(error.message);
         }
-
-        const json = await resp.json();
         
         if (json.routes && json.routes.length > 0) {
           const route = json.routes[0];

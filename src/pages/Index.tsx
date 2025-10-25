@@ -1038,6 +1038,15 @@ const Index = () => {
         <p className="text-xs">
           ps. Na stronie są reklamy by utrzymać serwery
         </p>
+        <p className="text-xs mt-2">
+          <a 
+            href="/plakat-promocyjny.png" 
+            download="eJedzie-plakat.png"
+            className="text-primary hover:underline"
+          >
+            Chcesz pomóc promować ten portal wśród sąsiadów? Wydrukuj tą kartkę i umieść ją za szybą.
+          </a>
+        </p>
       </footer>
       
       {/* Install Dialog */}

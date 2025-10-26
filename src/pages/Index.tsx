@@ -516,9 +516,8 @@ const Index = () => {
       }
 
       toast.success("Dziękujemy za zgłoszenie!");
-      // Show RSS ticker after successful report
-      console.log("[Index] Setting showRssTicker to true");
-      setShowRssTicker(true);
+      // RSS ticker disabled - uncomment line below to re-enable
+      // setShowRssTicker(true);
       // Wait a bit for database to commit, then refresh
       setTimeout(() => {
         fetchReports(selectedStreet);
@@ -637,8 +636,8 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* RSS Ticker */}
-      <RssTicker show={showRssTicker} />
+      {/* RSS Ticker - DISABLED */}
+      {/* <RssTicker show={showRssTicker} /> */}
       
       {/* Sticky Header */}
       <header className="sticky top-0 z-10 bg-card border-b border-border shadow-sm">

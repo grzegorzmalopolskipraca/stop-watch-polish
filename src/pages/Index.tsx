@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import {
@@ -1068,6 +1069,20 @@ const Index = () => {
             Chcesz pomóc promować ten portal wśród sąsiadów? Wydrukuj tą kartkę i umieść ją za szybą.
           </a>
         </p>
+        
+        <div className="flex flex-wrap justify-center gap-4 mt-6 pt-4 border-t border-border">
+          <Link to="/o-projekcie" className="text-sm text-primary hover:underline">
+            O projekcie
+          </Link>
+          <span className="text-muted-foreground">•</span>
+          <Link to="/regulamin" className="text-sm text-primary hover:underline">
+            Regulamin i polityka prywatności
+          </Link>
+          <span className="text-muted-foreground">•</span>
+          <Link to="/kontakt" className="text-sm text-primary hover:underline">
+            Kontakt
+          </Link>
+        </div>
       </footer>
       
       {/* Install Dialog */}

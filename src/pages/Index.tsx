@@ -38,7 +38,7 @@ import { GreenWave } from "@/components/GreenWave";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from "date-fns";
 import { pl } from "date-fns/locale";
-import { ArrowUp, ArrowDown, Bell, BellOff, ThumbsUp, Coffee, Pizza } from "lucide-react";
+import { ArrowUp, ArrowDown, Bell, BellOff, ThumbsUp, Coffee, Pizza, Download } from "lucide-react";
 import { subscribeToWonderPush, unsubscribeFromWonderPush, isWonderPushSubscribed } from "@/utils/wonderpush";
 
 const STREETS = [
@@ -920,6 +920,7 @@ const Index = () => {
             className="w-full"
             variant="outline"
           >
+            <Download className="mr-2 h-4 w-4" />
             Dodaj skrót na pulpit
           </Button>
         </section>

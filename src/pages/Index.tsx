@@ -1041,7 +1041,7 @@ const Index = () => {
         </section>
 
         {/* City Voting */}
-        <section>
+        <section className="hidden">
           <CityVoting />
         </section>
       </main>

@@ -35,6 +35,7 @@ import { StreetVoting } from "@/components/StreetVoting";
 import { CityVoting } from "@/components/CityVoting";
 import { TrafficLine } from "@/components/TrafficLine";
 import { GreenWave } from "@/components/GreenWave";
+import { RssTicker } from "@/components/RssTicker";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from "date-fns";
 import { pl } from "date-fns/locale";
@@ -98,6 +99,7 @@ const Index = () => {
     return currentHour < 13 ? "to_center" : "from_center";
   });
   const [todayVisitors, setTodayVisitors] = useState<number>(0);
+  const [showRssTicker, setShowRssTicker] = useState(false);
   const [totalVisitors, setTotalVisitors] = useState<number>(0);
   const [incidentCounts, setIncidentCounts] = useState<Record<string, number>>({});
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
@@ -514,6 +516,8 @@ const Index = () => {
       }
 
       toast.success("Dziękujemy za zgłoszenie!");
+      // Show RSS ticker after successful report
+      setShowRssTicker(true);
       // Wait a bit for database to commit, then refresh
       setTimeout(() => {
         fetchReports(selectedStreet);
@@ -632,6 +636,9 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* RSS Ticker */}
+      <RssTicker show={showRssTicker} />
+      
       {/* Sticky Header */}
       <header className="sticky top-0 z-10 bg-card border-b border-border shadow-sm">
         <div className="container max-w-2xl mx-auto px-4 py-4">

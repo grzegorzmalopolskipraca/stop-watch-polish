@@ -130,7 +130,49 @@ export const GreenWave = ({ reports }: GreenWaveProps) => {
       });
     }
 
-    return ranges;
+    // Filter ranges to only show 5:00 - 22:00
+    const filteredRanges = ranges.filter(range => {
+      // Convert time string to minutes (e.g., "05:00" -> 300)
+      const [startHour, startMin] = range.start.split(':').map(Number);
+      const startMinutes = startHour * 60 + startMin;
+      
+      const [endHour, endMin] = range.end.split(':').map(Number);
+      const endMinutes = endHour * 60 + endMin;
+      
+      // Only include ranges that overlap with 5:00 (300 min) to 22:00 (1320 min)
+      const displayStart = 5 * 60; // 5:00 AM in minutes
+      const displayEnd = 22 * 60;  // 22:00 in minutes
+      
+      // Check if range overlaps with display window
+      return endMinutes > displayStart && startMinutes < displayEnd;
+    }).map(range => {
+      // Truncate ranges that extend beyond display window
+      const [startHour, startMin] = range.start.split(':').map(Number);
+      const startMinutes = startHour * 60 + startMin;
+      
+      const [endHour, endMin] = range.end.split(':').map(Number);
+      const endMinutes = endHour * 60 + endMin;
+      
+      const displayStart = 5 * 60;
+      const displayEnd = 22 * 60;
+      
+      const adjustedStart = Math.max(startMinutes, displayStart);
+      const adjustedEnd = Math.min(endMinutes, displayEnd);
+      
+      const adjustedStartHour = Math.floor(adjustedStart / 60);
+      const adjustedStartMin = adjustedStart % 60;
+      const adjustedEndHour = Math.floor(adjustedEnd / 60);
+      const adjustedEndMin = adjustedEnd % 60;
+      
+      return {
+        ...range,
+        start: `${String(adjustedStartHour).padStart(2, '0')}:${String(adjustedStartMin).padStart(2, '0')}`,
+        end: `${String(adjustedEndHour).padStart(2, '0')}:${String(adjustedEndMin).padStart(2, '0')}`,
+        durationMinutes: adjustedEnd - adjustedStart,
+      };
+    });
+
+    return filteredRanges;
   }, [reports]);
 
   const formatDuration = (minutes: number): string => {

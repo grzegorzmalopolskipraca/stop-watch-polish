@@ -14,6 +14,9 @@ interface Props {
   width?: string;
 }
 
+// Thresholds for speed in km/h used to color the bar
+const SPEED_THRESHOLDS = { redKmh: 14.4, orangeKmh: 36 };
+
 // Street coordinates for Wrocław
 const STREET_COORDINATES: Record<string, StreetCoordinates> = {
   "Zwycięska": {
@@ -90,11 +93,13 @@ export const TrafficLine = ({ street, direction, width = "100%" }: Props) => {
           : { lat: coords.end.lat, lng: coords.end.lng };
 
         console.log(`[TrafficLine] Calling edge function with origin:`, origin, `destination:`, destination);
-
+        const t0 = performance.now();
         // Call edge function instead of Google API directly
         const { data: json, error } = await supabase.functions.invoke('get-traffic-data', {
           body: { origin, destination }
         });
+        const t1 = performance.now();
+        console.log(`[TrafficLine] Edge function roundtrip: ${(t1 - t0).toFixed(0)} ms`);
 
         if (error) {
           console.error(`[TrafficLine] Edge function error:`, error);
@@ -108,22 +113,32 @@ export const TrafficLine = ({ street, direction, width = "100%" }: Props) => {
           console.log(`[TrafficLine] Route data:`, route);
           
           const duration = parseInt(route.duration?.replace('s', '') || '0');
-          const distance = route.distanceMeters || 1000;
-          
+          const distance = route.distanceMeters || 0;
           console.log(`[TrafficLine] Parsed - duration: ${duration}s, distance: ${distance}m`);
-          
+          if (!duration || duration <= 0 || !distance || distance <= 0) {
+            console.warn(`[TrafficLine] Invalid duration/distance (duration=${duration}, distance=${distance}). Setting level=medium.`);
+            setLevel("medium");
+            return;
+          }
           // Calculate speed (meters per second)
           const speed = distance / duration;
           console.log(`[TrafficLine] Calculated speed: ${speed} m/s (${(speed * 3.6).toFixed(2)} km/h)`);
           
           // Determine traffic level based on speed
-          // Adjusted thresholds for better differentiation
-          let newLevel: TrafficLevel = "low";
-          if (speed < 4) newLevel = "high";      // < 14.4 km/h - heavy traffic/stopped
-          else if (speed < 10) newLevel = "medium"; // < 36 km/h - moderate traffic
-          else newLevel = "low";                   // >= 36 km/h - light traffic
-
-          console.log(`[TrafficLine] Determined traffic level: ${newLevel} (speed: ${speed} m/s, ${(speed * 3.6).toFixed(1)} km/h)`);
+          const speedKmh = speed * 3.6;
+          console.log(`[TrafficLine] Thresholds (km/h): red<${SPEED_THRESHOLDS.redKmh}, orange<${SPEED_THRESHOLDS.orangeKmh}, green>=${SPEED_THRESHOLDS.orangeKmh}`);
+          let newLevel: TrafficLevel;
+          if (!isFinite(speed) || speed <= 0) {
+            console.warn(`[TrafficLine] Invalid speed computed (speed=${speed}). Falling back to medium.`);
+            newLevel = "medium";
+          } else if (speedKmh < SPEED_THRESHOLDS.redKmh) {
+            newLevel = "high";
+          } else if (speedKmh < SPEED_THRESHOLDS.orangeKmh) {
+            newLevel = "medium";
+          } else {
+            newLevel = "low";
+          }
+          console.log(`[TrafficLine] Determined traffic level: ${newLevel} (speed: ${speed.toFixed(3)} m/s, ${speedKmh.toFixed(1)} km/h)`);
           setLevel(newLevel);
         } else {
           console.warn(`[TrafficLine] No routes in response, setting medium level`);
@@ -149,12 +164,18 @@ export const TrafficLine = ({ street, direction, width = "100%" }: Props) => {
     medium: "#f39c12",  // orange - moderate traffic
     high: "#e74c3c"     // red - heavy traffic
   };
+  console.log(`[TrafficLine] Current level=${level}, mapped color=${isLoading ? '#94a3b8' : colorMap[level]}`);
 
   const labelMap: Record<TrafficLevel, string> = {
     low: "Płynny ruch",
     medium: "Umiarkowany ruch",
     high: "Duże korki"
   };
+
+  useEffect(() => {
+    const barColor = isLoading ? '#94a3b8' : colorMap[level];
+    console.log(`[TrafficLine] UI render state -> loading=${isLoading}, level=${level}, color=${barColor}`);
+  }, [isLoading, level]);
 
   return (
     <div className="w-full space-y-1">

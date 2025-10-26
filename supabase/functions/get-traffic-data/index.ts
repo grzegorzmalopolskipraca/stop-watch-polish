@@ -48,6 +48,7 @@ serve(async (req) => {
   }
 
   try {
+    const funcStart = Date.now();
     // Get client IP for rate limiting
     const clientIP = req.headers.get('x-forwarded-for')?.split(',')[0].trim() || 
                      req.headers.get('x-real-ip') || 
@@ -122,6 +123,7 @@ serve(async (req) => {
     console.log('[get-traffic-data] Calling Google Maps API for route:', { origin, destination });
     console.log('[get-traffic-data] Request body:', JSON.stringify(body, null, 2));
 
+    const gStart = Date.now();
     const response = await fetch(url, {
       method: "POST",
       headers: {
@@ -131,8 +133,8 @@ serve(async (req) => {
       },
       body: JSON.stringify(body)
     });
-
-    console.log('[get-traffic-data] Response status:', response.status);
+    const gEnd = Date.now();
+    console.log('[get-traffic-data] Google API HTTP status:', response.status, `latency: ${gEnd - gStart}ms`);
 
     if (!response.ok) {
       const errorText = await response.text();
@@ -142,6 +144,14 @@ serve(async (req) => {
 
     const data = await response.json();
     console.log('[get-traffic-data] Google Maps API response received:', JSON.stringify(data, null, 2));
+    const routesCount = Array.isArray(data?.routes) ? data.routes.length : 0;
+    const first = routesCount > 0 ? data.routes[0] : null;
+    if (first) {
+      console.log('[get-traffic-data] Summary -> routes:', routesCount, 'distanceMeters:', first.distanceMeters, 'duration:', first.duration);
+    } else {
+      console.warn('[get-traffic-data] No routes returned by Google.');
+    }
+    console.log('[get-traffic-data] Function total time:', `${Date.now() - funcStart}ms`);
 
     return new Response(
       JSON.stringify(data),

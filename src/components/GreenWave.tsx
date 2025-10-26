@@ -178,7 +178,7 @@ export const GreenWave = ({ reports }: GreenWaveProps) => {
             ? 'bg-traffic-jedzie/10 border-traffic-jedzie/20' 
             : range.status === 'stoi'
             ? 'bg-traffic-stoi/10 border-traffic-stoi/20'
-            : 'bg-traffic-toczy_sie/10 border-traffic-toczy_sie/20';
+            : 'bg-traffic-toczy/10 border-traffic-toczy/20';
           
           return (
             <div 

@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useEffect, useRef } from "react";
 import { format, startOfDay } from "date-fns";
 import { pl } from "date-fns/locale";
 
@@ -19,6 +19,9 @@ interface TimeRange {
 }
 
 export const GreenWave = ({ reports }: GreenWaveProps) => {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const itemRefs = useRef<(HTMLDivElement | null)[]>([]);
+
   const greenWaveRanges = useMemo(() => {
     if (!reports || reports.length === 0) {
       return [];
@@ -175,6 +178,36 @@ export const GreenWave = ({ reports }: GreenWaveProps) => {
     return filteredRanges;
   }, [reports]);
 
+  // Scroll to current time on mount
+  useEffect(() => {
+    if (greenWaveRanges.length === 0 || !containerRef.current) return;
+
+    const now = new Date();
+    const currentHour = now.getHours();
+    const currentMinute = now.getMinutes();
+    const currentTotalMinutes = currentHour * 60 + currentMinute;
+
+    // Find the index of the time range that contains the current time
+    const currentIndex = greenWaveRanges.findIndex((range) => {
+      const [startHour, startMin] = range.start.split(':').map(Number);
+      const [endHour, endMin] = range.end.split(':').map(Number);
+      const startMinutes = startHour * 60 + startMin;
+      const endMinutes = endHour * 60 + endMin;
+
+      return currentTotalMinutes >= startMinutes && currentTotalMinutes < endMinutes;
+    });
+
+    // If we found a matching range, scroll to it
+    if (currentIndex !== -1 && itemRefs.current[currentIndex]) {
+      setTimeout(() => {
+        itemRefs.current[currentIndex]?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center',
+        });
+      }, 100);
+    }
+  }, [greenWaveRanges]);
+
   const formatDuration = (minutes: number): string => {
     if (minutes < 60) {
       return `${minutes} minut`;
@@ -214,7 +247,7 @@ export const GreenWave = ({ reports }: GreenWaveProps) => {
         Stan ruchu w ciągu dnia:
       </p>
       
-      <div className="space-y-2 h-[45vh] overflow-y-auto pr-2">
+      <div ref={containerRef} className="space-y-2 h-[45vh] overflow-y-auto pr-2">
         {greenWaveRanges.map((range, index) => {
           const bgColor = range.status === 'jedzie' 
             ? 'bg-traffic-jedzie/10 border-traffic-jedzie/20' 
@@ -225,6 +258,7 @@ export const GreenWave = ({ reports }: GreenWaveProps) => {
           return (
             <div 
               key={index}
+              ref={(el) => (itemRefs.current[index] = el)}
               className={`flex items-center justify-between p-3 rounded-lg border ${bgColor}`}
             >
               <div className="flex items-center gap-2">

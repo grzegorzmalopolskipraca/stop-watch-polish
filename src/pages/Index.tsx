@@ -651,7 +651,7 @@ const Index = () => {
                 >
                   e<span className="text-green-600">J</span>edzie.pl
                 </a>
-                <span className="text-[10px] text-muted-foreground">Alpha testy</span>
+                
               </div>
             </div>
             <Select value={selectedStreet} onValueChange={setSelectedStreet}>

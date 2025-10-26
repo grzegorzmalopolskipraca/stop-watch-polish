@@ -178,9 +178,13 @@ export const GreenWave = ({ reports }: GreenWaveProps) => {
     return filteredRanges;
   }, [reports]);
 
-  // Scroll to current time on mount
+  // Scroll to current time on mount (only once per session)
   useEffect(() => {
     if (greenWaveRanges.length === 0 || !containerRef.current) return;
+
+    // Check if we've already scrolled in this session
+    const hasScrolled = sessionStorage.getItem('greenWaveScrolled');
+    if (hasScrolled) return;
 
     const now = new Date();
     const currentHour = now.getHours();
@@ -197,13 +201,27 @@ export const GreenWave = ({ reports }: GreenWaveProps) => {
       return currentTotalMinutes >= startMinutes && currentTotalMinutes < endMinutes;
     });
 
-    // If we found a matching range, scroll to it
-    if (currentIndex !== -1 && itemRefs.current[currentIndex]) {
+    // If we found a matching range, scroll to it within the container only
+    if (currentIndex !== -1 && itemRefs.current[currentIndex] && containerRef.current) {
       setTimeout(() => {
-        itemRefs.current[currentIndex]?.scrollIntoView({
-          behavior: 'smooth',
-          block: 'center',
-        });
+        const container = containerRef.current;
+        const element = itemRefs.current[currentIndex];
+        
+        if (container && element) {
+          // Calculate scroll position to center the element in the container
+          const containerRect = container.getBoundingClientRect();
+          const elementRect = element.getBoundingClientRect();
+          const scrollTop = element.offsetTop - container.offsetTop - (containerRect.height / 2) + (elementRect.height / 2);
+          
+          // Scroll the container, not the page
+          container.scrollTo({
+            top: scrollTop,
+            behavior: 'smooth',
+          });
+          
+          // Mark as scrolled in this session
+          sessionStorage.setItem('greenWaveScrolled', 'true');
+        }
       }, 100);
     }
   }, [greenWaveRanges]);

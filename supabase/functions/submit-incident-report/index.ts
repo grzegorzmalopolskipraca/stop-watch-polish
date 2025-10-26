@@ -5,6 +5,37 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// IP-based rate limiting: max 3 reports per IP per 5 minutes
+async function checkIPRateLimit(supabase: any, clientIP: string): Promise<boolean> {
+  const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+  
+  const { data, error } = await supabase
+    .from('rate_limits')
+    .select('*')
+    .eq('identifier', `ip_${clientIP}`)
+    .eq('action_type', 'incident_report_ip')
+    .gte('last_action_at', fiveMinutesAgo);
+
+  if (error) {
+    console.error('IP rate limit check error:', error);
+    return true; // Fail open
+  }
+
+  if (data && data.length >= 3) {
+    return false; // IP rate limit exceeded
+  }
+
+  // Record this IP request
+  await supabase.from('rate_limits').insert({
+    identifier: `ip_${clientIP}`,
+    action_type: 'incident_report_ip',
+    action_count: 1,
+    last_action_at: new Date().toISOString(),
+  });
+
+  return true;
+}
+
 Deno.serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -15,6 +46,23 @@ Deno.serve(async (req) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Get client IP for rate limiting
+    const clientIP = req.headers.get('x-forwarded-for')?.split(',')[0].trim() || 
+                     req.headers.get('x-real-ip') || 
+                     'unknown';
+    
+    console.log(`Incident report from IP: ${clientIP}`);
+
+    // Check IP-based rate limit first
+    const ipAllowed = await checkIPRateLimit(supabase, clientIP);
+    if (!ipAllowed) {
+      console.log(`IP rate limit exceeded for ${clientIP}`);
+      return new Response(
+        JSON.stringify({ error: 'rate_limit', message: 'Zbyt wiele zgłoszeń z tego adresu IP. Spróbuj ponownie za kilka minut.' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 429 }
+      );
+    }
 
     const { street, incidentType, userFingerprint, direction } = await req.json();
 

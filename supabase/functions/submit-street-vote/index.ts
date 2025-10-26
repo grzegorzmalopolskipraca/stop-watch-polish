@@ -102,6 +102,13 @@ Deno.serve(async (req) => {
     const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
 
+    // Get client IP for additional tracking
+    const clientIP = req.headers.get('x-forwarded-for')?.split(',')[0].trim() || 
+                     req.headers.get('x-real-ip') || 
+                     'unknown';
+    
+    console.log(`Street vote from IP: ${clientIP}`);
+
     // Parse and validate request body
     const body = await req.json();
     const validationResult = streetVoteSchema.safeParse(body);

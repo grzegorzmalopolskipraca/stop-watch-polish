@@ -25,6 +25,37 @@ const reportSchema = z.object({
 // Rate limiting: max 1 report per user per street per direction per 5 minutes
 const RATE_LIMIT_WINDOW = 5 * 60 * 1000; // 5 minutes in milliseconds
 
+// IP-based rate limiting: max 5 reports per IP per 5 minutes
+async function checkIPRateLimit(supabase: any, clientIP: string): Promise<boolean> {
+  const fiveMinutesAgo = new Date(Date.now() - RATE_LIMIT_WINDOW).toISOString();
+  
+  const { data, error } = await supabase
+    .from('rate_limits')
+    .select('*')
+    .eq('identifier', `ip_${clientIP}`)
+    .eq('action_type', 'traffic_report_ip')
+    .gte('last_action_at', fiveMinutesAgo);
+
+  if (error) {
+    console.error('IP rate limit check error:', error);
+    return true; // Fail open
+  }
+
+  if (data && data.length >= 5) {
+    return false; // IP rate limit exceeded
+  }
+
+  // Record this IP request
+  await supabase.from('rate_limits').insert({
+    identifier: `ip_${clientIP}`,
+    action_type: 'traffic_report_ip',
+    action_count: 1,
+    last_action_at: new Date().toISOString(),
+  });
+
+  return true;
+}
+
 async function checkUserStreetRateLimit(
   supabase: any,
   userFingerprint: string,
@@ -74,8 +105,22 @@ Deno.serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Get client IP for rate limiting
-    const clientIP = req.headers.get('x-forwarded-for') || 'unknown';
+    // Get client IP for rate limiting (prioritize x-forwarded-for)
+    const clientIP = req.headers.get('x-forwarded-for')?.split(',')[0].trim() || 
+                     req.headers.get('x-real-ip') || 
+                     'unknown';
+    
+    console.log(`Traffic report from IP: ${clientIP}`);
+
+    // Check IP-based rate limit first (stronger protection)
+    const ipAllowed = await checkIPRateLimit(supabase, clientIP);
+    if (!ipAllowed) {
+      console.log(`IP rate limit exceeded for ${clientIP}`);
+      return new Response(
+        JSON.stringify({ error: 'rate_limit', message: 'Zbyt wiele zgłoszeń z tego adresu IP. Spróbuj ponownie za kilka minut.' }),
+        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
     
     const body = await req.json();
     

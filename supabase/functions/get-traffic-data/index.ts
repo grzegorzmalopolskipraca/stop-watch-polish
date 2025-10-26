@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.76.1';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -10,12 +11,69 @@ interface TrafficRequest {
   destination: { lat: number; lng: number };
 }
 
+// IP-based rate limiting: max 10 requests per IP per minute
+async function checkIPRateLimit(supabase: any, clientIP: string): Promise<boolean> {
+  const oneMinuteAgo = new Date(Date.now() - 60 * 1000).toISOString();
+  
+  const { data, error } = await supabase
+    .from('rate_limits')
+    .select('*')
+    .eq('identifier', `ip_${clientIP}`)
+    .eq('action_type', 'traffic_data_request')
+    .gte('last_action_at', oneMinuteAgo);
+
+  if (error) {
+    console.error('Rate limit check error:', error);
+    return true; // Fail open to avoid blocking legitimate users on errors
+  }
+
+  if (data && data.length >= 10) {
+    return false; // Rate limit exceeded
+  }
+
+  // Record this request
+  await supabase.from('rate_limits').insert({
+    identifier: `ip_${clientIP}`,
+    action_type: 'traffic_data_request',
+    action_count: 1,
+    last_action_at: new Date().toISOString(),
+  });
+
+  return true;
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
+    // Get client IP for rate limiting
+    const clientIP = req.headers.get('x-forwarded-for')?.split(',')[0].trim() || 
+                     req.headers.get('x-real-ip') || 
+                     'unknown';
+    
+    console.log(`Traffic data request from IP: ${clientIP}`);
+
+    // Initialize Supabase client for rate limiting
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
+
+    // Check IP-based rate limit
+    const allowed = await checkIPRateLimit(supabase, clientIP);
+    if (!allowed) {
+      console.log(`Rate limit exceeded for IP: ${clientIP}`);
+      return new Response(
+        JSON.stringify({ error: 'Too many requests. Please try again later.' }),
+        { 
+          status: 429, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
+
     const { origin, destination }: TrafficRequest = await req.json();
     
     const apiKey = Deno.env.get('GOOGLE_MAPS_API_KEY');

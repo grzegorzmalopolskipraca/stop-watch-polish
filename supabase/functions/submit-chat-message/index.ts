@@ -18,7 +18,41 @@ const messageSchema = z.object({
   userFingerprint: z.string().min(1).max(100),
 });
 
-// Rate limiting: max 10 messages per IP per hour
+// IP-based rate limiting: max 3 messages per IP per minute
+async function checkIPRateLimit(supabase: any, clientIP: string): Promise<{ allowed: boolean; message?: string }> {
+  const oneMinuteAgo = new Date(Date.now() - 60 * 1000).toISOString();
+  
+  const { data, error } = await supabase
+    .from('rate_limits')
+    .select('*')
+    .eq('identifier', `ip_${clientIP}`)
+    .eq('action_type', 'chat_message_ip')
+    .gte('last_action_at', oneMinuteAgo);
+
+  if (error) {
+    console.error('IP rate limit check error:', error);
+    return { allowed: true }; // Fail open
+  }
+
+  if (data && data.length >= 3) {
+    return { 
+      allowed: false, 
+      message: 'Zbyt wiele wiadomości z tego adresu IP. Spróbuj ponownie za minutę.' 
+    };
+  }
+
+  // Record this IP request
+  await supabase.from('rate_limits').insert({
+    identifier: `ip_${clientIP}`,
+    action_type: 'chat_message_ip',
+    action_count: 1,
+    last_action_at: new Date().toISOString(),
+  });
+
+  return { allowed: true };
+}
+
+// Rate limiting: max 10 messages per fingerprint per hour
 const RATE_LIMIT_WINDOW = 60 * 60 * 1000; // 1 hour in milliseconds
 const MAX_MESSAGES_PER_HOUR = 10;
 
@@ -93,7 +127,24 @@ Deno.serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const clientIP = req.headers.get('x-forwarded-for') || 'unknown';
+    // Get IP address for rate limiting (prioritize x-forwarded-for)
+    const clientIP = req.headers.get('x-forwarded-for')?.split(',')[0].trim() || 
+                      req.headers.get('x-real-ip') || 
+                      'unknown';
+    console.log(`Chat message request from IP: ${clientIP}`);
+
+    // Check IP-based rate limit first (stronger protection)
+    const ipRateLimitResult = await checkIPRateLimit(supabase, clientIP);
+    if (!ipRateLimitResult.allowed) {
+      console.log(`IP rate limit exceeded for ${clientIP}`);
+      return new Response(
+        JSON.stringify({ 
+          error: 'rate_limit',
+          message: ipRateLimitResult.message 
+        }),
+        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
     
     const body = await req.json();
     
@@ -108,8 +159,8 @@ Deno.serve(async (req) => {
 
     const { street, message, userFingerprint } = validationResult.data;
 
-    // Check rate limit
-    const rateLimitCheck = await checkRateLimit(supabase, clientIP, 'chat_message');
+    // Check fingerprint rate limit (secondary protection)
+    const rateLimitCheck = await checkRateLimit(supabase, userFingerprint, 'chat_message');
     if (!rateLimitCheck.allowed) {
       return new Response(
         JSON.stringify({ error: rateLimitCheck.message }),

@@ -5,6 +5,37 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// IP-based rate limiting: max 2 visits per IP per hour
+async function checkIPRateLimit(supabase: any, clientIP: string): Promise<boolean> {
+  const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+  
+  const { data, error } = await supabase
+    .from('rate_limits')
+    .select('*')
+    .eq('identifier', `ip_${clientIP}`)
+    .eq('action_type', 'visit_recording_ip')
+    .gte('last_action_at', oneHourAgo);
+
+  if (error) {
+    console.error('IP rate limit check error:', error);
+    return true; // Fail open
+  }
+
+  if (data && data.length >= 2) {
+    return false; // IP rate limit exceeded
+  }
+
+  // Record this IP request
+  await supabase.from('rate_limits').insert({
+    identifier: `ip_${clientIP}`,
+    action_type: 'visit_recording_ip',
+    action_count: 1,
+    last_action_at: new Date().toISOString(),
+  });
+
+  return true;
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -15,6 +46,23 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
+
+    // Get client IP for rate limiting
+    const clientIP = req.headers.get('x-forwarded-for')?.split(',')[0].trim() || 
+                     req.headers.get('x-real-ip') || 
+                     'unknown';
+    
+    console.log(`Visit recording from IP: ${clientIP}`);
+
+    // Check IP-based rate limit first
+    const ipAllowed = await checkIPRateLimit(supabase, clientIP);
+    if (!ipAllowed) {
+      console.log(`IP rate limit exceeded for ${clientIP}`);
+      return new Response(
+        JSON.stringify({ message: 'Visit already recorded recently from this IP' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+      );
+    }
 
     const { userFingerprint } = await req.json();
 

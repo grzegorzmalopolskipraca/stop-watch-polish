@@ -15,6 +15,7 @@ interface TimeRange {
   start: string;
   end: string;
   durationMinutes: number;
+  status: 'stoi' | 'toczy_sie' | 'jedzie';
 }
 
 export const GreenWave = ({ reports }: GreenWaveProps) => {
@@ -86,34 +87,38 @@ export const GreenWave = ({ reports }: GreenWaveProps) => {
       });
     }
 
-    // Group consecutive "jedzie" periods
+    // Group consecutive periods of the same status
     const ranges: TimeRange[] = [];
     let rangeStart: string | null = null;
     let rangeStartMinutes = 0;
+    let currentStatus: 'stoi' | 'toczy_sie' | 'jedzie' | null = null;
 
     resultStatusList.forEach((item, index) => {
-      if (item.averageStatus === 'jedzie') {
-        if (rangeStart === null) {
-          rangeStart = item.time;
-          rangeStartMinutes = index * 10;
-        }
-      } else {
-        if (rangeStart !== null) {
-          const endMinutes = index * 10;
-          const durationMinutes = endMinutes - rangeStartMinutes;
-          
-          ranges.push({
-            start: rangeStart,
-            end: item.time,
-            durationMinutes,
-          });
-          rangeStart = null;
-        }
+      if (rangeStart === null) {
+        // Start a new range
+        rangeStart = item.time;
+        rangeStartMinutes = index * 10;
+        currentStatus = item.averageStatus;
+      } else if (item.averageStatus !== currentStatus) {
+        // Status changed, close current range and start new one
+        const endMinutes = index * 10;
+        const durationMinutes = endMinutes - rangeStartMinutes;
+        
+        ranges.push({
+          start: rangeStart,
+          end: item.time,
+          durationMinutes,
+          status: currentStatus!,
+        });
+        
+        rangeStart = item.time;
+        rangeStartMinutes = index * 10;
+        currentStatus = item.averageStatus;
       }
     });
 
-    // Handle case where green wave extends to end of day
-    if (rangeStart !== null) {
+    // Handle the last range that extends to end of day
+    if (rangeStart !== null && currentStatus !== null) {
       const endMinutes = 24 * 60;
       const durationMinutes = endMinutes - rangeStartMinutes;
       
@@ -121,6 +126,7 @@ export const GreenWave = ({ reports }: GreenWaveProps) => {
         start: rangeStart,
         end: '24:00',
         durationMinutes,
+        status: currentStatus,
       });
     }
 
@@ -163,29 +169,37 @@ export const GreenWave = ({ reports }: GreenWaveProps) => {
         (Zielona fala dopiero zbiera dane. Mogą jeszcze nie być dokładne, zależne są od prawidłowych zgłoszeń)
       </p>
       <p className="text-sm font-semibold">
-        Najlepiej jechać w godzinach:
+        Stan ruchu w ciągu dnia:
       </p>
       
       <div className="space-y-2">
-        {greenWaveRanges.map((range, index) => (
-          <div 
-            key={index}
-            className="flex items-center justify-between p-3 bg-traffic-jedzie/10 rounded-lg border border-traffic-jedzie/20"
-          >
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-medium">
-                {range.start}
-              </span>
-              <span className="text-muted-foreground">do</span>
-              <span className="text-sm font-medium">
-                {range.end}
+        {greenWaveRanges.map((range, index) => {
+          const bgColor = range.status === 'jedzie' 
+            ? 'bg-traffic-jedzie/10 border-traffic-jedzie/20' 
+            : range.status === 'stoi'
+            ? 'bg-traffic-stoi/10 border-traffic-stoi/20'
+            : 'bg-traffic-toczy_sie/10 border-traffic-toczy_sie/20';
+          
+          return (
+            <div 
+              key={index}
+              className={`flex items-center justify-between p-3 rounded-lg border ${bgColor}`}
+            >
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium">
+                  {range.start}
+                </span>
+                <span className="text-muted-foreground">do</span>
+                <span className="text-sm font-medium">
+                  {range.end}
+                </span>
+              </div>
+              <span className="text-sm text-muted-foreground">
+                {formatDuration(range.durationMinutes)}
               </span>
             </div>
-            <span className="text-sm text-muted-foreground">
-              {formatDuration(range.durationMinutes)}
-            </span>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

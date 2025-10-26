@@ -8,7 +8,7 @@ const corsHeaders = {
 
 const VALID_STREETS = [
   'Borowska', 'Buforowa', 'Grabiszyńska', 'Grota Roweckiego',
-  'Karkonoska', 'Ołtaszyńska', 'Parafialna', 'Powstańców Śląskich',
+  'Karkonoska', 'Ołtaszyńska', 'Opolska', 'Parafialna', 'Powstańców Śląskich',
   'Radosna', 'Sudecka', 'Ślężna', 'Zwycięska'
 ];
 

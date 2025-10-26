@@ -48,6 +48,7 @@ const STREETS = [
   "Grota Roweckiego",
   "Karkonoska",
   "Ołtaszyńska",
+  "Opolska",
   "Parafialna",
   "Powstańców Śląskich",
   "Radosna",

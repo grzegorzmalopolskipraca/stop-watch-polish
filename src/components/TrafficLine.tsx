@@ -68,14 +68,18 @@ export const TrafficLine = ({ street, direction, width = "100%" }: Props) => {
 
   useEffect(() => {
     async function fetchTraffic() {
+      console.log(`[TrafficLine] Starting fetch for street: ${street}, direction: ${direction}`);
       setIsLoading(true);
       try {
         const coords = STREET_COORDINATES[street];
         if (!coords) {
+          console.warn(`[TrafficLine] No coordinates found for street: ${street}`);
           setLevel("medium");
           setIsLoading(false);
           return;
         }
+
+        console.log(`[TrafficLine] Found coordinates for ${street}:`, coords);
 
         // Reverse coordinates if direction is from center
         const origin = direction === "from_center" 
@@ -85,22 +89,32 @@ export const TrafficLine = ({ street, direction, width = "100%" }: Props) => {
           ? { lat: coords.start.lat, lng: coords.start.lng }
           : { lat: coords.end.lat, lng: coords.end.lng };
 
+        console.log(`[TrafficLine] Calling edge function with origin:`, origin, `destination:`, destination);
+
         // Call edge function instead of Google API directly
         const { data: json, error } = await supabase.functions.invoke('get-traffic-data', {
           body: { origin, destination }
         });
 
         if (error) {
+          console.error(`[TrafficLine] Edge function error:`, error);
           throw new Error(error.message);
         }
+
+        console.log(`[TrafficLine] Received response from edge function:`, json);
         
-        if (json.routes && json.routes.length > 0) {
+        if (json?.routes && json.routes.length > 0) {
           const route = json.routes[0];
+          console.log(`[TrafficLine] Route data:`, route);
+          
           const duration = parseInt(route.duration?.replace('s', '') || '0');
           const distance = route.distanceMeters || 1000;
           
+          console.log(`[TrafficLine] Parsed - duration: ${duration}s, distance: ${distance}m`);
+          
           // Calculate speed (meters per second)
           const speed = distance / duration;
+          console.log(`[TrafficLine] Calculated speed: ${speed} m/s (${(speed * 3.6).toFixed(2)} km/h)`);
           
           // Determine traffic level based on speed
           // Typical city speed: 30-50 km/h (8-14 m/s)
@@ -109,15 +123,18 @@ export const TrafficLine = ({ street, direction, width = "100%" }: Props) => {
           else if (speed < 8) newLevel = "medium"; // < 29 km/h - moderate traffic
           else newLevel = "low";                   // >= 29 km/h - light traffic
 
+          console.log(`[TrafficLine] Determined traffic level: ${newLevel}`);
           setLevel(newLevel);
         } else {
+          console.warn(`[TrafficLine] No routes in response, setting medium level`);
           setLevel("medium");
         }
       } catch (err) {
-        console.error("fetchTraffic error", err);
+        console.error(`[TrafficLine] fetchTraffic error for ${street}:`, err);
         setLevel("medium");
       } finally {
         setIsLoading(false);
+        console.log(`[TrafficLine] Finished fetch for ${street}, final level: ${level}`);
       }
     }
 

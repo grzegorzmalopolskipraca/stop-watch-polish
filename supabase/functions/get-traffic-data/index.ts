@@ -76,10 +76,17 @@ serve(async (req) => {
 
     const { origin, destination }: TrafficRequest = await req.json();
     
+    console.log('[get-traffic-data] Request body:', { origin, destination });
+    
     const apiKey = Deno.env.get('GOOGLE_MAPS_API_KEY');
     if (!apiKey) {
+      console.error('[get-traffic-data] Google Maps API key not configured');
       throw new Error('Google Maps API key not configured');
     }
+
+    // Add 1 minute to current time for departureTime (Google requires future time)
+    const departureTime = new Date(Date.now() + 60000).toISOString();
+    console.log('[get-traffic-data] Using departure time:', departureTime);
 
     const url = 'https://routes.googleapis.com/directions/v2:computeRoutes';
     const body = {
@@ -101,7 +108,7 @@ serve(async (req) => {
       },
       travelMode: "DRIVE",
       routingPreference: "TRAFFIC_AWARE",
-      departureTime: new Date().toISOString(),
+      departureTime: departureTime,
       computeAlternativeRoutes: false,
       routeModifiers: {
         avoidTolls: false,
@@ -112,7 +119,8 @@ serve(async (req) => {
       units: "METRIC"
     };
 
-    console.log('Calling Google Maps API for route:', { origin, destination });
+    console.log('[get-traffic-data] Calling Google Maps API for route:', { origin, destination });
+    console.log('[get-traffic-data] Request body:', JSON.stringify(body, null, 2));
 
     const response = await fetch(url, {
       method: "POST",
@@ -124,14 +132,16 @@ serve(async (req) => {
       body: JSON.stringify(body)
     });
 
+    console.log('[get-traffic-data] Response status:', response.status);
+
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('Google Maps API error:', response.status, errorText);
-      throw new Error(`Google Maps API error: ${response.status}`);
+      console.error('[get-traffic-data] Google Maps API error:', response.status, errorText);
+      throw new Error(`Google Maps API error: ${response.status} - ${errorText}`);
     }
 
     const data = await response.json();
-    console.log('Google Maps API response received:', data);
+    console.log('[get-traffic-data] Google Maps API response received:', JSON.stringify(data, null, 2));
 
     return new Response(
       JSON.stringify(data),

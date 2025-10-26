@@ -42,17 +42,18 @@ import { ArrowUp, ArrowDown, Bell, BellOff, ThumbsUp, Coffee, Pizza } from "luci
 import { subscribeToWonderPush, unsubscribeFromWonderPush, isWonderPushSubscribed } from "@/utils/wonderpush";
 
 const STREETS = [
-  "Zwycięska",
   "Borowska",
   "Buforowa",
   "Grabiszyńska",
   "Grota Roweckiego",
   "Karkonoska",
   "Ołtaszyńska",
+  "Parafialna",
   "Powstańców Śląskich",
   "Radosna",
   "Sudecka",
   "Ślężna",
+  "Zwycięska",
 ];
 
 const STATUS_CONFIG = {

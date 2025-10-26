@@ -7,9 +7,9 @@ const corsHeaders = {
 };
 
 const VALID_STREETS = [
-  'Zwycięska', 'Ołtaszyńska', 'Karkonoska', 'Ślężna',
-  'Powstańców Śląskich', 'Grabiszyńska', 'Borowska', 'Buforowa',
-  'Grota Roweckiego', 'Radosna', 'Sudecka'
+  'Borowska', 'Buforowa', 'Grabiszyńska', 'Grota Roweckiego',
+  'Karkonoska', 'Ołtaszyńska', 'Parafialna', 'Powstańców Śląskich',
+  'Radosna', 'Sudecka', 'Ślężna', 'Zwycięska'
 ];
 
 const VALID_STATUSES = ['stoi', 'toczy_sie', 'jedzie'];

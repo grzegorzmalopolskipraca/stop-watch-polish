@@ -214,7 +214,7 @@ export const GreenWave = ({ reports }: GreenWaveProps) => {
         Stan ruchu w ciągu dnia:
       </p>
       
-      <div className="space-y-2 h-[35vh] overflow-y-auto pr-2">
+      <div className="space-y-2 h-[45vh] overflow-y-auto pr-2">
         {greenWaveRanges.map((range, index) => {
           const bgColor = range.status === 'jedzie' 
             ? 'bg-traffic-jedzie/10 border-traffic-jedzie/20' 

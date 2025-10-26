@@ -1059,7 +1059,7 @@ const Index = () => {
             <Pizza className="w-12 h-12 text-primary" />
           </div>
           <Button
-            onClick={() => setShowDonationDialog(true)}
+            onClick={() => window.open('https://suppi.pl/ejedzie', '_blank')}
             className="w-full h-14 text-lg font-bold"
             size="lg"
           >

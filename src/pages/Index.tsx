@@ -1070,15 +1070,6 @@ const Index = () => {
         <p>
           Ulepszenia i sugestie piszcie na: grzegorzmalopolskipraca@gmail.com
         </p>
-        <p>
-          Mam nadzieję, że strona Ci się podoba.
-        </p>
-        <p>
-          Miłego dnia Sąsiedzie.
-        </p>
-        <p className="text-xs">
-          ps. Na stronie są reklamy by utrzymać serwery
-        </p>
         <p className="text-xs mt-2">
           <a 
             href="/plakat-promocyjny.png" 

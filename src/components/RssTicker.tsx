@@ -56,7 +56,7 @@ export const RssTicker = ({ show }: RssTickerProps) => {
   const duplicatedItems = [...items, ...items];
 
   return (
-    <div className="w-full bg-[#FF8C00] overflow-hidden border-b-2 border-black">
+    <div className="sticky top-0 z-20 w-full bg-traffic-toczy text-traffic-toczy-foreground overflow-hidden border-b border-border">
       <div className="relative h-10 flex items-center">
         <style dangerouslySetInnerHTML={{
           __html: `
@@ -72,14 +72,14 @@ export const RssTicker = ({ show }: RssTickerProps) => {
             }
           `
         }} />
-        <div className="flex gap-8 animate-scroll-left whitespace-nowrap">
+        <div className="flex gap-8 animate-scroll-left whitespace-nowrap px-4">
           {duplicatedItems.map((item, index) => (
             <a
               key={index}
               href={item.link}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-black font-medium hover:underline cursor-pointer"
+              className="font-medium hover:underline cursor-pointer"
             >
               {item.title}
             </a>

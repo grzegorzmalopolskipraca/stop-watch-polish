@@ -117,13 +117,13 @@ export const TrafficLine = ({ street, direction, width = "100%" }: Props) => {
           console.log(`[TrafficLine] Calculated speed: ${speed} m/s (${(speed * 3.6).toFixed(2)} km/h)`);
           
           // Determine traffic level based on speed
-          // Typical city speed: 30-50 km/h (8-14 m/s)
+          // Adjusted thresholds for better differentiation
           let newLevel: TrafficLevel = "low";
-          if (speed < 5) newLevel = "high";      // < 18 km/h - heavy traffic
-          else if (speed < 8) newLevel = "medium"; // < 29 km/h - moderate traffic
-          else newLevel = "low";                   // >= 29 km/h - light traffic
+          if (speed < 4) newLevel = "high";      // < 14.4 km/h - heavy traffic/stopped
+          else if (speed < 10) newLevel = "medium"; // < 36 km/h - moderate traffic
+          else newLevel = "low";                   // >= 36 km/h - light traffic
 
-          console.log(`[TrafficLine] Determined traffic level: ${newLevel}`);
+          console.log(`[TrafficLine] Determined traffic level: ${newLevel} (speed: ${speed} m/s, ${(speed * 3.6).toFixed(1)} km/h)`);
           setLevel(newLevel);
         } else {
           console.warn(`[TrafficLine] No routes in response, setting medium level`);
@@ -134,7 +134,7 @@ export const TrafficLine = ({ street, direction, width = "100%" }: Props) => {
         setLevel("medium");
       } finally {
         setIsLoading(false);
-        console.log(`[TrafficLine] Finished fetch for ${street}, final level: ${level}`);
+        console.log(`[TrafficLine] Finished fetch for ${street}`);
       }
     }
 

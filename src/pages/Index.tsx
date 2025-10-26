@@ -38,7 +38,7 @@ import { GreenWave } from "@/components/GreenWave";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from "date-fns";
 import { pl } from "date-fns/locale";
-import { ArrowUp, ArrowDown, Bell, BellOff } from "lucide-react";
+import { ArrowUp, ArrowDown, Bell, BellOff, ThumbsUp, Coffee, Pizza } from "lucide-react";
 import { subscribeToWonderPush, unsubscribeFromWonderPush, isWonderPushSubscribed } from "@/utils/wonderpush";
 
 const STREETS = [
@@ -1053,6 +1053,11 @@ const Index = () => {
           <h3 className="text-lg font-semibold text-foreground">
             Fajny pomysł, rozwijajmy go
           </h3>
+          <div className="flex justify-center items-center gap-6 py-4">
+            <ThumbsUp className="w-12 h-12 text-primary" />
+            <Coffee className="w-12 h-12 text-primary" />
+            <Pizza className="w-12 h-12 text-primary" />
+          </div>
           <Button
             onClick={() => setShowDonationDialog(true)}
             className="w-full h-14 text-lg font-bold"

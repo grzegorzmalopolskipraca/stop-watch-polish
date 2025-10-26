@@ -33,73 +33,94 @@ export const GreenWave = ({ reports }: GreenWaveProps) => {
       return reportDate >= weekAgo && reportDate <= new Date();
     });
 
-    // Use 15-minute blocks (96 blocks per day: 24 hours * 4)
-    const blockStatus: Record<number, { stoi: number; toczy_sie: number; jedzie: number }> = {};
+    // Use 10-minute intervals (144 intervals per day: 24 hours * 6)
+    interface IntervalStatus {
+      time: string;
+      averageStatus: 'stoi' | 'toczy_sie' | 'jedzie';
+    }
     
-    for (let block = 0; block < 96; block++) {
-      blockStatus[block] = { stoi: 0, toczy_sie: 0, jedzie: 0 };
-    }
+    const resultStatusList: IntervalStatus[] = [];
 
-    relevantReports.forEach((r) => {
-      const reportDate = new Date(r.reported_at);
-      const hour = reportDate.getHours();
-      const minute = reportDate.getMinutes();
-      const block = Math.floor((hour * 60 + minute) / 15);
+    // Process each 10-minute interval
+    for (let totalMinutes = 0; totalMinutes < 24 * 60; totalMinutes += 10) {
+      const hour = Math.floor(totalMinutes / 60);
+      const minute = totalMinutes % 60;
+      const endMinutes = totalMinutes + 10;
+
+      // Count statuses in this 10-minute window
+      let countStatusStoi = 0;
+      let countStatusToczySie = 0;
+      let countStatusJedzie = 0;
+
+      relevantReports.forEach((r) => {
+        const reportDate = new Date(r.reported_at);
+        const reportTotalMinutes = reportDate.getHours() * 60 + reportDate.getMinutes();
+        
+        if (reportTotalMinutes >= totalMinutes && reportTotalMinutes < endMinutes) {
+          if (r.status === "stoi") {
+            countStatusStoi++;
+          } else if (r.status === "toczy_sie") {
+            countStatusToczySie++;
+          } else if (r.status === "jedzie") {
+            countStatusJedzie++;
+          }
+        }
+      });
+
+      // Determine average status (highest count, default to jedzie if all zero)
+      let averageStatus: 'stoi' | 'toczy_sie' | 'jedzie' = 'jedzie';
       
-      if (r.status === "stoi") {
-        blockStatus[block].stoi++;
-      } else if (r.status === "toczy_sie") {
-        blockStatus[block].toczy_sie++;
-      } else if (r.status === "jedzie") {
-        blockStatus[block].jedzie++;
+      if (countStatusStoi === 0 && countStatusToczySie === 0 && countStatusJedzie === 0) {
+        averageStatus = 'jedzie';
+      } else if (countStatusStoi >= countStatusToczySie && countStatusStoi >= countStatusJedzie) {
+        averageStatus = 'stoi';
+      } else if (countStatusToczySie >= countStatusStoi && countStatusToczySie >= countStatusJedzie) {
+        averageStatus = 'toczy_sie';
+      } else {
+        averageStatus = 'jedzie';
       }
-    });
 
-    // Find green wave periods (blocks where stoi and toczy_sie are 0)
-    const greenBlocks: boolean[] = [];
-    for (let block = 0; block < 96; block++) {
-      const status = blockStatus[block];
-      const totalBad = status.stoi + status.toczy_sie;
-      const totalGood = status.jedzie;
-      
-      // Green wave if: no bad reports and at least some good reports
-      const isGreen = totalBad === 0 && totalGood > 0;
-      greenBlocks.push(isGreen);
+      resultStatusList.push({
+        time: `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`,
+        averageStatus,
+      });
     }
 
-    // Merge consecutive green blocks into ranges
+    // Group consecutive "jedzie" periods
     const ranges: TimeRange[] = [];
-    let rangeStart: number | null = null;
+    let rangeStart: string | null = null;
+    let rangeStartMinutes = 0;
 
-    for (let block = 0; block < 96; block++) {
-      if (greenBlocks[block]) {
+    resultStatusList.forEach((item, index) => {
+      if (item.averageStatus === 'jedzie') {
         if (rangeStart === null) {
-          rangeStart = block;
+          rangeStart = item.time;
+          rangeStartMinutes = index * 10;
         }
       } else {
         if (rangeStart !== null) {
-          const startMinutes = rangeStart * 15;
-          const endMinutes = block * 15;
+          const endMinutes = index * 10;
+          const durationMinutes = endMinutes - rangeStartMinutes;
           
           ranges.push({
-            start: `${String(Math.floor(startMinutes / 60)).padStart(2, '0')}:${String(startMinutes % 60).padStart(2, '0')}`,
-            end: `${String(Math.floor(endMinutes / 60)).padStart(2, '0')}:${String(endMinutes % 60).padStart(2, '0')}`,
-            durationMinutes: endMinutes - startMinutes,
+            start: rangeStart,
+            end: item.time,
+            durationMinutes,
           });
           rangeStart = null;
         }
       }
-    }
+    });
 
     // Handle case where green wave extends to end of day
     if (rangeStart !== null) {
-      const startMinutes = rangeStart * 15;
       const endMinutes = 24 * 60;
+      const durationMinutes = endMinutes - rangeStartMinutes;
       
       ranges.push({
-        start: `${String(Math.floor(startMinutes / 60)).padStart(2, '0')}:${String(startMinutes % 60).padStart(2, '0')}`,
+        start: rangeStart,
         end: '24:00',
-        durationMinutes: endMinutes - startMinutes,
+        durationMinutes,
       });
     }
 

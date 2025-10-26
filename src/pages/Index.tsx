@@ -517,6 +517,7 @@ const Index = () => {
 
       toast.success("Dziękujemy za zgłoszenie!");
       // Show RSS ticker after successful report
+      console.log("[Index] Setting showRssTicker to true");
       setShowRssTicker(true);
       // Wait a bit for database to commit, then refresh
       setTimeout(() => {

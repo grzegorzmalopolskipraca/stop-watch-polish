@@ -17,31 +17,38 @@ export const RssTicker = ({ show }: RssTickerProps) => {
   useEffect(() => {
     const fetchRss = async () => {
       try {
+        console.log("[RssTicker] Fetching RSS feed...");
         const { data, error } = await supabase.functions.invoke('fetch-rss-feed');
         
         if (error) {
-          console.error("Error fetching RSS:", error);
+          console.error("[RssTicker] Error fetching RSS:", error);
           return;
         }
 
+        console.log("[RssTicker] RSS data received:", data);
         if (data?.items) {
           setItems(data.items);
+          console.log("[RssTicker] Items set:", data.items.length);
         }
       } catch (error) {
-        console.error("Error fetching RSS:", error);
+        console.error("[RssTicker] Error fetching RSS:", error);
       } finally {
         setIsLoading(false);
       }
     };
 
+    console.log("[RssTicker] Show prop changed:", show);
     if (show) {
       fetchRss();
     }
   }, [show]);
 
+  console.log("[RssTicker] Render - show:", show, "isLoading:", isLoading, "items:", items.length);
+  
   if (!show || isLoading) return null;
 
   if (items.length === 0) {
+    console.log("[RssTicker] No items to display");
     return null;
   }
 

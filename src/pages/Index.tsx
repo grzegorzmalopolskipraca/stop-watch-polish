@@ -1048,6 +1048,20 @@ const Index = () => {
 
       {/* Footer */}
       <footer className="container max-w-2xl mx-auto px-4 py-6 text-center text-sm text-muted-foreground space-y-3">
+        {/* Support Section */}
+        <div className="bg-card rounded-lg p-6 border border-border space-y-4 mb-6">
+          <h3 className="text-lg font-semibold text-foreground">
+            Fajny pomysł, rozwijajmy go
+          </h3>
+          <Button
+            onClick={() => setShowDonationDialog(true)}
+            className="w-full h-14 text-lg font-bold"
+            size="lg"
+          >
+            Wspieram rozwój strony
+          </Button>
+        </div>
+
         <p>
           Ulepszenia i sugestie piszcie na: grzegorzmalopolskipraca@gmail.com
         </p>

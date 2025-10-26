@@ -37,6 +37,19 @@ const Contact = () => {
 
               <div className="space-y-3">
                 <a
+                  href="mailto:grzegorzmalopolskipraca@gmail.com"
+                  className="flex items-center gap-3 p-4 rounded-lg border hover:bg-accent transition-colors"
+                >
+                  <Mail className="h-6 w-6 text-primary" />
+                  <div>
+                    <div className="font-medium">Email</div>
+                    <div className="text-sm text-muted-foreground">
+                      Ulepszenia i sugestie piszcie na: grzegorzmalopolskipraca@gmail.com
+                    </div>
+                  </div>
+                </a>
+
+                <a
                   href="https://pl.linkedin.com/in/grzegorz-ma%C5%82opolski-7aa25016b"
                   target="_blank"
                   rel="noopener noreferrer"

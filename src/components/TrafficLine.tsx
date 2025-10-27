@@ -25,7 +25,7 @@ const SPEED_THRESHOLDS = {
 const STREET_COORDINATES: Record<string, StreetCoordinates> = {
   "Zwycięska": {
     start: { lat: 51.058494, lng: 17.014247 },
-    end: { lat: 51.0610, lng: 16.9980 }
+    end: { lat: 51.061066, lng: 16.998068 }
   },
   "Ołtaszyńska": {
     start: { lat: 51.0761, lng: 17.0012 },

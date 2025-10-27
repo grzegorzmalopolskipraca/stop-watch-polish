@@ -136,7 +136,7 @@ export const StreetVoting = ({ existingStreets }: StreetVotingProps) => {
   return (
     <div className="bg-card rounded-lg p-5 border border-border space-y-4">
       <h3 className="text-lg font-semibold text-center">
-        Głosuj na ulicę, którą należy tu dodać
+        Głosuj którą ulicę dodać
       </h3>
       
       {/* Add new street */}

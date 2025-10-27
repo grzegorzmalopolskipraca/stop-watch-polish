@@ -224,14 +224,29 @@ export const TrafficLine = ({ street, direction, width = "100%" }: Props) => {
         </span>
       </div>
       <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
-        <div 
-          style={{ 
-            width: `${avgSpeed ? Math.max(0, Math.min(100, 50 - parseFloat(avgSpeed))) : trafficPercent}%`,
-            height: '100%',
-            backgroundColor: '#e74c3c',
-            transition: 'width 0.3s ease'
-          }}
-        />
+        {(() => {
+          const linePercent = avgSpeed ? Math.max(0, Math.min(100, 50 - parseFloat(avgSpeed))) : trafficPercent;
+          let barColor = '#e74c3c'; // red default
+          
+          if (linePercent > 80) {
+            barColor = '#e74c3c'; // red
+          } else if (linePercent >= 40) {
+            barColor = '#f39c12'; // orange
+          } else {
+            barColor = '#2ecc71'; // green
+          }
+          
+          return (
+            <div 
+              style={{ 
+                width: `${linePercent}%`,
+                height: '100%',
+                backgroundColor: barColor,
+                transition: 'width 0.3s ease, background-color 0.3s ease'
+              }}
+            />
+          );
+        })()}
       </div>
     </div>
   );

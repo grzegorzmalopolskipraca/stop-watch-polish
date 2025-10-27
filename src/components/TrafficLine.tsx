@@ -29,7 +29,7 @@ const STREET_COORDINATES: Record<string, StreetCoordinates> = {
   },
   "Ołtaszyńska": {
     start: { lat: 51.060302, lng: 17.007551 },
-    end: { lat: 51.0945, lng: 17.0187 }
+    end: { lat: 51.070612, lng: 17.011211 }
   },
   "Karkonoska": {
     start: { lat: 51.1285, lng: 16.9442 },

@@ -16,9 +16,9 @@ interface Props {
 
 // Thresholds for speed in km/h - adjusted for urban traffic
 const SPEED_THRESHOLDS = {
-  LOW: 40,    // >= 40 km/h = free-flowing traffic (green)
-  MEDIUM: 25  // 25-40 km/h = moderate traffic (orange)
-              // < 25 km/h = heavy congestion (red)
+  LOW: 25,    // >= 25 km/h = free-flowing traffic (green)
+  MEDIUM: 8   // 8-25 km/h = moderate traffic (orange)
+              // < 8 km/h = heavy congestion (red)
 };
 
 // Street coordinates for Wrocław

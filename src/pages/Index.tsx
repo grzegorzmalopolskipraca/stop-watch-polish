@@ -1118,13 +1118,7 @@ const Index = () => {
             <h3 className="text-lg font-semibold">
               Najbliższa zielona fala
             </h3>
-            <p className="text-sm text-muted-foreground">
-              Możesz wyjechać, gdy ruch jest mniejszy
-            </p>
-            <div className="bg-traffic-jedzie/10 border border-traffic-jedzie/20 rounded-lg p-4">
-              <p className="text-sm font-medium text-muted-foreground mb-2">
-                Kiedy masz zielony slot:
-              </p>
+            <div className="bg-traffic-jedzie/10 border border-traffic-jedzie/20 rounded-lg p-4 space-y-2">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <span className="text-lg font-semibold">
@@ -1139,6 +1133,9 @@ const Index = () => {
                   {formatDuration(nextGreenSlot.durationMinutes)}
                 </span>
               </div>
+              <p className="text-sm text-muted-foreground">
+                Możesz wyjechać, gdy ruch jest mniejszy
+              </p>
             </div>
           </section>
         )}

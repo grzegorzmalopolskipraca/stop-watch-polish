@@ -24,7 +24,7 @@ const SPEED_THRESHOLDS = {
 // Street coordinates for Wrocław
 const STREET_COORDINATES: Record<string, StreetCoordinates> = {
   "Zwycięska": {
-    start: { lat: 51.0927, lng: 17.0141 },
+    start: { lat: 51.058494, lng: 17.014247 },
     end: { lat: 51.0610, lng: 16.9980 }
   },
   "Ołtaszyńska": {

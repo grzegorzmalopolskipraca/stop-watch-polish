@@ -113,11 +113,13 @@ const Index = () => {
 
   // Save selected street to localStorage and reset auto-submit tracking
   useEffect(() => {
+    console.log(`[StreetChange] Street or direction changed: ${selectedStreet} (${direction})`);
     localStorage.setItem('selectedStreet', selectedStreet);
     // Load incident notification preference when street changes
     setIncidentNotificationsEnabled(isWonderPushSubscribed(`incidents_${selectedStreet}`));
     // Reset current status to allow auto-submit on street/direction change
     setCurrentStatus(null);
+    console.log(`[StreetChange] Reset currentStatus to null for new street/direction`);
   }, [selectedStreet, direction]);
 
   // Capture the install prompt event
@@ -499,7 +501,9 @@ const Index = () => {
         localStorage.setItem('userFingerprint', userFingerprint);
       }
       
-      const { error } = await supabase.functions.invoke('auto-submit-traffic-report', {
+      console.log(`[AutoSubmit] Attempting to submit status: ${status} for ${selectedStreet} (${direction})`);
+      
+      const { data, error } = await supabase.functions.invoke('auto-submit-traffic-report', {
         body: {
           street: selectedStreet,
           status,
@@ -509,28 +513,44 @@ const Index = () => {
         },
       });
 
-      if (!error) {
-        console.log(`Auto-submitted status: ${status} for ${selectedStreet}`);
+      if (!error && data?.success) {
+        console.log(`[AutoSubmit] Successfully submitted status: ${status} for ${selectedStreet} (${direction})`);
         // Mark as auto-submitted for this street+direction
         const key = `${selectedStreet}_${direction}`;
         setHasAutoSubmitted(prev => ({ ...prev, [key]: true }));
         
-        // Refresh reports after submission
+        // Refresh reports after submission to update status box
         setTimeout(() => {
+          console.log(`[AutoSubmit] Refreshing reports for ${selectedStreet} (${direction})`);
           fetchReports(selectedStreet);
-        }, 500);
+        }, 800);
+      } else {
+        console.error(`[AutoSubmit] Failed to submit:`, error);
       }
     } catch (error) {
-      console.error("Error auto-submitting report:", error);
+      console.error("[AutoSubmit] Error auto-submitting report:", error);
       // Fail silently - no toast messages
     }
   };
 
   const handleSpeedUpdate = (speed: number | null) => {
-    if (speed === null || currentStatus !== null) return;
+    console.log(`[HandleSpeed] Speed update: ${speed} km/h, currentStatus: ${currentStatus}, street: ${selectedStreet}, direction: ${direction}`);
+    
+    if (speed === null) {
+      console.log(`[HandleSpeed] Speed is null, skipping auto-submit`);
+      return;
+    }
+    
+    if (currentStatus !== null) {
+      console.log(`[HandleSpeed] Current status exists (${currentStatus}), skipping auto-submit`);
+      return;
+    }
     
     const key = `${selectedStreet}_${direction}`;
-    if (hasAutoSubmitted[key]) return;
+    if (hasAutoSubmitted[key]) {
+      console.log(`[HandleSpeed] Already auto-submitted for ${key}, skipping`);
+      return;
+    }
     
     let autoStatus: string | null = null;
     if (speed < 5) {
@@ -540,6 +560,8 @@ const Index = () => {
     } else {
       autoStatus = 'jedzie';
     }
+    
+    console.log(`[HandleSpeed] Determined auto-status: ${autoStatus} based on speed ${speed} km/h`);
     
     if (autoStatus) {
       autoSubmitReport(autoStatus);

@@ -72,6 +72,7 @@ const STREET_COORDINATES: Record<string, StreetCoordinates> = {
 export const TrafficLine = ({ street, direction, width = "100%" }: Props) => {
   const [level, setLevel] = useState<TrafficLevel>("medium");
   const [isLoading, setIsLoading] = useState(true);
+  const [trafficPercent, setTrafficPercent] = useState<number>(0);
 
   useEffect(() => {
     async function fetchTraffic() {
@@ -125,9 +126,16 @@ export const TrafficLine = ({ street, direction, width = "100%" }: Props) => {
           }
 
           const trafficDuration = leg.duration_in_traffic?.value; // in seconds
+          const normalDuration = leg.duration?.value; // in seconds
           const distance = leg.distance?.value; // in meters
           
-          console.log(`[TrafficLine] Parsed - duration_in_traffic: ${trafficDuration}s, distance: ${distance}m`);
+          console.log(`[TrafficLine] Parsed - duration_in_traffic: ${trafficDuration}s, duration: ${normalDuration}s, distance: ${distance}m`);
+          
+          // Calculate traffic percentage for visualization
+          if (trafficDuration && normalDuration && normalDuration > 0) {
+            const percent = (trafficDuration / normalDuration) * 100;
+            setTrafficPercent(Math.min(percent, 100));
+          }
           
           if (!trafficDuration || trafficDuration <= 0 || !distance || distance <= 0) {
             console.warn(`[TrafficLine] Invalid duration/distance (duration=${trafficDuration}, distance=${distance}). Setting level=medium.`);
@@ -193,9 +201,19 @@ export const TrafficLine = ({ street, direction, width = "100%" }: Props) => {
   }, [isLoading, level]);
 
   return (
-    <div className="w-full space-y-1">
-      <div className="flex items-center justify-between text-xs text-muted-foreground">
+    <div className="w-full space-y-2">
+      <div className="flex items-center justify-between text-xs" style={{ color: '#94a3b8' }}>
         <span>Natężenie ruchu wzdłuż drogi (w trakcie prac)</span>
+      </div>
+      <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
+        <div 
+          style={{ 
+            width: `${trafficPercent}%`,
+            height: '100%',
+            backgroundColor: '#e74c3c',
+            transition: 'width 0.3s ease'
+          }}
+        />
       </div>
       <div 
         style={{ 

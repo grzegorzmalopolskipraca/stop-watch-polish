@@ -868,7 +868,7 @@ const Index = () => {
             </li>
             <li className="flex items-start gap-2">
               <span className="text-primary mt-0.5">•</span>
-              <span>Zobacz czy jest korek, by zdecydować, kiedy pojechać na zakupy</span>
+              <span>Wybierasz się na zakupy, jedź gdy nie ma ruchu</span>
             </li>
             <li className="flex items-start gap-2">
               <span className="text-primary mt-0.5">•</span>

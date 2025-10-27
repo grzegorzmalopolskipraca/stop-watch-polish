@@ -118,11 +118,7 @@ export const StreetChat = ({ street }: StreetChatProps) => {
   }, [street]);
 
   useEffect(() => {
-    // Skip auto-scroll on initial load
-    if (initialLoadRef.current) {
-      initialLoadRef.current = false;
-      return;
-    }
+    // Always scroll to bottom when messages change
     if (messages.length > 0) {
       const timeoutId = setTimeout(scrollToBottom, 100);
       return () => clearTimeout(timeoutId);

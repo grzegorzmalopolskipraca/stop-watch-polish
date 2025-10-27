@@ -86,7 +86,7 @@ export const WeeklyTimeline = ({ reports }: WeeklyTimelineProps) => {
         {weekData.map(({ day, hours }, dayIndex) => (
           <div key={dayIndex} className="flex items-center gap-2">
             <div className="w-8 text-xs text-muted-foreground">
-              {format(day, "EEE", { locale: pl })}
+              {dayIndex === 7 ? "dziś" : format(day, "EEE", { locale: pl })}
             </div>
             <div className="flex-1 flex gap-0.5">
               {hours.map((status, hourIndex) => (

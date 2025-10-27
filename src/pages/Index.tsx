@@ -804,7 +804,7 @@ const Index = () => {
             {format(lastUpdate, "dd.MM.yyyy, HH:mm", { locale: pl })}
           </p>
           <p>
-            Dzisiaj odwiedziło nas: <strong>{todayVisitors}</strong> osób
+            Dziś korki sprawdziło już <strong>{todayVisitors}</strong> osób
           </p>
           <p>
             Petycja: Drogi Wrocławiu, <strong>{totalVisitors}</strong> osób sprawdzało, czy są korki. Pomóż nam redukować korki

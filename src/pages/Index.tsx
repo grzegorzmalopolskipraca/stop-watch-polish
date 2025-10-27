@@ -572,9 +572,9 @@ const Index = () => {
       return;
     }
 
-    // CHECK 0b: Prevent auto-submit immediately after direction change (within 2 seconds)
+    // CHECK 0b: Prevent auto-submit immediately after direction change (within 4 seconds)
     const timeSinceDirectionChange = Date.now() - lastDirectionChange;
-    if (timeSinceDirectionChange < 2000) {
+    if (timeSinceDirectionChange < 4000) {
       console.log(`[HandleSpeed] ❌ Direction changed too recently (${timeSinceDirectionChange}ms ago) - skipping auto-submit`);
       return;
     }

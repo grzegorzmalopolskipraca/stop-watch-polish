@@ -800,7 +800,7 @@ const Index = () => {
         {/* Last Update Info */}
         <section className="text-center text-sm text-muted-foreground space-y-1">
           <p>
-            Dane społecznościowe. Aktualizacja z:{" "}
+            Ostatnie zgłoszenie z:{" "}
             {format(lastUpdate, "dd.MM.yyyy, HH:mm", { locale: pl })}
           </p>
           <p>

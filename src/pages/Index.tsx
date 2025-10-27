@@ -112,7 +112,11 @@ const Index = () => {
   const [hasAutoSubmitted, setHasAutoSubmitted] = useState<Record<string, boolean>>({});
   const [reportsLoaded, setReportsLoaded] = useState<boolean>(false);
   const [pendingSpeed, setPendingSpeed] = useState<number | null>(null);
-  const [hasAutoSubmittedInSession, setHasAutoSubmittedInSession] = useState<boolean>(false);
+  const [hasAutoSubmittedInSession, setHasAutoSubmittedInSession] = useState<boolean>(() => {
+    // Check localStorage for session-level auto-submit flag
+    return localStorage.getItem('hasAutoSubmittedInSession') === 'true';
+  });
+  const [lastDirectionChange, setLastDirectionChange] = useState<number>(0);
 
   // Save selected street to localStorage
   useEffect(() => {
@@ -124,6 +128,8 @@ const Index = () => {
     setReportsLoaded(false);
     // Clear pending speed when street changes
     setPendingSpeed(null);
+    // Track direction change timestamp to prevent immediate auto-submit
+    setLastDirectionChange(Date.now());
     // Don't reset currentStatus - let fetchReports determine it from actual data
   }, [selectedStreet, direction]);
 
@@ -566,6 +572,13 @@ const Index = () => {
       return;
     }
 
+    // CHECK 0b: Prevent auto-submit immediately after direction change (within 2 seconds)
+    const timeSinceDirectionChange = Date.now() - lastDirectionChange;
+    if (timeSinceDirectionChange < 2000) {
+      console.log(`[HandleSpeed] ❌ Direction changed too recently (${timeSinceDirectionChange}ms ago) - skipping auto-submit`);
+      return;
+    }
+
     // CHECK 1: Ensure reports for current street+direction are loaded
     if (!reportsLoaded) {
       console.log(`[HandleSpeed] ❌ Reports not loaded yet for ${selectedStreet} (${direction}) - storing speed for later check`);
@@ -622,6 +635,7 @@ const Index = () => {
     
     // Mark that auto-submit has been used in this session (session-level limit)
     setHasAutoSubmittedInSession(true);
+    localStorage.setItem('hasAutoSubmittedInSession', 'true'); // Persist across page refreshes
     
     if (autoStatus) {
       autoSubmitReport(autoStatus);

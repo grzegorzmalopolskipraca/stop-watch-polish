@@ -109,13 +109,16 @@ const Index = () => {
   const [pendingIncident, setPendingIncident] = useState<{type: string; emoji: string} | null>(null);
   const [trafficTrend, setTrafficTrend] = useState<string | null>(null);
   const [incidentNotificationsEnabled, setIncidentNotificationsEnabled] = useState(false);
+  const [hasAutoSubmitted, setHasAutoSubmitted] = useState<Record<string, boolean>>({});
 
-  // Save selected street to localStorage
+  // Save selected street to localStorage and reset auto-submit tracking
   useEffect(() => {
     localStorage.setItem('selectedStreet', selectedStreet);
     // Load incident notification preference when street changes
     setIncidentNotificationsEnabled(isWonderPushSubscribed(`incidents_${selectedStreet}`));
-  }, [selectedStreet]);
+    // Reset current status to allow auto-submit on street/direction change
+    setCurrentStatus(null);
+  }, [selectedStreet, direction]);
 
   // Capture the install prompt event
   useEffect(() => {
@@ -488,6 +491,61 @@ const Index = () => {
     };
   }, [selectedStreet, direction]);
 
+  const autoSubmitReport = async (status: string) => {
+    try {
+      let userFingerprint = localStorage.getItem('userFingerprint');
+      if (!userFingerprint) {
+        userFingerprint = `user_${Math.random().toString(36).substring(2, 15)}_${Date.now()}`;
+        localStorage.setItem('userFingerprint', userFingerprint);
+      }
+      
+      const { error } = await supabase.functions.invoke('auto-submit-traffic-report', {
+        body: {
+          street: selectedStreet,
+          status,
+          userFingerprint,
+          direction,
+          isAutoSubmit: true,
+        },
+      });
+
+      if (!error) {
+        console.log(`Auto-submitted status: ${status} for ${selectedStreet}`);
+        // Mark as auto-submitted for this street+direction
+        const key = `${selectedStreet}_${direction}`;
+        setHasAutoSubmitted(prev => ({ ...prev, [key]: true }));
+        
+        // Refresh reports after submission
+        setTimeout(() => {
+          fetchReports(selectedStreet);
+        }, 500);
+      }
+    } catch (error) {
+      console.error("Error auto-submitting report:", error);
+      // Fail silently - no toast messages
+    }
+  };
+
+  const handleSpeedUpdate = (speed: number | null) => {
+    if (speed === null || currentStatus !== null) return;
+    
+    const key = `${selectedStreet}_${direction}`;
+    if (hasAutoSubmitted[key]) return;
+    
+    let autoStatus: string | null = null;
+    if (speed < 5) {
+      autoStatus = 'stoi';
+    } else if (speed < 15) {
+      autoStatus = 'toczy_sie';
+    } else {
+      autoStatus = 'jedzie';
+    }
+    
+    if (autoStatus) {
+      autoSubmitReport(autoStatus);
+    }
+  };
+
   const submitReport = async (status: string) => {
     try {
       // Get or create persistent user fingerprint
@@ -794,7 +852,11 @@ const Index = () => {
         {/* Today's Timeline */}
         <section className="bg-card rounded-lg p-5 border border-border space-y-4">
           <TodayTimeline reports={todayReports} street={selectedStreet} />
-          <TrafficLine street={selectedStreet} direction={direction as "to_center" | "from_center"} />
+          <TrafficLine 
+            street={selectedStreet} 
+            direction={direction as "to_center" | "from_center"} 
+            onSpeedUpdate={handleSpeedUpdate}
+          />
         </section>
 
         {/* Last Update Info */}

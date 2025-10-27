@@ -182,11 +182,6 @@ export const StreetChat = ({ street }: StreetChatProps) => {
           przystanku i czekasz na autobus, możesz napisać dokąd jedziesz, a ktoś
           jadący samochodem może Cię zabrać, zmniejszając korki.
         </p>
-        <p className="text-muted-foreground text-xs">
-          <strong>Przykład:</strong> "Uprzejmy 22-latek w czerwonej kurtce na
-          przystanku przy Atalu chce dojechać na Plac Grunwaldzki" → Odpowiedź:
-          "Cześć, jadę czerwoną Mazdą 6, będę za 5 minut, mogę Cię zabrać"
-        </p>
       </div>
 
       <div className="bg-card rounded-lg border-2 border-blue-400">

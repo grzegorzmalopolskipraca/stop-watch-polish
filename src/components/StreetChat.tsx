@@ -176,18 +176,18 @@ export const StreetChat = ({ street }: StreetChatProps) => {
 
   return (
     <div className="space-y-4">
-      <div className="bg-primary/10 border-2 border-blue-400 rounded-lg p-5 text-sm space-y-2">
-        <h4 className="text-lg font-bold text-primary">💬 Chat sąsiedzki (cb radio) - {street}</h4>
-        <p>
-          Ten chat służy do komunikacji między sąsiadami. Jeśli stoisz na
-          przystanku i czekasz na autobus, możesz napisać dokąd jedziesz, a ktoś
-          jadący samochodem może Cię zabrać, zmniejszając korki.
-        </p>
-      </div>
-
-      <Separator className="my-4" />
-
       <div className="bg-card rounded-lg border-2 border-blue-400">
+        <div className="bg-primary/10 p-5 text-sm space-y-2">
+          <h4 className="text-lg font-bold text-primary">💬 Chat sąsiedzki (cb radio) - {street}</h4>
+          <p>
+            Ten chat służy do komunikacji między sąsiadami. Jeśli stoisz na
+            przystanku i czekasz na autobus, możesz napisać dokąd jedziesz, a ktoś
+            jadący samochodem może Cię zabrać, zmniejszając korki.
+          </p>
+        </div>
+
+        <Separator />
+
         <div className="h-80 overflow-y-auto p-4 space-y-3" ref={messagesContainerRef}>
           {messages.length === 0 ? (
             <p className="text-center text-muted-foreground text-sm py-8">

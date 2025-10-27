@@ -941,7 +941,7 @@ const Index = () => {
         {/* Chat Use Cases */}
         <section className="bg-card rounded-lg p-4 border border-border space-y-3">
           <h3 className="text-lg font-semibold text-center">
-            O co pytać na czacie?
+            O czym pisać na czacie?
           </h3>
           <div className="relative h-64 overflow-hidden">
             <style dangerouslySetInnerHTML={{__html: `

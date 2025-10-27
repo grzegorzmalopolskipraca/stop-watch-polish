@@ -39,7 +39,7 @@ import { RssTicker } from "@/components/RssTicker";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from "date-fns";
 import { pl } from "date-fns/locale";
-import { ArrowUp, ArrowDown, Bell, BellOff, ThumbsUp, Coffee, Pizza, Download, Share2 } from "lucide-react";
+import { ArrowUp, ArrowDown, Bell, BellOff, ThumbsUp, Coffee, Pizza, Download, Share2, Printer } from "lucide-react";
 import { subscribeToWonderPush, unsubscribeFromWonderPush, isWonderPushSubscribed } from "@/utils/wonderpush";
 
 const STREETS = [
@@ -1085,8 +1085,9 @@ const Index = () => {
           <a 
             href="/plakat-promocyjny.png" 
             download="eJedzie-plakat.png"
-            className="text-primary hover:underline"
+            className="text-primary hover:underline flex items-center gap-2"
           >
+            <Printer className="h-4 w-4" />
             Chcesz pomóc promować ten portal wśród sąsiadów? Wydrukuj tą kartkę i umieść ją za szybą.
           </a>
         </p>

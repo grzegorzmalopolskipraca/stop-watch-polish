@@ -31,9 +31,13 @@ export const WeeklyTimeline = ({ reports }: WeeklyTimelineProps) => {
       const currentDay = addDays(weekStart, day);
       const blocks: string[] = [];
       
-      // 48 blocks per day (24 hours * 2)
-      for (let block = 0; block < 48; block++) {
-        const hour = Math.floor(block / 2);
+      // 34 blocks per day (from 5:00 to 22:00 = 17 hours * 2)
+      const startHour = 5;
+      const endHour = 22;
+      const totalBlocks = (endHour - startHour) * 2;
+      
+      for (let block = 0; block < totalBlocks; block++) {
+        const hour = startHour + Math.floor(block / 2);
         const minute = (block % 2) * 30;
         
         const blockStart = new Date(currentDay);
@@ -91,7 +95,7 @@ export const WeeklyTimeline = ({ reports }: WeeklyTimelineProps) => {
                   className={`flex-1 h-4 rounded-sm transition-colors ${
                     COLORS[status as keyof typeof COLORS]
                   }`}
-                  title={`${format(day, "dd.MM")} ${Math.floor(hourIndex / 2)}:${(hourIndex % 2) * 30 === 0 ? '00' : '30'} - ${status}`}
+                  title={`${format(day, "dd.MM")} ${5 + Math.floor(hourIndex / 2)}:${(hourIndex % 2) * 30 === 0 ? '00' : '30'} - ${status}`}
                 />
               ))}
             </div>
@@ -102,7 +106,7 @@ export const WeeklyTimeline = ({ reports }: WeeklyTimelineProps) => {
         <div className="flex items-center gap-2 pt-1">
           <div className="w-8" />
           <div className="flex-1 flex justify-between text-xs text-muted-foreground">
-            {[0, 3, 6, 9, 12, 15, 18, 21, 24].map((hour) => (
+            {[5, 8, 11, 14, 17, 20, 22].map((hour) => (
               <span key={hour} className="text-center" style={{ width: '1ch' }}>
                 {hour}
               </span>

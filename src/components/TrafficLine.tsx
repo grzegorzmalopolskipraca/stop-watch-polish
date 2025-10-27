@@ -73,6 +73,7 @@ export const TrafficLine = ({ street, direction, width = "100%" }: Props) => {
   const [level, setLevel] = useState<TrafficLevel>("medium");
   const [isLoading, setIsLoading] = useState(true);
   const [trafficPercent, setTrafficPercent] = useState<number>(0);
+  const [durationMinutes, setDurationMinutes] = useState<number>(0);
 
   useEffect(() => {
     async function fetchTraffic() {
@@ -135,6 +136,7 @@ export const TrafficLine = ({ street, direction, width = "100%" }: Props) => {
           if (trafficDuration && normalDuration && normalDuration > 0) {
             const percent = (trafficDuration / normalDuration) * 100;
             setTrafficPercent(Math.min(percent, 100));
+            setDurationMinutes(Math.round(trafficDuration / 60));
           }
           
           if (!trafficDuration || trafficDuration <= 0 || !distance || distance <= 0) {
@@ -203,7 +205,9 @@ export const TrafficLine = ({ street, direction, width = "100%" }: Props) => {
   return (
     <div className="w-full space-y-2">
       <div className="flex items-center justify-between text-xs" style={{ color: '#94a3b8' }}>
-        <span>Natężenie ruchu wzdłuż drogi (w trakcie prac)</span>
+        <span>
+          Natężenie ruchu wzdłuż drogi (w trakcie prac) {durationMinutes > 0 && `Czas: ${durationMinutes} min`}
+        </span>
       </div>
       <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
         <div 

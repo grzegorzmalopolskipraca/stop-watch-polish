@@ -226,7 +226,7 @@ export const TrafficLine = ({ street, direction, width = "100%" }: Props) => {
       <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
         <div 
           style={{ 
-            width: `${trafficPercent}%`,
+            width: `${avgSpeed ? Math.max(0, Math.min(100, 50 - parseFloat(avgSpeed))) : trafficPercent}%`,
             height: '100%',
             backgroundColor: '#e74c3c',
             transition: 'width 0.3s ease'

@@ -74,6 +74,7 @@ export const TrafficLine = ({ street, direction, width = "100%" }: Props) => {
   const [isLoading, setIsLoading] = useState(true);
   const [trafficPercent, setTrafficPercent] = useState<number>(0);
   const [durationMinutes, setDurationMinutes] = useState<number>(0);
+  const [distanceKm, setDistanceKm] = useState<string>("");
 
   useEffect(() => {
     async function fetchTraffic() {
@@ -137,6 +138,10 @@ export const TrafficLine = ({ street, direction, width = "100%" }: Props) => {
             const percent = (trafficDuration / normalDuration) * 100;
             setTrafficPercent(Math.min(percent, 100));
             setDurationMinutes(Math.round(trafficDuration / 60));
+          }
+          
+          if (distance && distance > 0) {
+            setDistanceKm((distance / 1000).toFixed(1));
           }
           
           if (!trafficDuration || trafficDuration <= 0 || !distance || distance <= 0) {
@@ -206,7 +211,7 @@ export const TrafficLine = ({ street, direction, width = "100%" }: Props) => {
     <div className="w-full space-y-2">
       <div className="flex items-center justify-between text-xs" style={{ color: '#94a3b8' }}>
         <span>
-          Natężenie ruchu wzdłuż drogi (w trakcie prac) {durationMinutes > 0 && `Czas: ${durationMinutes} min`}
+          Natężenie ruchu wzdłuż drogi (w trakcie prac) {durationMinutes > 0 && `Czas: ${durationMinutes} min`} {distanceKm && `Dystans: ${distanceKm} km`}
         </span>
       </div>
       <div className="w-full h-2 bg-muted rounded-full overflow-hidden">

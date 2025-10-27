@@ -85,54 +85,20 @@ serve(async (req) => {
       throw new Error('Google Maps API key not configured');
     }
 
-    // Add 1 minute to current time for departureTime (Google requires future time)
-    const departureTime = new Date(Date.now() + 60000).toISOString();
-    console.log('[get-traffic-data] Using departure time:', departureTime);
+    console.log('[get-traffic-data] Calling Google Directions API for route:', { origin, destination });
 
-    const url = 'https://routes.googleapis.com/directions/v2:computeRoutes';
-    const body = {
-      origin: {
-        location: {
-          latLng: {
-            latitude: origin.lat,
-            longitude: origin.lng
-          }
-        }
-      },
-      destination: {
-        location: {
-          latLng: {
-            latitude: destination.lat,
-            longitude: destination.lng
-          }
-        }
-      },
-      travelMode: "DRIVE",
-      routingPreference: "TRAFFIC_AWARE",
-      departureTime: departureTime,
-      computeAlternativeRoutes: false,
-      routeModifiers: {
-        avoidTolls: false,
-        avoidHighways: false,
-        avoidFerries: false
-      },
-      languageCode: "pl",
-      units: "METRIC"
-    };
-
-    console.log('[get-traffic-data] Calling Google Maps API for route:', { origin, destination });
-    console.log('[get-traffic-data] Request body:', JSON.stringify(body, null, 2));
+    // Use Directions API for real-time traffic data
+    const url = 'https://maps.googleapis.com/maps/api/directions/json';
+    const params = new URLSearchParams({
+      origin: `${origin.lat},${origin.lng}`,
+      destination: `${destination.lat},${destination.lng}`,
+      departure_time: 'now', // Use 'now' for real-time traffic
+      traffic_model: 'best_guess',
+      key: apiKey
+    });
 
     const gStart = Date.now();
-    const response = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Goog-Api-Key": apiKey,
-        "X-Goog-FieldMask": "routes.duration,routes.distanceMeters,routes.polyline.encodedPolyline"
-      },
-      body: JSON.stringify(body)
-    });
+    const response = await fetch(`${url}?${params.toString()}`);
     const gEnd = Date.now();
     console.log('[get-traffic-data] Google API HTTP status:', response.status, `latency: ${gEnd - gStart}ms`);
 
@@ -143,11 +109,22 @@ serve(async (req) => {
     }
 
     const data = await response.json();
-    console.log('[get-traffic-data] Google Maps API response received:', JSON.stringify(data, null, 2));
+    console.log('[get-traffic-data] Google Directions API response received');
+    
+    if (data.status !== 'OK') {
+      console.error('[get-traffic-data] Directions API error:', data.status, data.error_message);
+      throw new Error(`Directions API error: ${data.status} - ${data.error_message || 'Unknown error'}`);
+    }
+
     const routesCount = Array.isArray(data?.routes) ? data.routes.length : 0;
-    const first = routesCount > 0 ? data.routes[0] : null;
-    if (first) {
-      console.log('[get-traffic-data] Summary -> routes:', routesCount, 'distanceMeters:', first.distanceMeters, 'duration:', first.duration);
+    const route = routesCount > 0 ? data.routes[0] : null;
+    
+    if (route && route.legs && route.legs.length > 0) {
+      const leg = route.legs[0];
+      console.log('[get-traffic-data] Summary -> routes:', routesCount, 
+        'distance:', leg.distance?.value, 
+        'duration:', leg.duration?.value,
+        'duration_in_traffic:', leg.duration_in_traffic?.value);
     } else {
       console.warn('[get-traffic-data] No routes returned by Google.');
     }

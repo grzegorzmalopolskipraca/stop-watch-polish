@@ -112,20 +112,31 @@ export const TrafficLine = ({ street, direction, width = "100%" }: Props) => {
           const route = json.routes[0];
           console.log(`[TrafficLine] Route data:`, route);
           
-          const duration = parseInt(route.duration?.replace('s', '') || '0');
-          const distance = route.distanceMeters || 0;
-          console.log(`[TrafficLine] Parsed - duration: ${duration}s, distance: ${distance}m`);
-          if (!duration || duration <= 0 || !distance || distance <= 0) {
-            console.warn(`[TrafficLine] Invalid duration/distance (duration=${duration}, distance=${distance}). Setting level=medium.`);
+          // Get traffic-aware duration and distance from Directions API response
+          const leg = route.legs?.[0];
+          if (!leg) {
+            console.warn(`[TrafficLine] No leg data in route. Setting level=medium.`);
             setLevel("medium");
             return;
           }
-          // Calculate speed (meters per second)
-          const speed = distance / duration;
-          console.log(`[TrafficLine] Calculated speed: ${speed} m/s (${(speed * 3.6).toFixed(2)} km/h)`);
+
+          const trafficDuration = leg.duration_in_traffic?.value; // in seconds
+          const distance = leg.distance?.value; // in meters
+          
+          console.log(`[TrafficLine] Parsed - duration_in_traffic: ${trafficDuration}s, distance: ${distance}m`);
+          
+          if (!trafficDuration || trafficDuration <= 0 || !distance || distance <= 0) {
+            console.warn(`[TrafficLine] Invalid duration/distance (duration=${trafficDuration}, distance=${distance}). Setting level=medium.`);
+            setLevel("medium");
+            return;
+          }
+          
+          // Calculate speed with traffic (meters per second)
+          const speed = distance / trafficDuration;
+          const speedKmh = speed * 3.6;
+          console.log(`[TrafficLine] Calculated speed with traffic: ${speed} m/s (${speedKmh.toFixed(2)} km/h)`);
           
           // Determine traffic level based on speed
-          const speedKmh = speed * 3.6;
           console.log(`[TrafficLine] Thresholds (km/h): red<${SPEED_THRESHOLDS.redKmh}, orange<${SPEED_THRESHOLDS.orangeKmh}, green>=${SPEED_THRESHOLDS.orangeKmh}`);
           let newLevel: TrafficLevel;
           if (!isFinite(speed) || speed <= 0) {

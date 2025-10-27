@@ -112,6 +112,7 @@ const Index = () => {
   const [hasAutoSubmitted, setHasAutoSubmitted] = useState<Record<string, boolean>>({});
   const [reportsLoaded, setReportsLoaded] = useState<boolean>(false);
   const [pendingSpeed, setPendingSpeed] = useState<number | null>(null);
+  const [hasAutoSubmittedInSession, setHasAutoSubmittedInSession] = useState<boolean>(false);
 
   // Save selected street to localStorage
   useEffect(() => {
@@ -559,7 +560,13 @@ const Index = () => {
       return;
     }
 
-    // CHECK 0: Ensure reports for current street+direction are loaded
+    // CHECK 0: Session-level limit - only one auto-submit per session
+    if (hasAutoSubmittedInSession) {
+      console.log(`[HandleSpeed] ❌ Auto-submit already used in this session - skipping`);
+      return;
+    }
+
+    // CHECK 1: Ensure reports for current street+direction are loaded
     if (!reportsLoaded) {
       console.log(`[HandleSpeed] ❌ Reports not loaded yet for ${selectedStreet} (${direction}) - storing speed for later check`);
       setPendingSpeed(speed);
@@ -569,26 +576,26 @@ const Index = () => {
     // Clear pending speed since we're processing now
     setPendingSpeed(null);
     
-    // CHECK 1: Must have no currentStatus (this determines if "Brak aktualnych zgłoszeń" is shown)
+    // CHECK 2: Must have no currentStatus (this determines if "Brak aktualnych zgłoszeń" is shown)
     if (currentStatus !== null) {
       console.log(`[HandleSpeed] ❌ Current status exists (${currentStatus}), not "Brak aktualnych zgłoszeń" - skipping auto-submit`);
       return;
     }
     
-    // CHECK 2: Must have zero reports in all categories (stoi, toczy_sie, jedzie all = 0)
+    // CHECK 3: Must have zero reports in all categories (stoi, toczy_sie, jedzie all = 0)
     if (totalReports > 0) {
       console.log(`[HandleSpeed] ❌ Total reports count is ${totalReports} (not 0) - skipping auto-submit`);
       return;
     }
     
-    // CHECK 3: Additional safety - verify lastTenStats object has no entries
+    // CHECK 4: Additional safety - verify lastTenStats object has no entries
     const hasAnyStats = Object.keys(lastTenStats).length > 0;
     if (hasAnyStats) {
       console.log(`[HandleSpeed] ❌ lastTenStats has entries - skipping auto-submit`);
       return;
     }
     
-    // CHECK 4: Don't auto-submit twice for same street+direction
+    // CHECK 5: Don't auto-submit twice for same street+direction
     const key = `${selectedStreet}_${direction}`;
     if (hasAutoSubmitted[key]) {
       console.log(`[HandleSpeed] ❌ Already auto-submitted for ${key}, skipping`);
@@ -606,6 +613,15 @@ const Index = () => {
     }
     
     console.log(`[HandleSpeed] ✅ All checks passed! "Brak aktualnych zgłoszeń" is displayed. Auto-submitting status: ${autoStatus} (speed: ${speed} km/h)`);
+    
+    // Mark that this street+direction has been auto-submitted (key already declared above)
+    setHasAutoSubmitted(prev => ({
+      ...prev,
+      [key]: true
+    }));
+    
+    // Mark that auto-submit has been used in this session (session-level limit)
+    setHasAutoSubmittedInSession(true);
     
     if (autoStatus) {
       autoSubmitReport(autoStatus);

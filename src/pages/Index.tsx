@@ -929,7 +929,7 @@ const Index = () => {
             variant="outline"
           >
             <Download className="mr-2 h-4 w-4" />
-            Dodaj skrót na pulpit
+            Dodaj aplikację na pulpit
           </Button>
         </section>
 

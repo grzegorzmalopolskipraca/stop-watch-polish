@@ -32,40 +32,40 @@ const STREET_COORDINATES: Record<string, StreetCoordinates> = {
     end: { lat: 51.070612, lng: 17.011211 }
   },
   "Karkonoska": {
-    start: { lat: 51.1285, lng: 16.9442 },
-    end: { lat: 51.1456, lng: 16.9789 }
+    start: { lat: 51.047681, lng: 16.970960 },
+    end: { lat: 51.074112, lng: 17.007528 }
   },
   "Ślężna": {
-    start: { lat: 51.0856, lng: 17.0456 },
-    end: { lat: 51.0689, lng: 17.0145 }
+    start: { lat: 51.072314, lng: 17.012157 },
+    end: { lat: 51.093395, lng: 17.030582 }
   },
   "Powstańców Śląskich": {
-    start: { lat: 51.1187, lng: 17.0567 },
-    end: { lat: 51.0945, lng: 17.0334 }
+    start: { lat: 51.075543, lng: 17.007560 },
+    end: { lat: 51.101667, lng: 17.029515 }
   },
   "Grabiszyńska": {
-    start: { lat: 51.1023, lng: 17.0123 },
-    end: { lat: 51.0834, lng: 16.9867 }
+    start: { lat: 51.095267, lng: 16.983208 },
+    end: { lat: 51.104327, lng: 17.021340 }
   },
   "Borowska": {
-    start: { lat: 51.0889, lng: 17.0567 },
-    end: { lat: 51.0645, lng: 17.0234 }
+    start: { lat: 51.071441, lng: 17.032402 },
+    end: { lat: 51.093573, lng: 17.033407 }
   },
   "Buforowa": {
-    start: { lat: 51.0456, lng: 16.9989 },
-    end: { lat: 51.0634, lng: 17.0123 }
+    start: { lat: 51.043754, lng: 17.060997 },
+    end: { lat: 51.068746, lng: 17.054066 }
   },
   "Grota Roweckiego": {
-    start: { lat: 51.1234, lng: 17.0789 },
-    end: { lat: 51.1089, lng: 17.0456 }
+    start: { lat: 51.043693, lng: 17.028696 },
+    end: { lat: 51.070613, lng: 17.032364 }
   },
   "Radosna": {
-    start: { lat: 51.0734, lng: 17.0678 },
-    end: { lat: 51.0889, lng: 17.0823 }
+    start: { lat: 51.037788, lng: 16.986309 },
+    end: { lat: 51.058774, lng: 17.006882 }
   },
   "Sudecka": {
-    start: { lat: 51.1156, lng: 17.0234 },
-    end: { lat: 51.0989, lng: 17.0456 }
+    start: { lat: 51.072714, lng: 17.011915 },
+    end: { lat: 51.084632, lng: 17.018180 }
   }
 };
 

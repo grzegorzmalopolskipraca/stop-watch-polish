@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { pl } from "date-fns/locale";
@@ -183,6 +184,8 @@ export const StreetChat = ({ street }: StreetChatProps) => {
           jadący samochodem może Cię zabrać, zmniejszając korki.
         </p>
       </div>
+
+      <Separator className="my-4" />
 
       <div className="bg-card rounded-lg border-2 border-blue-400">
         <div className="h-80 overflow-y-auto p-4 space-y-3" ref={messagesContainerRef}>

@@ -1,7 +1,7 @@
 import { useMemo, useEffect, useRef } from "react";
 import { format, startOfDay } from "date-fns";
 import { pl } from "date-fns/locale";
-import { Lightbulb } from "lucide-react";
+import { CircleDot } from "lucide-react";
 
 interface Report {
   status: string;
@@ -247,7 +247,7 @@ export const GreenWave = ({ reports }: GreenWaveProps) => {
       <div className="space-y-3">
         <h2 className="text-lg font-semibold flex items-center gap-2">
           Zielona fala
-          <Lightbulb className="h-5 w-5 text-green-500 fill-green-500" />
+          <CircleDot className="h-5 w-5 text-green-500 fill-green-500" />
         </h2>
         <p className="text-sm text-muted-foreground">
           Brak danych o płynnym ruchu w ciągu ostatniego tygodnia
@@ -260,7 +260,7 @@ export const GreenWave = ({ reports }: GreenWaveProps) => {
     <div className="space-y-3">
       <h2 className="text-lg font-semibold flex items-center gap-2">
         Zielona fala
-        <Lightbulb className="h-5 w-5 text-green-500 fill-green-500" />
+        <CircleDot className="h-5 w-5 text-green-500 fill-green-500" />
       </h2>
       <p className="text-sm text-muted-foreground">
         Korzystaj z zielonej fali i wyjeżdżaj z domu w czasie mniejszego ruchu. Szybciej zajedziesz i odciążysz korki. Informuj jak wygląda ruch na Twojej ulicy a Zielona Fala będzie się aktualizować

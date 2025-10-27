@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { format, startOfWeek, addDays, addHours } from "date-fns";
+import { format, addDays, subDays } from "date-fns";
 import { pl } from "date-fns/locale";
 
 interface Report {
@@ -21,7 +21,8 @@ const COLORS = {
 export const WeeklyTimeline = ({ reports }: WeeklyTimelineProps) => {
   const weekData = useMemo(() => {
     const now = new Date();
-    const weekStart = startOfWeek(now, { locale: pl, weekStartsOn: 1 });
+    // Start from 6 days ago to show last 7 days (including today)
+    const weekStart = subDays(now, 6);
     
     // Create 7 days × 48 blocks (30-minute intervals)
     const grid: { day: Date; hours: string[] }[] = [];
@@ -74,7 +75,7 @@ export const WeeklyTimeline = ({ reports }: WeeklyTimelineProps) => {
     <div className="space-y-3">
       <h2 className="text-lg font-semibold">Ruch tygodniowy</h2>
       <p className="text-sm text-muted-foreground">
-        Średnia z ostatniego tygodnia
+        Ostatnie 7 dni
       </p>
       
       <div className="space-y-1">

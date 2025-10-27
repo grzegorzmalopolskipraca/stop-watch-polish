@@ -21,13 +21,13 @@ const COLORS = {
 export const WeeklyTimeline = ({ reports }: WeeklyTimelineProps) => {
   const weekData = useMemo(() => {
     const now = new Date();
-    // Start from 6 days ago to show last 7 days (including today)
-    const weekStart = subDays(now, 6);
+    // Start from 7 days ago to show last 8 days (including today)
+    const weekStart = subDays(now, 7);
     
-    // Create 7 days × 48 blocks (30-minute intervals)
+    // Create 8 days × 48 blocks (30-minute intervals)
     const grid: { day: Date; hours: string[] }[] = [];
     
-    for (let day = 0; day < 7; day++) {
+    for (let day = 0; day < 8; day++) {
       const currentDay = addDays(weekStart, day);
       const blocks: string[] = [];
       
@@ -75,7 +75,7 @@ export const WeeklyTimeline = ({ reports }: WeeklyTimelineProps) => {
     <div className="space-y-3">
       <h2 className="text-lg font-semibold">Ruch tygodniowy</h2>
       <p className="text-sm text-muted-foreground">
-        Ostatnie 7 dni
+        Ostatnie 8 dni
       </p>
       
       <div className="space-y-1">

@@ -1130,7 +1130,7 @@ const Index = () => {
                   </span>
                 </div>
                 <span className="text-sm text-muted-foreground">
-                  {formatDuration(nextGreenSlot.durationMinutes)}
+                  trwa {formatDuration(nextGreenSlot.durationMinutes)}
                 </span>
               </div>
               <p className="text-sm text-muted-foreground/60 mt-2">

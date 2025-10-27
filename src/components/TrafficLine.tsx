@@ -226,14 +226,23 @@ export const TrafficLine = ({ street, direction, width = "100%" }: Props) => {
       <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
         {(() => {
           const linePercent = avgSpeed ? Math.max(0, Math.min(100, 50 - parseFloat(avgSpeed))) : trafficPercent;
-          let barColor = '#e74c3c'; // red default
           
-          if (linePercent > 80) {
-            barColor = '#e74c3c'; // red
-          } else if (linePercent >= 40) {
-            barColor = '#f39c12'; // orange
+          // Smooth gradient from dark green (0%) -> yellow (50%) -> dark red (100%)
+          let barColor: string;
+          if (linePercent <= 50) {
+            // Interpolate from dark green to yellow
+            const ratio = linePercent / 50;
+            const r = Math.round(34 + (255 - 34) * ratio);
+            const g = Math.round(139 + (255 - 139) * ratio);
+            const b = Math.round(34 + (0 - 34) * ratio);
+            barColor = `rgb(${r}, ${g}, ${b})`;
           } else {
-            barColor = '#2ecc71'; // green
+            // Interpolate from yellow to dark red
+            const ratio = (linePercent - 50) / 50;
+            const r = Math.round(255 + (139 - 255) * ratio);
+            const g = Math.round(255 + (0 - 255) * ratio);
+            const b = 0;
+            barColor = `rgb(${r}, ${g}, ${b})`;
           }
           
           return (

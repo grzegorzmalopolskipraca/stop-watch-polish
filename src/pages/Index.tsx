@@ -532,32 +532,46 @@ const Index = () => {
   };
 
   const handleSpeedUpdate = (speed: number | null) => {
-    console.log(`[HandleSpeed] Speed update: ${speed} km/h, currentStatus: ${currentStatus}, lastTenStats: ${JSON.stringify(lastTenStats)}, street: ${selectedStreet}, direction: ${direction}`);
+    // Triple-check conditions: auto-submit only when "Brak aktualnych zgłoszeń" is displayed
+    const stoiCount = lastTenStats['stoi'] || 0;
+    const toczyCount = lastTenStats['toczy_sie'] || 0;
+    const jedzieCount = lastTenStats['jedzie'] || 0;
+    const totalReports = stoiCount + toczyCount + jedzieCount;
+    
+    console.log(`[HandleSpeed] Speed: ${speed} km/h | currentStatus: ${currentStatus} | Stats: stoi=${stoiCount}, toczy=${toczyCount}, jedzie=${jedzieCount} (total=${totalReports}) | street: ${selectedStreet} (${direction})`);
     
     if (speed === null) {
-      console.log(`[HandleSpeed] Speed is null, skipping auto-submit`);
+      console.log(`[HandleSpeed] ❌ Speed is null, skipping auto-submit`);
       return;
     }
     
-    // Only auto-submit if currentStatus is null (no existing reports)
+    // CHECK 1: Must have no currentStatus (this determines if "Brak aktualnych zgłoszeń" is shown)
     if (currentStatus !== null) {
-      console.log(`[HandleSpeed] Current status exists (${currentStatus}), skipping auto-submit`);
+      console.log(`[HandleSpeed] ❌ Current status exists (${currentStatus}), not "Brak aktualnych zgłoszeń" - skipping auto-submit`);
       return;
     }
     
-    // Also check if there are any stats (counts > 0 means there are reports)
-    const hasAnyReports = Object.values(lastTenStats).some(count => count > 0);
-    if (hasAnyReports) {
-      console.log(`[HandleSpeed] There are existing reports (lastTenStats has values), skipping auto-submit`);
+    // CHECK 2: Must have zero reports in all categories (stoi, toczy_sie, jedzie all = 0)
+    if (totalReports > 0) {
+      console.log(`[HandleSpeed] ❌ Total reports count is ${totalReports} (not 0) - skipping auto-submit`);
       return;
     }
     
+    // CHECK 3: Additional safety - verify lastTenStats object has no entries
+    const hasAnyStats = Object.keys(lastTenStats).length > 0;
+    if (hasAnyStats) {
+      console.log(`[HandleSpeed] ❌ lastTenStats has entries - skipping auto-submit`);
+      return;
+    }
+    
+    // CHECK 4: Don't auto-submit twice for same street+direction
     const key = `${selectedStreet}_${direction}`;
     if (hasAutoSubmitted[key]) {
-      console.log(`[HandleSpeed] Already auto-submitted for ${key}, skipping`);
+      console.log(`[HandleSpeed] ❌ Already auto-submitted for ${key}, skipping`);
       return;
     }
     
+    // Determine status based on speed
     let autoStatus: string | null = null;
     if (speed < 5) {
       autoStatus = 'stoi';
@@ -567,7 +581,7 @@ const Index = () => {
       autoStatus = 'jedzie';
     }
     
-    console.log(`[HandleSpeed] All checks passed. Determined auto-status: ${autoStatus} based on speed ${speed} km/h`);
+    console.log(`[HandleSpeed] ✅ All checks passed! "Brak aktualnych zgłoszeń" is displayed. Auto-submitting status: ${autoStatus} (speed: ${speed} km/h)`);
     
     if (autoStatus) {
       autoSubmitReport(autoStatus);

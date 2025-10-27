@@ -111,15 +111,13 @@ const Index = () => {
   const [incidentNotificationsEnabled, setIncidentNotificationsEnabled] = useState(false);
   const [hasAutoSubmitted, setHasAutoSubmitted] = useState<Record<string, boolean>>({});
 
-  // Save selected street to localStorage and reset auto-submit tracking
+  // Save selected street to localStorage
   useEffect(() => {
     console.log(`[StreetChange] Street or direction changed: ${selectedStreet} (${direction})`);
     localStorage.setItem('selectedStreet', selectedStreet);
     // Load incident notification preference when street changes
     setIncidentNotificationsEnabled(isWonderPushSubscribed(`incidents_${selectedStreet}`));
-    // Reset current status to allow auto-submit on street/direction change
-    setCurrentStatus(null);
-    console.log(`[StreetChange] Reset currentStatus to null for new street/direction`);
+    // Don't reset currentStatus - let fetchReports determine it from actual data
   }, [selectedStreet, direction]);
 
   // Capture the install prompt event
@@ -534,15 +532,23 @@ const Index = () => {
   };
 
   const handleSpeedUpdate = (speed: number | null) => {
-    console.log(`[HandleSpeed] Speed update: ${speed} km/h, currentStatus: ${currentStatus}, street: ${selectedStreet}, direction: ${direction}`);
+    console.log(`[HandleSpeed] Speed update: ${speed} km/h, currentStatus: ${currentStatus}, lastTenStats: ${JSON.stringify(lastTenStats)}, street: ${selectedStreet}, direction: ${direction}`);
     
     if (speed === null) {
       console.log(`[HandleSpeed] Speed is null, skipping auto-submit`);
       return;
     }
     
+    // Only auto-submit if currentStatus is null (no existing reports)
     if (currentStatus !== null) {
       console.log(`[HandleSpeed] Current status exists (${currentStatus}), skipping auto-submit`);
+      return;
+    }
+    
+    // Also check if there are any stats (counts > 0 means there are reports)
+    const hasAnyReports = Object.values(lastTenStats).some(count => count > 0);
+    if (hasAnyReports) {
+      console.log(`[HandleSpeed] There are existing reports (lastTenStats has values), skipping auto-submit`);
       return;
     }
     
@@ -561,7 +567,7 @@ const Index = () => {
       autoStatus = 'jedzie';
     }
     
-    console.log(`[HandleSpeed] Determined auto-status: ${autoStatus} based on speed ${speed} km/h`);
+    console.log(`[HandleSpeed] All checks passed. Determined auto-status: ${autoStatus} based on speed ${speed} km/h`);
     
     if (autoStatus) {
       autoSubmitReport(autoStatus);

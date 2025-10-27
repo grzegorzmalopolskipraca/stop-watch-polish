@@ -111,6 +111,7 @@ const Index = () => {
   const [incidentNotificationsEnabled, setIncidentNotificationsEnabled] = useState(false);
   const [hasAutoSubmitted, setHasAutoSubmitted] = useState<Record<string, boolean>>({});
   const [reportsLoaded, setReportsLoaded] = useState<boolean>(false);
+  const [pendingSpeed, setPendingSpeed] = useState<number | null>(null);
 
   // Save selected street to localStorage
   useEffect(() => {
@@ -120,6 +121,8 @@ const Index = () => {
     setIncidentNotificationsEnabled(isWonderPushSubscribed(`incidents_${selectedStreet}`));
     // Mark reports as not loaded until fetch completes
     setReportsLoaded(false);
+    // Clear pending speed when street changes
+    setPendingSpeed(null);
     // Don't reset currentStatus - let fetchReports determine it from actual data
   }, [selectedStreet, direction]);
 
@@ -377,6 +380,15 @@ const Index = () => {
  
       setLastUpdate(new Date());
       setReportsLoaded(true);
+      
+      // After reports are loaded, check if we have pending speed for auto-submit
+      if (pendingSpeed !== null) {
+        console.log(`[FetchReports] Reports loaded, checking pending speed: ${pendingSpeed} km/h`);
+        // Trigger auto-submit check with pending speed after a short delay
+        setTimeout(() => {
+          handleSpeedUpdate(pendingSpeed);
+        }, 100);
+      }
     } catch (error) {
       console.error("Error fetching reports:", error);
       toast.error("Błąd podczas pobierania danych");
@@ -549,9 +561,13 @@ const Index = () => {
 
     // CHECK 0: Ensure reports for current street+direction are loaded
     if (!reportsLoaded) {
-      console.log(`[HandleSpeed] ❌ Reports not loaded yet for ${selectedStreet} (${direction}) - skipping auto-submit`);
+      console.log(`[HandleSpeed] ❌ Reports not loaded yet for ${selectedStreet} (${direction}) - storing speed for later check`);
+      setPendingSpeed(speed);
       return;
     }
+    
+    // Clear pending speed since we're processing now
+    setPendingSpeed(null);
     
     // CHECK 1: Must have no currentStatus (this determines if "Brak aktualnych zgłoszeń" is shown)
     if (currentStatus !== null) {

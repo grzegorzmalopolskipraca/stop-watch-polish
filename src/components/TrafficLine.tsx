@@ -75,6 +75,7 @@ export const TrafficLine = ({ street, direction, width = "100%" }: Props) => {
   const [trafficPercent, setTrafficPercent] = useState<number>(0);
   const [durationMinutes, setDurationMinutes] = useState<number>(0);
   const [distanceKm, setDistanceKm] = useState<string>("");
+  const [avgSpeed, setAvgSpeed] = useState<string>("");
 
   useEffect(() => {
     async function fetchTraffic() {
@@ -141,7 +142,15 @@ export const TrafficLine = ({ street, direction, width = "100%" }: Props) => {
           }
           
           if (distance && distance > 0) {
-            setDistanceKm((distance / 1000).toFixed(1));
+            const distKm = distance / 1000;
+            setDistanceKm(distKm.toFixed(1));
+            
+            // Calculate average speed if we have duration
+            if (trafficDuration && trafficDuration > 0) {
+              const durationHours = trafficDuration / 3600; // convert seconds to hours
+              const speed = distKm / durationHours;
+              setAvgSpeed(speed.toFixed(1));
+            }
           }
           
           if (!trafficDuration || trafficDuration <= 0 || !distance || distance <= 0) {
@@ -211,7 +220,7 @@ export const TrafficLine = ({ street, direction, width = "100%" }: Props) => {
     <div className="w-full space-y-2">
       <div className="flex items-center justify-between text-xs" style={{ color: '#94a3b8' }}>
         <span>
-          Natężenie ruchu wzdłuż drogi (w trakcie prac) {durationMinutes > 0 && `Czas: ${durationMinutes} min`} {distanceKm && `Dystans: ${distanceKm} km`}
+          Natężenie ruchu wzdłuż drogi (w trakcie prac) {durationMinutes > 0 && `Czas: ${durationMinutes} min`} {distanceKm && `Dystans: ${distanceKm} km`} {avgSpeed && `Średnia prędkość: ${avgSpeed} km/h`}
         </span>
       </div>
       <div className="w-full h-2 bg-muted rounded-full overflow-hidden">

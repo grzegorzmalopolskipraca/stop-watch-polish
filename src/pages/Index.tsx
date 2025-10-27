@@ -884,7 +884,7 @@ const Index = () => {
             </li>
             <li className="flex items-start gap-2">
               <span className="text-primary mt-0.5">•</span>
-              <span>Łączmy się w bólu i uśmiechu</span>
+              <span>Łączmy się w bólu, miejmy z korków</span>
             </li>
             <li className="flex items-start gap-2">
               <span className="text-primary mt-0.5">•</span>

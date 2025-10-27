@@ -233,20 +233,6 @@ export const TrafficLine = ({ street, direction, width = "100%" }: Props) => {
           }}
         />
       </div>
-      <div 
-        style={{ 
-          width, 
-          height: '8px', 
-          backgroundColor: isLoading ? '#94a3b8' : colorMap[level],
-          transition: 'background-color 0.3s ease',
-          borderRadius: '4px'
-        }}
-        className="relative overflow-hidden"
-      >
-        {isLoading && (
-          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-pulse" />
-        )}
-      </div>
     </div>
   );
 };

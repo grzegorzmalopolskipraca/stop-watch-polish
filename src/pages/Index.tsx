@@ -876,7 +876,7 @@ const Index = () => {
             </li>
             <li className="flex items-start gap-2">
               <span className="text-primary mt-0.5">•</span>
-              <span>Spójrz, które godziny będą lepsze do wyjazdu i powrotu z miasta</span>
+              <span>Luźny wypad na miasto? Wybierz najodpowiednią porę</span>
             </li>
             <li className="flex items-start gap-2">
               <span className="text-primary mt-0.5">•</span>

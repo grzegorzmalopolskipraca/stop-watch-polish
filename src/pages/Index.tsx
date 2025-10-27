@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -37,7 +37,7 @@ import { TrafficLine } from "@/components/TrafficLine";
 import { GreenWave } from "@/components/GreenWave";
 import { RssTicker } from "@/components/RssTicker";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { format } from "date-fns";
+import { format, startOfDay } from "date-fns";
 import { pl } from "date-fns/locale";
 import { ArrowUp, ArrowDown, Bell, BellOff, ThumbsUp, Coffee, Pizza, Download, Share2, Printer } from "lucide-react";
 import { subscribeToWonderPush, unsubscribeFromWonderPush, isWonderPushSubscribed } from "@/utils/wonderpush";
@@ -117,6 +117,173 @@ const Index = () => {
     return localStorage.getItem('hasAutoSubmittedInSession') === 'true';
   });
   const [lastDirectionChange, setLastDirectionChange] = useState<number>(0);
+
+  // Format duration helper function
+  const formatDuration = (minutes: number): string => {
+    if (minutes < 60) {
+      return `${minutes} minut`;
+    }
+    
+    const hours = Math.floor(minutes / 60);
+    const remainingMinutes = minutes % 60;
+    
+    if (remainingMinutes === 0) {
+      return hours === 1 ? '1 godzina' : `${hours} godziny`;
+    }
+    
+    return `${hours} ${hours === 1 ? 'godzina' : 'godziny'} ${remainingMinutes} minut`;
+  };
+
+  // Calculate next green slot
+  const nextGreenSlot = useMemo(() => {
+    if (!weeklyReports || weeklyReports.length === 0) {
+      return null;
+    }
+
+    // Filter reports to only today and past 7 days
+    const today = startOfDay(new Date());
+    const weekAgo = new Date(today);
+    weekAgo.setDate(weekAgo.getDate() - 7);
+
+    const relevantReports = weeklyReports.filter((r) => {
+      const reportDate = new Date(r.reported_at);
+      return reportDate >= weekAgo && reportDate <= new Date();
+    });
+
+    // Use 10-minute intervals
+    interface IntervalStatus {
+      time: string;
+      averageStatus: 'stoi' | 'toczy_sie' | 'jedzie';
+    }
+    
+    const resultStatusList: IntervalStatus[] = [];
+
+    // Process each 10-minute interval
+    for (let totalMinutes = 0; totalMinutes < 24 * 60; totalMinutes += 10) {
+      const hour = Math.floor(totalMinutes / 60);
+      const minute = totalMinutes % 60;
+      const endMinutes = totalMinutes + 10;
+
+      // Count statuses in this 10-minute window
+      let countStatusStoi = 0;
+      let countStatusToczySie = 0;
+      let countStatusJedzie = 0;
+
+      relevantReports.forEach((r) => {
+        const reportDate = new Date(r.reported_at);
+        const reportTotalMinutes = reportDate.getHours() * 60 + reportDate.getMinutes();
+        
+        if (reportTotalMinutes >= totalMinutes && reportTotalMinutes < endMinutes) {
+          if (r.status === "stoi") {
+            countStatusStoi++;
+          } else if (r.status === "toczy_sie") {
+            countStatusToczySie++;
+          } else if (r.status === "jedzie") {
+            countStatusJedzie++;
+          }
+        }
+      });
+
+      // Determine average status
+      let averageStatus: 'stoi' | 'toczy_sie' | 'jedzie' = 'jedzie';
+      
+      if (countStatusStoi === 0 && countStatusToczySie === 0 && countStatusJedzie === 0) {
+        averageStatus = 'jedzie';
+      } else if (countStatusStoi >= countStatusToczySie && countStatusStoi >= countStatusJedzie) {
+        averageStatus = 'stoi';
+      } else if (countStatusToczySie >= countStatusStoi && countStatusToczySie >= countStatusJedzie) {
+        averageStatus = 'toczy_sie';
+      } else {
+        averageStatus = 'jedzie';
+      }
+
+      resultStatusList.push({
+        time: `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`,
+        averageStatus,
+      });
+    }
+
+    // Group consecutive periods of the same status
+    interface TimeRange {
+      start: string;
+      end: string;
+      durationMinutes: number;
+      status: 'stoi' | 'toczy_sie' | 'jedzie';
+    }
+
+    const ranges: TimeRange[] = [];
+    let rangeStart: string | null = null;
+    let rangeStartMinutes = 0;
+    let currentStatusInRange: 'stoi' | 'toczy_sie' | 'jedzie' | null = null;
+
+    resultStatusList.forEach((item, index) => {
+      if (rangeStart === null) {
+        rangeStart = item.time;
+        rangeStartMinutes = index * 10;
+        currentStatusInRange = item.averageStatus;
+      } else if (item.averageStatus !== currentStatusInRange) {
+        const endMinutes = index * 10;
+        const durationMinutes = endMinutes - rangeStartMinutes;
+        
+        ranges.push({
+          start: rangeStart,
+          end: item.time,
+          durationMinutes,
+          status: currentStatusInRange!,
+        });
+        
+        rangeStart = item.time;
+        rangeStartMinutes = index * 10;
+        currentStatusInRange = item.averageStatus;
+      }
+    });
+
+    // Handle the last range
+    if (rangeStart !== null && currentStatusInRange !== null) {
+      const endMinutes = 24 * 60;
+      const durationMinutes = endMinutes - rangeStartMinutes;
+      
+      ranges.push({
+        start: rangeStart,
+        end: '24:00',
+        durationMinutes,
+        status: currentStatusInRange,
+      });
+    }
+
+    // Find next green slot from current time
+    const now = new Date();
+    const currentHour = now.getHours();
+    const currentMinute = now.getMinutes();
+    const currentTotalMinutes = currentHour * 60 + currentMinute;
+
+    // Filter to green slots only and find next one after current time
+    const greenSlots = ranges.filter(range => range.status === 'jedzie');
+    
+    for (const slot of greenSlots) {
+      const [startHour, startMin] = slot.start.split(':').map(Number);
+      const startMinutes = startHour * 60 + startMin;
+      
+      // If this slot starts after current time and is between 5:00 and 22:00
+      if (startMinutes > currentTotalMinutes && startMinutes >= 5 * 60 && startMinutes < 22 * 60) {
+        // Ensure end time is also within display window
+        const [endHour, endMin] = slot.end.split(':').map(Number);
+        const endMinutes = endHour * 60 + endMin;
+        const adjustedEnd = Math.min(endMinutes, 22 * 60);
+        
+        const adjustedEndHour = Math.floor(adjustedEnd / 60);
+        const adjustedEndMin = adjustedEnd % 60;
+        
+        return {
+          ...slot,
+          end: `${String(adjustedEndHour).padStart(2, '0')}:${String(adjustedEndMin).padStart(2, '0')}`,
+          durationMinutes: adjustedEnd - startMinutes,
+        };
+      }
+    }
+
+    return null;
+  }, [weeklyReports]);
 
   // Save selected street to localStorage
   useEffect(() => {
@@ -944,6 +1111,37 @@ const Index = () => {
             </Button>
           </div>
         </section>
+
+        {/* Next Green Slot */}
+        {nextGreenSlot && (
+          <section className="bg-card rounded-lg p-5 border border-border space-y-3">
+            <h3 className="text-lg font-semibold">
+              Najbliższa zielona fala
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              Możesz wyjechać, gdy ruch jest mniejszy
+            </p>
+            <div className="bg-traffic-jedzie/10 border border-traffic-jedzie/20 rounded-lg p-4">
+              <p className="text-sm font-medium text-muted-foreground mb-2">
+                Kiedy masz zielony slot:
+              </p>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="text-lg font-semibold">
+                    {nextGreenSlot.start}
+                  </span>
+                  <span className="text-muted-foreground">do</span>
+                  <span className="text-lg font-semibold">
+                    {nextGreenSlot.end}
+                  </span>
+                </div>
+                <span className="text-sm text-muted-foreground">
+                  {formatDuration(nextGreenSlot.durationMinutes)}
+                </span>
+              </div>
+            </div>
+          </section>
+        )}
 
         {/* Today's Timeline */}
         <section className="bg-card rounded-lg p-5 border border-border space-y-4">

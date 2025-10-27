@@ -1133,7 +1133,7 @@ const Index = () => {
                   {formatDuration(nextGreenSlot.durationMinutes)}
                 </span>
               </div>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-muted-foreground/60 mt-2">
                 Możesz wyjechać, gdy ruch jest mniejszy
               </p>
             </div>

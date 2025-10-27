@@ -643,7 +643,7 @@ const Index = () => {
       <header className="sticky top-0 z-10 bg-card border-b border-border shadow-sm">
         <div className="container max-w-2xl mx-auto px-4 py-4">
           <div className="mb-3">
-            <p className="text-sm text-muted-foreground mb-1">Zanim wyjedziesz sprawdź</p>
+            <p className="text-sm text-muted-foreground mb-1">Korzystaj z Zielonej Fali. Zanim ruszysz sprawdź</p>
             <a href="https://ejedzie.pl" className="block">
               <h1 className="text-2xl font-bold hover:text-primary transition-colors cursor-pointer">
                 Czy {selectedStreet} stoi?

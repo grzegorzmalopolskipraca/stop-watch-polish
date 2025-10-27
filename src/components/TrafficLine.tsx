@@ -14,8 +14,12 @@ interface Props {
   width?: string;
 }
 
-// Thresholds for speed in km/h used to color the bar
-const SPEED_THRESHOLDS = { redKmh: 14.4, orangeKmh: 36 };
+// Thresholds for speed in km/h - adjusted for urban traffic
+const SPEED_THRESHOLDS = {
+  LOW: 40,    // >= 40 km/h = free-flowing traffic (green)
+  MEDIUM: 25  // 25-40 km/h = moderate traffic (orange)
+              // < 25 km/h = heavy congestion (red)
+};
 
 // Street coordinates for Wrocław
 const STREET_COORDINATES: Record<string, StreetCoordinates> = {
@@ -137,17 +141,17 @@ export const TrafficLine = ({ street, direction, width = "100%" }: Props) => {
           console.log(`[TrafficLine] Calculated speed with traffic: ${speed} m/s (${speedKmh.toFixed(2)} km/h)`);
           
           // Determine traffic level based on speed
-          console.log(`[TrafficLine] Thresholds (km/h): red<${SPEED_THRESHOLDS.redKmh}, orange<${SPEED_THRESHOLDS.orangeKmh}, green>=${SPEED_THRESHOLDS.orangeKmh}`);
+          console.log(`[TrafficLine] Thresholds (km/h): red<${SPEED_THRESHOLDS.MEDIUM}, orange<${SPEED_THRESHOLDS.LOW}, green>=${SPEED_THRESHOLDS.LOW}`);
           let newLevel: TrafficLevel;
           if (!isFinite(speed) || speed <= 0) {
             console.warn(`[TrafficLine] Invalid speed computed (speed=${speed}). Falling back to medium.`);
             newLevel = "medium";
-          } else if (speedKmh < SPEED_THRESHOLDS.redKmh) {
-            newLevel = "high";
-          } else if (speedKmh < SPEED_THRESHOLDS.orangeKmh) {
-            newLevel = "medium";
+          } else if (speedKmh >= SPEED_THRESHOLDS.LOW) {
+            newLevel = "low";     // Green: fast, free-flowing
+          } else if (speedKmh >= SPEED_THRESHOLDS.MEDIUM) {
+            newLevel = "medium";  // Orange: moderate traffic
           } else {
-            newLevel = "low";
+            newLevel = "high";    // Red: slow, congested
           }
           console.log(`[TrafficLine] Determined traffic level: ${newLevel} (speed: ${speed.toFixed(3)} m/s, ${speedKmh.toFixed(1)} km/h)`);
           setLevel(newLevel);

@@ -79,7 +79,7 @@ export const WeeklyTimeline = ({ reports }: WeeklyTimelineProps) => {
     <div className="space-y-3">
       <h2 className="text-lg font-semibold">Ruch tygodniowy</h2>
       <p className="text-sm text-muted-foreground">
-        Ostatnie 8 dni
+        Ostatnie 7 dni
       </p>
       
       <div className="space-y-1">

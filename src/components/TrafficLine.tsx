@@ -225,7 +225,7 @@ export const TrafficLine = ({ street, direction, width = "100%", onSpeedUpdate }
     <div className="w-full space-y-2">
       <div className="flex items-center justify-between text-xs" style={{ color: '#94a3b8' }}>
         <span>
-          Natężenie ruchu wzdłuż drogi (w trakcie prac) {durationMinutes > 0 && `Czas: ${durationMinutes} min`} {distanceKm && `Dystans: ${distanceKm} km`} {avgSpeed && `Średnia prędkość: ${avgSpeed} km/h`}
+          Średnie natężenie ruchu od Google: {durationMinutes > 0 && `Czas: ${durationMinutes} min`} {distanceKm && `Dystans: ${distanceKm} km`} {avgSpeed && `Średnia prędkość: ${avgSpeed} km/h`}
         </span>
       </div>
       <div className="w-full h-2 bg-muted rounded-full overflow-hidden">

@@ -262,7 +262,7 @@ export const GreenWave = ({ reports }: GreenWaveProps) => {
         Zielona fala analizuje dane z Naszych zgłoszeń. Im więcej prawidłowych zgłoszeń, tym będzie dokładniejsza.
       </p>
       <p className="text-sm font-semibold">
-        Stan ruchu w ciągu dnia:
+        Wyjedź, kiedy masz zielony slot:
       </p>
       
       <div ref={containerRef} className="space-y-2 h-[45vh] overflow-y-auto pr-2">

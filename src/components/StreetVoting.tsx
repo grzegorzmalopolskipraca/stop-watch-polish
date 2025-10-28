@@ -87,7 +87,7 @@ export const StreetVoting = ({ existingStreets }: StreetVotingProps) => {
     setIsLoading(true);
 
     try {
-      // Call edge function to handle voting with content filtering
+      // Handle voting with content filtering
       const { data, error } = await supabase.functions.invoke('submit-street-vote', {
         body: {
           streetName: streetName,
@@ -97,7 +97,7 @@ export const StreetVoting = ({ existingStreets }: StreetVotingProps) => {
       });
 
       if (error) {
-        console.error("Error from edge function:", error);
+        console.error("Error:", error);
         throw error;
       }
 

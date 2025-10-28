@@ -101,7 +101,6 @@ export const TrafficLine = ({ street, direction, width = "100%", onSpeedUpdate }
 
         console.log(`[TrafficLine] Found coordinates for ${street}:`, coords);
 
-        // Reverse coordinates if direction is from center
         const origin = direction === "from_center" 
           ? { lat: coords.end.lat, lng: coords.end.lng }
           : { lat: coords.start.lat, lng: coords.start.lng };
@@ -109,21 +108,19 @@ export const TrafficLine = ({ street, direction, width = "100%", onSpeedUpdate }
           ? { lat: coords.start.lat, lng: coords.start.lng }
           : { lat: coords.end.lat, lng: coords.end.lng };
 
-        console.log(`[TrafficLine] Calling edge function with origin:`, origin, `destination:`, destination);
         const t0 = performance.now();
-        // Call edge function instead of Google API directly
         const { data: json, error } = await supabase.functions.invoke('get-traffic-data', {
           body: { origin, destination }
         });
         const t1 = performance.now();
-        console.log(`[TrafficLine] Edge function roundtrip: ${(t1 - t0).toFixed(0)} ms`);
+        console.log(`[TrafficLine] Roundtrip: ${(t1 - t0).toFixed(0)} ms`);
 
         if (error) {
-          console.error(`[TrafficLine] Edge function error:`, error);
+          console.error(`[TrafficLine] Error:`, error);
           throw new Error(error.message);
         }
 
-        console.log(`[TrafficLine] Received response from edge function:`, json);
+        console.log(`[TrafficLine] Received response:`, json);
         
         if (json?.routes && json.routes.length > 0) {
           const route = json.routes[0];

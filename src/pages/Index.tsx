@@ -705,11 +705,7 @@ const Index = () => {
         const key = `${selectedStreet}_${direction}`;
         setHasAutoSubmitted(prev => ({ ...prev, [key]: true }));
         
-        // Refresh reports after submission to update status box
-        setTimeout(() => {
-          console.log(`[AutoSubmit] Refreshing reports for ${selectedStreet} (${direction})`);
-          fetchReports(selectedStreet);
-        }, 800);
+        // Don't refresh UI to prevent page updates
       } else {
         console.error(`[AutoSubmit] Failed to submit:`, error);
       }
@@ -1146,8 +1142,7 @@ const Index = () => {
           <TrafficLine 
             street={selectedStreet} 
             direction={direction as "to_center" | "from_center"} 
-            // Temporarily disabled auto-submit logic
-            // onSpeedUpdate={handleSpeedUpdate}
+            onSpeedUpdate={handleSpeedUpdate}
           />
         </section>
 

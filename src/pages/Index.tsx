@@ -990,7 +990,7 @@ const Index = () => {
         {nextGreenSlot && (
           <section className="bg-card rounded-lg p-5 border border-border space-y-3">
             <h3 className="text-lg font-semibold">
-              Najbliższa zielona fala
+              Korzystaj. Wyjedź, gdy ruch jest mniejszy:
             </h3>
             <div className="bg-traffic-jedzie/10 border border-traffic-jedzie/20 rounded-lg p-4 space-y-2">
               <div className="flex items-center justify-between">

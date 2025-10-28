@@ -1146,7 +1146,8 @@ const Index = () => {
           <TrafficLine 
             street={selectedStreet} 
             direction={direction as "to_center" | "from_center"} 
-            onSpeedUpdate={handleSpeedUpdate}
+            // Temporarily disabled auto-submit logic
+            // onSpeedUpdate={handleSpeedUpdate}
           />
         </section>
 

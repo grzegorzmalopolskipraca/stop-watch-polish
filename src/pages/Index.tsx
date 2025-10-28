@@ -423,7 +423,7 @@ const Index = () => {
     );
   };
 
-  const fetchReports = async (street: string) => {
+  const fetchReports = async (street: string, currentDirection: string = direction) => {
     setIsLoading(true);
     try {
       // Fetch last 7 days of reports for weekly timeline
@@ -434,7 +434,7 @@ const Index = () => {
         .from("traffic_reports")
         .select("*")
         .eq("street", street)
-        .eq("direction", direction)
+        .eq("direction", currentDirection)
         .gte("reported_at", weekAgo.toISOString())
         .order("reported_at", { ascending: false });
 
@@ -449,7 +449,7 @@ const Index = () => {
         .from("traffic_reports")
         .select("*")
         .eq("street", street)
-        .eq("direction", direction)
+        .eq("direction", currentDirection)
         .gte("reported_at", startOfDay.toISOString())
         .order("reported_at", { ascending: false });
 
@@ -465,7 +465,7 @@ const Index = () => {
           .from('traffic_reports')
           .select('*')
           .eq('street', street)
-          .eq('direction', direction)
+          .eq('direction', currentDirection)
           .gte('reported_at', timeAgo.toISOString());
 
         if (error) throw error;
@@ -525,7 +525,7 @@ const Index = () => {
         .from('traffic_reports')
         .select('status')
         .eq('street', street)
-        .eq('direction', direction)
+        .eq('direction', currentDirection)
         .order('reported_at', { ascending: false })
         .limit(2);
 
@@ -644,14 +644,14 @@ const Index = () => {
   };
 
   useEffect(() => {
-    fetchReports(selectedStreet);
+    fetchReports(selectedStreet, direction);
     fetchVisitorStats();
     fetchIncidentCounts();
     recordVisit();
 
     // Auto-refresh every 60 seconds
     const interval = setInterval(() => {
-      fetchReports(selectedStreet);
+      fetchReports(selectedStreet, direction);
       fetchVisitorStats();
       fetchIncidentCounts();
     }, 60000);
@@ -668,7 +668,7 @@ const Index = () => {
           filter: `street=eq.${selectedStreet}`,
         },
         () => {
-          fetchReports(selectedStreet);
+          fetchReports(selectedStreet, direction);
         }
       )
       .subscribe();
@@ -838,7 +838,7 @@ const Index = () => {
       // Wait for database to commit, then refresh status box
       setTimeout(() => {
         console.log('[SubmitReport] Refreshing status box after manual submission');
-        fetchReports(selectedStreet);
+        fetchReports(selectedStreet, direction);
         fetchIncidentCounts();
       }, 1000);
     } catch (error: any) {

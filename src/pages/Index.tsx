@@ -959,7 +959,7 @@ const Index = () => {
         {/* Report Buttons */}
         <section className="space-y-3">
           <h3 className="text-sm font-medium text-center">
-            Jak wygląda teraz ruch?
+            Poinformuj sąsiadów. Jak wygląda teraz ruch?
           </h3>
           <div className="grid grid-cols-3 gap-3">
             <Button

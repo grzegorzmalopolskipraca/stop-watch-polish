@@ -109,7 +109,6 @@ const Index = () => {
   const [pendingIncident, setPendingIncident] = useState<{type: string; emoji: string} | null>(null);
   const [trafficTrend, setTrafficTrend] = useState<string | null>(null);
   const [incidentNotificationsEnabled, setIncidentNotificationsEnabled] = useState(false);
-  const [lastAutoSubmitTime, setLastAutoSubmitTime] = useState<number>(0);
 
   // Format duration helper function
   const formatDuration = (minutes: number): string => {
@@ -284,8 +283,6 @@ const Index = () => {
     localStorage.setItem('selectedStreet', selectedStreet);
     // Load incident notification preference when street changes
     setIncidentNotificationsEnabled(isWonderPushSubscribed(`incidents_${selectedStreet}`));
-    // Reset auto-submit timer on street/direction change
-    setLastAutoSubmitTime(0);
   }, [selectedStreet, direction]);
 
   // Capture the install prompt event
@@ -657,70 +654,6 @@ const Index = () => {
     };
   }, [selectedStreet, direction]);
 
-  const autoSubmitReport = async (status: string) => {
-    try {
-      let userFingerprint = localStorage.getItem('userFingerprint');
-      if (!userFingerprint) {
-        userFingerprint = `user_${Math.random().toString(36).substring(2, 15)}_${Date.now()}`;
-        localStorage.setItem('userFingerprint', userFingerprint);
-      }
-      
-      console.log(`[AutoSubmit] Submitting status: ${status} for ${selectedStreet} (${direction})`);
-      
-      const { data, error } = await supabase.functions.invoke('auto-submit-traffic-report', {
-        body: {
-          street: selectedStreet,
-          status,
-          userFingerprint,
-          direction,
-          isAutoSubmit: true,
-        },
-      });
-
-      if (!error && data?.success) {
-        if (data?.skipped) {
-          console.log(`[AutoSubmit] Duplicate detected - skipped`);
-        } else {
-          console.log(`[AutoSubmit] Successfully submitted`);
-          fetchReports(selectedStreet, direction);
-        }
-      }
-    } catch (error) {
-      console.error("[AutoSubmit] Error:", error);
-    }
-  };
-
-  const handleSpeedUpdate = (speed: number | null) => {
-    if (speed === null) return;
-    
-    // Only auto-submit when "Brak aktualnych zgłoszeń" is displayed
-    if (currentStatus !== null) {
-      console.log(`[HandleSpeed] Status exists (${currentStatus}) - skipping auto-submit`);
-      return;
-    }
-    
-    // Prevent too frequent auto-submits (minimum 30 seconds between)
-    const now = Date.now();
-    if (now - lastAutoSubmitTime < 30000) {
-      console.log(`[HandleSpeed] Auto-submit too recent - skipping`);
-      return;
-    }
-    
-    // Determine status based on speed
-    let autoStatus: string;
-    if (speed < 5) {
-      autoStatus = 'stoi';
-    } else if (speed < 15) {
-      autoStatus = 'toczy_sie';
-    } else {
-      autoStatus = 'jedzie';
-    }
-    
-    console.log(`[HandleSpeed] Auto-submitting: ${autoStatus} (speed: ${speed} km/h)`);
-    setLastAutoSubmitTime(now);
-    autoSubmitReport(autoStatus);
-  };
-
   const submitReport = async (status: string) => {
     try {
       // Get or create persistent user fingerprint
@@ -1059,7 +992,6 @@ const Index = () => {
           <TrafficLine 
             street={selectedStreet} 
             direction={direction as "to_center" | "from_center"}
-            onSpeedUpdate={handleSpeedUpdate}
           />
         </section>
 

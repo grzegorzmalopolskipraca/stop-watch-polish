@@ -67,6 +67,14 @@ const STREET_COORDINATES: Record<string, StreetCoordinates> = {
   "Sudecka": {
     start: { lat: 51.072714, lng: 17.011915 },
     end: { lat: 51.084632, lng: 17.018180 }
+  },
+  "Opolska": {
+    start: { lat: 51.085276, lng: 16.998133 },
+    end: { lat: 51.106789, lng: 17.025789 }
+  },
+  "Parafialna": {
+    start: { lat: 51.037543, lng: 17.042567 },
+    end: { lat: 51.057234, lng: 17.048923 }
   }
 };
 

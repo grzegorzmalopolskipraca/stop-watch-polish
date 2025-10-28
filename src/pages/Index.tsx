@@ -1337,6 +1337,10 @@ const Index = () => {
           <Link to="/kontakt" className="text-sm text-primary hover:underline">
             Kontakt
           </Link>
+          <span className="text-muted-foreground">•</span>
+          <Link to="/statystyki" className="text-sm text-primary hover:underline">
+            Statystyki
+          </Link>
         </div>
       </footer>
       

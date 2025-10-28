@@ -1,9 +1,30 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
+import { z } from 'https://deno.land/x/zod@v3.22.4/mod.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+const VALID_STREETS = [
+  'Borowska', 'Buforowa', 'Grabiszyńska', 'Grota Roweckiego',
+  'Karkonoska', 'Ołtaszyńska', 'Opolska', 'Parafialna', 'Powstańców Śląskich',
+  'Radosna', 'Sudecka', 'Ślężna', 'Zwycięska'
+];
+
+const VALID_INCIDENT_TYPES = [
+  'Wypadek', 'Kolizja', 'Roboty drogowe', 'Awaria pojazdu', 
+  'Kontrola drogowa', 'Utrudnienie', 'Zamknięta droga'
+];
+
+const VALID_DIRECTIONS = ['to_center', 'from_center'];
+
+const incidentSchema = z.object({
+  street: z.enum(VALID_STREETS as [string, ...string[]]),
+  incidentType: z.enum(VALID_INCIDENT_TYPES as [string, ...string[]]),
+  userFingerprint: z.string().min(1).max(100),
+  direction: z.enum(VALID_DIRECTIONS as [string, ...string[]]),
+});
 
 // IP-based rate limiting: max 3 reports per IP per 5 minutes
 async function checkIPRateLimit(supabase: any, clientIP: string): Promise<boolean> {
@@ -64,16 +85,24 @@ Deno.serve(async (req) => {
       );
     }
 
-    const { street, incidentType, userFingerprint, direction } = await req.json();
+    const body = await req.json();
 
-    console.log('Received incident report:', { street, incidentType, userFingerprint, direction });
-
-    if (!street || !incidentType || !userFingerprint || !direction) {
+    // Validate input with schema
+    const validationResult = incidentSchema.safeParse(body);
+    if (!validationResult.success) {
+      console.log('Validation failed:', validationResult.error.issues);
       return new Response(
-        JSON.stringify({ error: 'Missing required fields' }),
+        JSON.stringify({ 
+          error: 'Nieprawidłowe dane wejściowe', 
+          details: validationResult.error.issues 
+        }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
       );
     }
+
+    const { street, incidentType, userFingerprint, direction } = validationResult.data;
+
+    console.log('Received incident report:', { street, incidentType, userFingerprint, direction });
 
     // Check rate limiting - max 1 incident report per user per incident type per street per 5 minutes
     const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();

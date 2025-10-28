@@ -109,9 +109,6 @@ const Index = () => {
   const [pendingIncident, setPendingIncident] = useState<{type: string; emoji: string} | null>(null);
   const [trafficTrend, setTrafficTrend] = useState<string | null>(null);
   const [incidentNotificationsEnabled, setIncidentNotificationsEnabled] = useState(false);
-  const [reportsLoaded, setReportsLoaded] = useState<boolean>(false);
-  const [pendingSpeed, setPendingSpeed] = useState<number | null>(null);
-  const [lastDirectionChange, setLastDirectionChange] = useState<number>(0);
 
   // Format duration helper function
   const formatDuration = (minutes: number): string => {
@@ -286,12 +283,6 @@ const Index = () => {
     localStorage.setItem('selectedStreet', selectedStreet);
     // Load incident notification preference when street changes
     setIncidentNotificationsEnabled(isWonderPushSubscribed(`incidents_${selectedStreet}`));
-    // Mark reports as not loaded until fetch completes
-    setReportsLoaded(false);
-    // Don't clear pending speed - let it persist for the new direction
-    // Track direction change timestamp to prevent immediate auto-submit
-    setLastDirectionChange(Date.now());
-    // Don't reset currentStatus - let fetchReports determine it from actual data
   }, [selectedStreet, direction]);
 
   // Capture the install prompt event
@@ -545,18 +536,8 @@ const Index = () => {
           setTrafficTrend(null);
         }
       }
- 
+  
       setLastUpdate(new Date());
-      setReportsLoaded(true);
-      
-      // After reports are loaded, check if we have pending speed for auto-submit
-      if (pendingSpeed !== null) {
-        console.log(`[FetchReports] Reports loaded, checking pending speed: ${pendingSpeed} km/h`);
-        // Trigger auto-submit check with pending speed after a short delay
-        setTimeout(() => {
-          handleSpeedUpdate(pendingSpeed);
-        }, 100);
-      }
     } catch (error) {
       console.error("Error fetching reports:", error);
       toast.error("Błąd podczas pobierania danych");
@@ -672,111 +653,6 @@ const Index = () => {
       supabase.removeChannel(channel);
     };
   }, [selectedStreet, direction]);
-
-  const autoSubmitReport = async (status: string) => {
-    try {
-      let userFingerprint = localStorage.getItem('userFingerprint');
-      if (!userFingerprint) {
-        userFingerprint = `user_${Math.random().toString(36).substring(2, 15)}_${Date.now()}`;
-        localStorage.setItem('userFingerprint', userFingerprint);
-      }
-      
-      console.log(`[AutoSubmit] Attempting to submit status: ${status} for ${selectedStreet} (${direction})`);
-      
-      const { data, error } = await supabase.functions.invoke('auto-submit-traffic-report', {
-        body: {
-          street: selectedStreet,
-          status,
-          userFingerprint,
-          direction,
-          isAutoSubmit: true,
-        },
-      });
-
-      if (!error && data?.success) {
-        if (data?.skipped) {
-          console.log(`[AutoSubmit] Duplicate detected - skipped submission for ${selectedStreet} (${direction})`);
-        } else {
-          console.log(`[AutoSubmit] Successfully submitted status: ${status} for ${selectedStreet} (${direction})`);
-          // Refresh UI immediately to show the new auto-submitted status
-          fetchReports(selectedStreet, direction);
-        }
-      } else {
-        console.error(`[AutoSubmit] Failed to submit:`, error);
-      }
-    } catch (error) {
-      console.error("[AutoSubmit] Error auto-submitting report:", error);
-      // Fail silently - no toast messages
-    }
-  };
-
-  const handleSpeedUpdate = (speed: number | null) => {
-    // Auto-submit only when "Brak aktualnych zgłoszeń" is displayed
-    const stoiCount = lastTenStats['stoi'] || 0;
-    const toczyCount = lastTenStats['toczy_sie'] || 0;
-    const jedzieCount = lastTenStats['jedzie'] || 0;
-    const totalReports = stoiCount + toczyCount + jedzieCount;
-    
-    console.log(`[HandleSpeed] Speed: ${speed} km/h | currentStatus: ${currentStatus} | Stats: stoi=${stoiCount}, toczy=${toczyCount}, jedzie=${jedzieCount} (total=${totalReports}) | street: ${selectedStreet} (${direction})`);
-    
-    if (speed === null) {
-      console.log(`[HandleSpeed] ❌ Speed is null, skipping auto-submit`);
-      return;
-    }
-
-    // CHECK 1: Prevent auto-submit immediately after direction/street change (within 2 seconds)
-    const timeSinceDirectionChange = Date.now() - lastDirectionChange;
-    if (timeSinceDirectionChange < 2000) {
-      console.log(`[HandleSpeed] ❌ Direction/street changed too recently (${timeSinceDirectionChange}ms ago) - skipping auto-submit`);
-      return;
-    }
-
-    // CHECK 2: Ensure reports for current street+direction are loaded
-    if (!reportsLoaded) {
-      console.log(`[HandleSpeed] ❌ Reports not loaded yet for ${selectedStreet} (${direction}) - storing speed for later check`);
-      setPendingSpeed(speed);
-      return;
-    }
-    
-    // Clear pending speed since we're processing now
-    setPendingSpeed(null);
-    
-    // CHECK 3: Must have no currentStatus (this determines if "Brak aktualnych zgłoszeń" is shown)
-    if (currentStatus !== null) {
-      console.log(`[HandleSpeed] ❌ Current status exists (${currentStatus}), not "Brak aktualnych zgłoszeń" - skipping auto-submit`);
-      return;
-    }
-    
-    // CHECK 4: Must have zero reports in all categories (stoi, toczy_sie, jedzie all = 0)
-    if (totalReports > 0) {
-      console.log(`[HandleSpeed] ❌ Total reports count is ${totalReports} (not 0) - skipping auto-submit`);
-      return;
-    }
-    
-    // CHECK 5: Additional safety - verify lastTenStats object has no entries
-    const hasAnyStats = Object.keys(lastTenStats).length > 0;
-    if (hasAnyStats) {
-      console.log(`[HandleSpeed] ❌ lastTenStats has entries - skipping auto-submit`);
-      return;
-    }
-    
-    // Determine status based on speed
-    let autoStatus: string | null = null;
-    if (speed < 5) {
-      autoStatus = 'stoi';
-    } else if (speed < 15) {
-      autoStatus = 'toczy_sie';
-    } else {
-      autoStatus = 'jedzie';
-    }
-    
-    console.log(`[HandleSpeed] ✅ All checks passed! "Brak aktualnych zgłoszeń" is displayed. Auto-submitting status: ${autoStatus} (speed: ${speed} km/h)`);
-    
-    // Backend will check for duplicates within 10 seconds - we rely on that check
-    if (autoStatus) {
-      autoSubmitReport(autoStatus);
-    }
-  };
 
   const submitReport = async (status: string) => {
     try {
@@ -1116,7 +992,6 @@ const Index = () => {
           <TrafficLine 
             street={selectedStreet} 
             direction={direction as "to_center" | "from_center"} 
-            onSpeedUpdate={handleSpeedUpdate}
           />
         </section>
 

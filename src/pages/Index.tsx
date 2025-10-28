@@ -673,12 +673,12 @@ const Index = () => {
       }
       
       console.log(`[AutoSpeed] Auto-submitting: ${autoStatus} (speed: ${latestSpeed} km/h)`);
-      submitReport(autoStatus);
+      submitReport(autoStatus, true); // Pass true to indicate auto-submission
       setLatestSpeed(null); // Reset to prevent duplicate submissions
     }
   }, [currentStatus, latestSpeed]);
 
-  const submitReport = async (status: string) => {
+  const submitReport = async (status: string, isAutoSubmit: boolean = false) => {
     try {
       // Get or create persistent user fingerprint
       let userFingerprint = localStorage.getItem('userFingerprint');
@@ -705,12 +705,16 @@ const Index = () => {
         return;
       }
 
-      toast.success("Dziękujemy za zgłoszenie!");
-      // RSS ticker disabled - uncomment line below to re-enable
-      // setShowRssTicker(true);
+      // Only show thank you message for manual submissions, not auto-submissions
+      if (!isAutoSubmit) {
+        toast.success("Dziękujemy za zgłoszenie!");
+        // RSS ticker disabled - uncomment line below to re-enable
+        // setShowRssTicker(true);
+      }
+      
       // Wait for database to commit, then refresh status box
       setTimeout(() => {
-        console.log('[SubmitReport] Refreshing status box after manual submission');
+        console.log(`[SubmitReport] Refreshing status box after ${isAutoSubmit ? 'auto' : 'manual'} submission`);
         fetchReports(selectedStreet, direction);
         fetchIncidentCounts();
       }, 1000);

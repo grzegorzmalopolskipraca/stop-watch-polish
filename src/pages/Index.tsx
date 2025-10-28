@@ -109,13 +109,8 @@ const Index = () => {
   const [pendingIncident, setPendingIncident] = useState<{type: string; emoji: string} | null>(null);
   const [trafficTrend, setTrafficTrend] = useState<string | null>(null);
   const [incidentNotificationsEnabled, setIncidentNotificationsEnabled] = useState(false);
-  const [hasAutoSubmitted, setHasAutoSubmitted] = useState<Record<string, boolean>>({});
   const [reportsLoaded, setReportsLoaded] = useState<boolean>(false);
   const [pendingSpeed, setPendingSpeed] = useState<number | null>(null);
-  const [hasAutoSubmittedInSession, setHasAutoSubmittedInSession] = useState<boolean>(() => {
-    // Check localStorage for session-level auto-submit flag
-    return localStorage.getItem('hasAutoSubmittedInSession') === 'true';
-  });
   const [lastDirectionChange, setLastDirectionChange] = useState<number>(0);
 
   // Format duration helper function
@@ -701,11 +696,10 @@ const Index = () => {
 
       if (!error && data?.success) {
         console.log(`[AutoSubmit] Successfully submitted status: ${status} for ${selectedStreet} (${direction})`);
-        // Mark as auto-submitted for this street+direction
-        const key = `${selectedStreet}_${direction}`;
-        setHasAutoSubmitted(prev => ({ ...prev, [key]: true }));
-        
-        // Don't refresh UI to prevent page updates
+        // Refresh UI to show the new auto-submitted status
+        setTimeout(() => {
+          fetchReports(selectedStreet, direction);
+        }, 500);
       } else {
         console.error(`[AutoSubmit] Failed to submit:`, error);
       }
@@ -716,7 +710,7 @@ const Index = () => {
   };
 
   const handleSpeedUpdate = (speed: number | null) => {
-    // Triple-check conditions: auto-submit only when "Brak aktualnych zgłoszeń" is displayed
+    // Auto-submit only when "Brak aktualnych zgłoszeń" is displayed
     const stoiCount = lastTenStats['stoi'] || 0;
     const toczyCount = lastTenStats['toczy_sie'] || 0;
     const jedzieCount = lastTenStats['jedzie'] || 0;
@@ -729,20 +723,14 @@ const Index = () => {
       return;
     }
 
-    // CHECK 0: Session-level limit - only one auto-submit per session
-    if (hasAutoSubmittedInSession) {
-      console.log(`[HandleSpeed] ❌ Auto-submit already used in this session - skipping`);
-      return;
-    }
-
-    // CHECK 0b: Prevent auto-submit immediately after direction change (within 4 seconds)
+    // CHECK 1: Prevent auto-submit immediately after direction/street change (within 4 seconds)
     const timeSinceDirectionChange = Date.now() - lastDirectionChange;
     if (timeSinceDirectionChange < 4000) {
-      console.log(`[HandleSpeed] ❌ Direction changed too recently (${timeSinceDirectionChange}ms ago) - skipping auto-submit`);
+      console.log(`[HandleSpeed] ❌ Direction/street changed too recently (${timeSinceDirectionChange}ms ago) - skipping auto-submit`);
       return;
     }
 
-    // CHECK 1: Ensure reports for current street+direction are loaded
+    // CHECK 2: Ensure reports for current street+direction are loaded
     if (!reportsLoaded) {
       console.log(`[HandleSpeed] ❌ Reports not loaded yet for ${selectedStreet} (${direction}) - storing speed for later check`);
       setPendingSpeed(speed);
@@ -752,29 +740,22 @@ const Index = () => {
     // Clear pending speed since we're processing now
     setPendingSpeed(null);
     
-    // CHECK 2: Must have no currentStatus (this determines if "Brak aktualnych zgłoszeń" is shown)
+    // CHECK 3: Must have no currentStatus (this determines if "Brak aktualnych zgłoszeń" is shown)
     if (currentStatus !== null) {
       console.log(`[HandleSpeed] ❌ Current status exists (${currentStatus}), not "Brak aktualnych zgłoszeń" - skipping auto-submit`);
       return;
     }
     
-    // CHECK 3: Must have zero reports in all categories (stoi, toczy_sie, jedzie all = 0)
+    // CHECK 4: Must have zero reports in all categories (stoi, toczy_sie, jedzie all = 0)
     if (totalReports > 0) {
       console.log(`[HandleSpeed] ❌ Total reports count is ${totalReports} (not 0) - skipping auto-submit`);
       return;
     }
     
-    // CHECK 4: Additional safety - verify lastTenStats object has no entries
+    // CHECK 5: Additional safety - verify lastTenStats object has no entries
     const hasAnyStats = Object.keys(lastTenStats).length > 0;
     if (hasAnyStats) {
       console.log(`[HandleSpeed] ❌ lastTenStats has entries - skipping auto-submit`);
-      return;
-    }
-    
-    // CHECK 5: Don't auto-submit twice for same street+direction
-    const key = `${selectedStreet}_${direction}`;
-    if (hasAutoSubmitted[key]) {
-      console.log(`[HandleSpeed] ❌ Already auto-submitted for ${key}, skipping`);
       return;
     }
     
@@ -790,16 +771,7 @@ const Index = () => {
     
     console.log(`[HandleSpeed] ✅ All checks passed! "Brak aktualnych zgłoszeń" is displayed. Auto-submitting status: ${autoStatus} (speed: ${speed} km/h)`);
     
-    // Mark that this street+direction has been auto-submitted (key already declared above)
-    setHasAutoSubmitted(prev => ({
-      ...prev,
-      [key]: true
-    }));
-    
-    // Mark that auto-submit has been used in this session (session-level limit)
-    setHasAutoSubmittedInSession(true);
-    localStorage.setItem('hasAutoSubmittedInSession', 'true'); // Persist across page refreshes
-    
+    // Backend will check for duplicates within 10 seconds - we rely on that check
     if (autoStatus) {
       autoSubmitReport(autoStatus);
     }

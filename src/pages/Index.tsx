@@ -1303,6 +1303,12 @@ const Index = () => {
           >
             Wspieram rozwój strony
           </Button>
+          <div className="mt-6 space-y-2 text-sm text-left">
+            <p className="font-semibold text-base">Co dalej?</p>
+            <p>Wspólne przejazdy do pracy - 50% mniej kosztów paliwa i samochodów na drodze</p>
+            <p>AutoStop sąsiedzki - Gdy uciekł Ci autobus</p>
+            <p>Dowóz dzieci do szkoły na zmianę z sąsiadką</p>
+          </div>
         </div>
 
         <p>

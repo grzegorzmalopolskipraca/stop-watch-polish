@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ThumbsUp } from "lucide-react";
+import { ThumbsUp, Share2 } from "lucide-react";
 import { toast } from "sonner";
 
 interface StreetVote {
@@ -133,6 +133,28 @@ export const StreetVoting = ({ existingStreets }: StreetVotingProps) => {
     return vote.voter_ips.includes(userIp);
   };
 
+  const handleShare = async () => {
+    const shareData = {
+      title: 'Głosuj na ulicę',
+      text: 'Zagłosuj która ulica powinna być dodana do monitoringu ruchu!',
+      url: window.location.href,
+    };
+
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+        toast.success("Udostępniono pomyślnie!");
+      } else {
+        await navigator.clipboard.writeText(window.location.href);
+        toast.success("Link skopiowany do schowka!");
+      }
+    } catch (error) {
+      if ((error as Error).name !== 'AbortError') {
+        console.error("Error sharing:", error);
+      }
+    }
+  };
+
   return (
     <div className="bg-card rounded-lg p-5 border border-border space-y-4">
       <h3 className="text-lg font-semibold text-center">
@@ -193,6 +215,16 @@ export const StreetVoting = ({ existingStreets }: StreetVotingProps) => {
           ))
         )}
       </div>
+
+      {/* Share button */}
+      <Button
+        onClick={handleShare}
+        variant="outline"
+        className="w-full gap-2"
+      >
+        <Share2 className="h-4 w-4" />
+        Udostępnij znajomym, niech głosują na Waszą ulicę
+      </Button>
     </div>
   );
 };

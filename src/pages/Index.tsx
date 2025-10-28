@@ -1008,7 +1008,7 @@ const Index = () => {
                 </span>
               </div>
               <p className="text-sm text-muted-foreground/60 mt-2">
-                Wyjedź, gdy ruch jest mniejszy
+                Najbliższa zielona fala
               </p>
             </div>
           </section>

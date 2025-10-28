@@ -654,6 +654,28 @@ const Index = () => {
     };
   }, [selectedStreet, direction]);
 
+  const handleSpeedUpdate = (speed: number | null) => {
+    if (speed === null) return;
+    
+    // Only auto-submit when "Brak aktualnych zgłoszeń" is displayed
+    if (currentStatus !== null) {
+      return;
+    }
+    
+    // Determine status based on speed with user's thresholds
+    let autoStatus: string;
+    if (speed < 10) {
+      autoStatus = 'stoi';
+    } else if (speed <= 20) {
+      autoStatus = 'toczy_sie';
+    } else {
+      autoStatus = 'jedzie';
+    }
+    
+    console.log(`[AutoSpeed] Submitting: ${autoStatus} (speed: ${speed} km/h)`);
+    submitReport(autoStatus);
+  };
+
   const submitReport = async (status: string) => {
     try {
       // Get or create persistent user fingerprint
@@ -992,6 +1014,7 @@ const Index = () => {
           <TrafficLine 
             street={selectedStreet} 
             direction={direction as "to_center" | "from_center"}
+            onSpeedUpdate={handleSpeedUpdate}
           />
         </section>
 

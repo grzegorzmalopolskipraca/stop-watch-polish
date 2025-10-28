@@ -52,6 +52,37 @@ Deno.serve(async (req) => {
 
     const { street, status, userFingerprint, direction } = validationResult.data;
 
+    // Check for duplicate submission in last 10 seconds
+    const tenSecondsAgo = new Date();
+    tenSecondsAgo.setSeconds(tenSecondsAgo.getSeconds() - 10);
+    
+    const { data: recentReports, error: checkError } = await supabase
+      .from('traffic_reports')
+      .select('*')
+      .eq('user_fingerprint', userFingerprint)
+      .eq('street', street)
+      .eq('direction', direction)
+      .eq('status', status)
+      .gte('reported_at', tenSecondsAgo.toISOString())
+      .limit(1);
+
+    if (checkError) {
+      console.error('Check error:', checkError);
+      return new Response(
+        JSON.stringify({ error: 'Database check error' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // If duplicate found, silently skip insertion
+    if (recentReports && recentReports.length > 0) {
+      console.log(`[AutoSubmit] Duplicate submission detected for ${userFingerprint} on ${street} (${direction}) with status ${status} - skipping`);
+      return new Response(
+        JSON.stringify({ success: true, silent: true, skipped: true }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Insert the traffic report without rate limiting
     const { error } = await supabase
       .from('traffic_reports')

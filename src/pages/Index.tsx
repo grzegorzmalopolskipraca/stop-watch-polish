@@ -835,11 +835,12 @@ const Index = () => {
       toast.success("Dziękujemy za zgłoszenie!");
       // RSS ticker disabled - uncomment line below to re-enable
       // setShowRssTicker(true);
-      // Wait a bit for database to commit, then refresh
+      // Wait for database to commit, then refresh status box
       setTimeout(() => {
+        console.log('[SubmitReport] Refreshing status box after manual submission');
         fetchReports(selectedStreet);
         fetchIncidentCounts();
-      }, 500);
+      }, 1000);
     } catch (error: any) {
       console.error("Error submitting report:", error);
       toast.error(error.message || "Błąd podczas wysyłania zgłoszenia");

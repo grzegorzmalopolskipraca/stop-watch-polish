@@ -288,8 +288,7 @@ const Index = () => {
     setIncidentNotificationsEnabled(isWonderPushSubscribed(`incidents_${selectedStreet}`));
     // Mark reports as not loaded until fetch completes
     setReportsLoaded(false);
-    // Clear pending speed when street changes
-    setPendingSpeed(null);
+    // Don't clear pending speed - let it persist for the new direction
     // Track direction change timestamp to prevent immediate auto-submit
     setLastDirectionChange(Date.now());
     // Don't reset currentStatus - let fetchReports determine it from actual data
@@ -695,11 +694,13 @@ const Index = () => {
       });
 
       if (!error && data?.success) {
-        console.log(`[AutoSubmit] Successfully submitted status: ${status} for ${selectedStreet} (${direction})`);
-        // Refresh UI to show the new auto-submitted status
-        setTimeout(() => {
+        if (data?.skipped) {
+          console.log(`[AutoSubmit] Duplicate detected - skipped submission for ${selectedStreet} (${direction})`);
+        } else {
+          console.log(`[AutoSubmit] Successfully submitted status: ${status} for ${selectedStreet} (${direction})`);
+          // Refresh UI immediately to show the new auto-submitted status
           fetchReports(selectedStreet, direction);
-        }, 500);
+        }
       } else {
         console.error(`[AutoSubmit] Failed to submit:`, error);
       }
@@ -723,9 +724,9 @@ const Index = () => {
       return;
     }
 
-    // CHECK 1: Prevent auto-submit immediately after direction/street change (within 4 seconds)
+    // CHECK 1: Prevent auto-submit immediately after direction/street change (within 2 seconds)
     const timeSinceDirectionChange = Date.now() - lastDirectionChange;
-    if (timeSinceDirectionChange < 4000) {
+    if (timeSinceDirectionChange < 2000) {
       console.log(`[HandleSpeed] ❌ Direction/street changed too recently (${timeSinceDirectionChange}ms ago) - skipping auto-submit`);
       return;
     }

@@ -134,10 +134,11 @@ export const StreetVoting = ({ existingStreets }: StreetVotingProps) => {
   };
 
   const handleShare = async () => {
+    const shareUrl = 'https://ejedzie.pl';
     const shareData = {
       title: 'Głosuj na ulicę',
       text: 'Zagłosuj która ulica powinna być dodana do monitoringu ruchu!',
-      url: window.location.href,
+      url: shareUrl,
     };
 
     try {
@@ -145,7 +146,7 @@ export const StreetVoting = ({ existingStreets }: StreetVotingProps) => {
         await navigator.share(shareData);
         toast.success("Udostępniono pomyślnie!");
       } else {
-        await navigator.clipboard.writeText(window.location.href);
+        await navigator.clipboard.writeText(shareUrl);
         toast.success("Link skopiowany do schowka!");
       }
     } catch (error) {
@@ -223,7 +224,7 @@ export const StreetVoting = ({ existingStreets }: StreetVotingProps) => {
         className="w-full gap-2"
       >
         <Share2 className="h-4 w-4" />
-        Udostępnij znajomym, niech głosują na Waszą ulicę
+        Udostępnij znajomym, niech głosują
       </Button>
     </div>
   );

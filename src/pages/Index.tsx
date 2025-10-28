@@ -1289,7 +1289,7 @@ const Index = () => {
         {/* Support Section */}
         <div className="bg-card rounded-lg p-6 border border-border space-y-4 mb-6">
           <h3 className="text-lg font-semibold text-foreground">
-            Fajny pomysł, rozwijajmy go
+            Nie chcę tracić życia w korkach, dlatego
           </h3>
           <div className="flex justify-center items-center gap-6 py-4">
             <ThumbsUp className="w-12 h-12 text-primary" />

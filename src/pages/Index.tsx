@@ -109,6 +109,7 @@ const Index = () => {
   const [pendingIncident, setPendingIncident] = useState<{type: string; emoji: string} | null>(null);
   const [trafficTrend, setTrafficTrend] = useState<string | null>(null);
   const [incidentNotificationsEnabled, setIncidentNotificationsEnabled] = useState(false);
+  const [latestSpeed, setLatestSpeed] = useState<number | null>(null);
 
   // Format duration helper function
   const formatDuration = (minutes: number): string => {
@@ -655,26 +656,27 @@ const Index = () => {
   }, [selectedStreet, direction]);
 
   const handleSpeedUpdate = (speed: number | null) => {
-    if (speed === null) return;
-    
-    // Only auto-submit when "Brak aktualnych zgłoszeń" is displayed
-    if (currentStatus !== null) {
-      return;
-    }
-    
-    // Determine status based on speed with user's thresholds
-    let autoStatus: string;
-    if (speed < 10) {
-      autoStatus = 'stoi';
-    } else if (speed <= 20) {
-      autoStatus = 'toczy_sie';
-    } else {
-      autoStatus = 'jedzie';
-    }
-    
-    console.log(`[AutoSpeed] Submitting: ${autoStatus} (speed: ${speed} km/h)`);
-    submitReport(autoStatus);
+    console.log(`[AutoSpeed] Speed updated: ${speed} km/h, currentStatus: ${currentStatus}`);
+    setLatestSpeed(speed);
   };
+
+  // Auto-submit when status becomes null and we have valid speed
+  useEffect(() => {
+    if (currentStatus === null && latestSpeed !== null && latestSpeed > 0) {
+      let autoStatus: string;
+      if (latestSpeed < 10) {
+        autoStatus = 'stoi';
+      } else if (latestSpeed <= 20) {
+        autoStatus = 'toczy_sie';
+      } else {
+        autoStatus = 'jedzie';
+      }
+      
+      console.log(`[AutoSpeed] Auto-submitting: ${autoStatus} (speed: ${latestSpeed} km/h)`);
+      submitReport(autoStatus);
+      setLatestSpeed(null); // Reset to prevent duplicate submissions
+    }
+  }, [currentStatus, latestSpeed]);
 
   const submitReport = async (status: string) => {
     try {

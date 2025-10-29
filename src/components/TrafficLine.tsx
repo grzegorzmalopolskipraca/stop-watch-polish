@@ -241,7 +241,7 @@ export const TrafficLine = ({ street, direction, width = "100%", onSpeedUpdate, 
       </div>
       <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
         {(() => {
-          const linePercent = avgSpeed ? Math.max(0, Math.min(100, 50 - parseFloat(avgSpeed))) : trafficPercent;
+          const linePercent = avgSpeed ? Math.max(0, Math.min(100, 70 - parseFloat(avgSpeed))) : trafficPercent;
           
           // Smooth gradient from dark green (0%) -> yellow (50%) -> dark red (100%)
           let barColor: string;

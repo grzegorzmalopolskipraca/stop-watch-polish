@@ -905,7 +905,7 @@ const Index = () => {
               <div className="flex flex-col items-end -mt-1">
                 <a 
                   href="https://ejedzie.pl" 
-                  className="text-base font-semibold text-primary hover:text-primary/80 transition-colors whitespace-nowrap leading-tight"
+                  className="text-xl font-semibold text-primary hover:text-primary/80 transition-colors whitespace-nowrap leading-tight"
                 >
                   e<span className="text-green-600">J</span>edzie.pl
                 </a>
@@ -974,7 +974,7 @@ const Index = () => {
               </p>
               {Object.keys(lastTenStats).length > 0 && (
                 <>
-                  <p className={`text-xs mt-2 ${statusConfig.textColor} opacity-80`}>
+                  <p className={`text-sm font-bold mt-2 ${statusConfig.textColor} opacity-80`}>
                     {lastTenStats.stoi && `Stoi: ${lastTenStats.stoi}`}
                     {lastTenStats.toczy_sie && ` Toczy się: ${lastTenStats.toczy_sie}`}
                     {lastTenStats.jedzie && ` Jedzie: ${lastTenStats.jedzie}`}
@@ -1043,7 +1043,7 @@ const Index = () => {
         {nextGreenSlot && (
           <section className="bg-card rounded-lg p-5 border border-border space-y-3">
             <h3 className="text-lg font-semibold">
-              Korzystaj. Wyjedź, gdy ruch jest mniejszy:
+              Korzystaj! Wyjedź, gdy ruch jest mniejszy:
             </h3>
             <div className="bg-traffic-jedzie/10 border border-traffic-jedzie/20 rounded-lg p-4 space-y-2">
               <div className="flex items-center justify-between">
@@ -1092,8 +1092,8 @@ const Index = () => {
           <p>
             Dziś korki sprawdziło już <strong>{todayVisitors}</strong> osób
           </p>
-          <p>
-            Petycja: Drogi Wrocławiu, <strong>{totalVisitors}</strong> osób sprawdzało, czy są korki. Pomóż nam redukować korki
+          <p className="text-base font-semibold">
+            Petycja: Drogi Wrocławiu, <strong>{totalVisitors}</strong> osób sprawdzało, czy są korki. Pomóż nam <span className="text-primary">redukować korki</span>
           </p>
         </section>
 

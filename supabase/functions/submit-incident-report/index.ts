@@ -13,8 +13,8 @@ const VALID_STREETS = [
 ];
 
 const VALID_INCIDENT_TYPES = [
-  'Wypadek', 'Kolizja', 'Roboty drogowe', 'Awaria pojazdu', 
-  'Kontrola drogowa', 'Utrudnienie', 'Zamknięta droga'
+  'Blokada', 'Wypadek', 'Objazd', 'Roboty', 
+  'Ślisko', 'Dziury', 'Zwierze', 'Awaria'
 ];
 
 const VALID_DIRECTIONS = ['to_center', 'from_center'];

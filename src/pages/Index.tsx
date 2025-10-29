@@ -1019,7 +1019,7 @@ const Index = () => {
               onClick={() => submitReport("stoi")}
               className="h-16 bg-traffic-stoi hover:bg-traffic-stoi/90 text-traffic-stoi-foreground flex flex-col gap-1"
             >
-              <svg width="28" height="28" viewBox="0 0 100 100" className="mb-1">
+              <svg width="34" height="34" viewBox="0 0 100 100" className="mb-1">
                 <polygon 
                   points="50,5 85,25 85,75 50,95 15,75 15,25" 
                   fill="#dc2626" 

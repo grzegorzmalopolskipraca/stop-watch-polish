@@ -1175,14 +1175,14 @@ const Index = () => {
           </div>
         </section>
 
-        {/* Weekly Timeline */}
-        <section className="bg-card rounded-lg p-5 border border-border">
-          <WeeklyTimeline reports={weeklyReports} />
-        </section>
-
         {/* SMS Subscription */}
         <section>
           <SmsSubscription selectedStreet={selectedStreet} />
+        </section>
+
+        {/* Weekly Timeline */}
+        <section className="bg-card rounded-lg p-5 border border-border">
+          <WeeklyTimeline reports={weeklyReports} />
         </section>
 
         {/* Green Wave */}

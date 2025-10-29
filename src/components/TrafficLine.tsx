@@ -292,7 +292,7 @@ export const TrafficLine = ({ street, direction, width = "100%", onSpeedUpdate, 
         <svg width="300" height="180" viewBox="0 0 300 180" className="drop-shadow-lg">
           {/* Define striped pattern for 0-5 km/h zone */}
           <defs>
-            <pattern id="dangerStripes" x="0" y="0" width="8" height="20" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+            <pattern id="dangerStripes" x="0" y="0" width="8" height="20" patternUnits="userSpaceOnUse" patternTransform="rotate(-30)">
               <rect x="0" y="0" width="4" height="20" fill="#000000" />
               <rect x="4" y="0" width="4" height="20" fill="#dc2626" />
             </pattern>

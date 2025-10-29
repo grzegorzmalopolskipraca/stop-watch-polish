@@ -315,6 +315,13 @@ export const TrafficLine = ({ street, direction, width = "100%", onSpeedUpdate, 
         backgroundColor: "#ffffff",
         scale: 2,
         logging: false,
+        onclone: (clonedDoc) => {
+          // Make eJedzie.pl branding visible in the screenshot
+          const branding = clonedDoc.querySelector('.absolute.bottom-2.right-4');
+          if (branding) {
+            (branding as HTMLElement).style.opacity = '1';
+          }
+        }
       });
 
       canvas.toBlob(async (blob) => {
@@ -537,8 +544,8 @@ export const TrafficLine = ({ street, direction, width = "100%", onSpeedUpdate, 
           </p>
         </div>
         
-        {/* eJedzie.pl Branding */}
-        <div className="absolute bottom-4 right-6 text-gray-500 font-semibold text-sm">
+        {/* eJedzie.pl Branding - hidden in UI, visible in export */}
+        <div className="absolute bottom-2 right-4 text-gray-400 font-medium text-xs opacity-0">
           eJedzie.pl
         </div>
       </div>

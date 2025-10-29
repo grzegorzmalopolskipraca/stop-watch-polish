@@ -410,7 +410,7 @@ export const TrafficLine = ({ street, direction, width = "100%", onSpeedUpdate, 
       </div>
       
       {/* Speedometer Gauge */}
-      <div ref={shareRef} className="relative flex flex-col items-center mt-6 p-6 pb-8 bg-white rounded-lg">
+      <div ref={shareRef} className="relative flex flex-col items-center mt-6 p-6 pb-16 bg-white rounded-lg">
         {/* Street Name at Top - hidden in UI, visible in export */}
         <h2 className="text-2xl font-bold text-gray-900 opacity-0 h-0 mb-4">{street}</h2>
         

@@ -112,6 +112,7 @@ const Index = () => {
   const [latestSpeed, setLatestSpeed] = useState<number | null>(null);
   const [todayMinSpeed, setTodayMinSpeed] = useState<Record<string, number>>({});
   const [todayMaxSpeed, setTodayMaxSpeed] = useState<Record<string, number>>({});
+  const [streetDistance, setStreetDistance] = useState<number | null>(null);
 
   // Format duration helper function
   const formatDuration = (minutes: number): string => {
@@ -681,6 +682,10 @@ const Index = () => {
     }
   };
 
+  const handleDistanceUpdate = (distance: number | null) => {
+    setStreetDistance(distance);
+  };
+
   // Auto-submit when status becomes null and we have valid speed
   useEffect(() => {
     if (currentStatus === null && latestSpeed !== null && latestSpeed > 0) {
@@ -1047,6 +1052,7 @@ const Index = () => {
             street={selectedStreet} 
             direction={direction as "to_center" | "from_center"}
             onSpeedUpdate={handleSpeedUpdate}
+            onDistanceUpdate={handleDistanceUpdate}
           />
         </section>
 

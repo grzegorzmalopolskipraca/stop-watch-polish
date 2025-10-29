@@ -13,6 +13,7 @@ interface Props {
   direction: "to_center" | "from_center";
   width?: string;
   onSpeedUpdate?: (speed: number | null) => void;
+  onDistanceUpdate?: (distance: number | null) => void;
 }
 
 // Thresholds for speed in km/h - adjusted for urban traffic
@@ -78,7 +79,7 @@ const STREET_COORDINATES: Record<string, StreetCoordinates> = {
   }
 };
 
-export const TrafficLine = ({ street, direction, width = "100%", onSpeedUpdate }: Props) => {
+export const TrafficLine = ({ street, direction, width = "100%", onSpeedUpdate, onDistanceUpdate }: Props) => {
   const [level, setLevel] = useState<TrafficLevel>("medium");
   const [isLoading, setIsLoading] = useState(true);
   const [trafficPercent, setTrafficPercent] = useState<number>(0);
@@ -150,6 +151,11 @@ export const TrafficLine = ({ street, direction, width = "100%", onSpeedUpdate }
             if (distance && distance > 0) {
             const distKm = distance / 1000;
             setDistanceKm(distKm.toFixed(1));
+            
+            // Notify parent about distance update
+            if (onDistanceUpdate) {
+              onDistanceUpdate(parseFloat(distKm.toFixed(1)));
+            }
             
             // Calculate average speed if we have duration
             if (trafficDuration && trafficDuration > 0) {

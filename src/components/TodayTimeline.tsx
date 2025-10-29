@@ -10,6 +10,8 @@ interface Report {
 interface TodayTimelineProps {
   reports: Report[];
   street: string;
+  minSpeed?: number;
+  maxSpeed?: number;
 }
 
 const COLORS = {
@@ -19,7 +21,7 @@ const COLORS = {
   neutral: "bg-traffic-neutral",
 };
 
-export const TodayTimeline = ({ reports, street }: TodayTimelineProps) => {
+export const TodayTimeline = ({ reports, street, minSpeed, maxSpeed }: TodayTimelineProps) => {
   const todayData = useMemo(() => {
     const now = new Date();
     const startOfDay = new Date(now.setHours(0, 0, 0, 0));
@@ -86,6 +88,21 @@ export const TodayTimeline = ({ reports, street }: TodayTimelineProps) => {
           ))}
         </div>
       </div>
+      
+      {(minSpeed || maxSpeed) && (
+        <div className="pt-2 border-t border-border space-y-1">
+          {minSpeed && (
+            <p className="text-xs text-muted-foreground">
+              Minimalna prędkość dzisiaj: <span className="font-medium text-foreground">{minSpeed} km/h</span>
+            </p>
+          )}
+          {maxSpeed && (
+            <p className="text-xs text-muted-foreground">
+              Maksymalna prędkość dzisiaj: <span className="font-medium text-foreground">{maxSpeed} km/h</span>
+            </p>
+          )}
+        </div>
+      )}
     </div>
   );
 };

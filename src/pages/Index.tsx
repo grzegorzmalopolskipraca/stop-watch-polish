@@ -110,6 +110,8 @@ const Index = () => {
   const [trafficTrend, setTrafficTrend] = useState<string | null>(null);
   const [incidentNotificationsEnabled, setIncidentNotificationsEnabled] = useState(false);
   const [latestSpeed, setLatestSpeed] = useState<number | null>(null);
+  const [todayMinSpeed, setTodayMinSpeed] = useState<Record<string, number>>({});
+  const [todayMaxSpeed, setTodayMaxSpeed] = useState<Record<string, number>>({});
 
   // Format duration helper function
   const formatDuration = (minutes: number): string => {
@@ -658,6 +660,25 @@ const Index = () => {
   const handleSpeedUpdate = (speed: number | null) => {
     console.log(`[AutoSpeed] Speed updated: ${speed} km/h, currentStatus: ${currentStatus}`);
     setLatestSpeed(speed);
+    
+    // Update min/max speeds for today per street+direction
+    if (speed !== null && speed > 0) {
+      const key = `${selectedStreet}_${direction}`;
+      
+      setTodayMinSpeed(prev => {
+        if (!prev[key] || speed < prev[key]) {
+          return { ...prev, [key]: speed };
+        }
+        return prev;
+      });
+      
+      setTodayMaxSpeed(prev => {
+        if (!prev[key] || speed > prev[key]) {
+          return { ...prev, [key]: speed };
+        }
+        return prev;
+      });
+    }
   };
 
   // Auto-submit when status becomes null and we have valid speed
@@ -1016,7 +1037,12 @@ const Index = () => {
 
         {/* Today's Timeline */}
         <section className="bg-card rounded-lg p-5 border border-border space-y-4">
-          <TodayTimeline reports={todayReports} street={selectedStreet} />
+          <TodayTimeline 
+            reports={todayReports} 
+            street={selectedStreet}
+            minSpeed={todayMinSpeed[`${selectedStreet}_${direction}`]}
+            maxSpeed={todayMaxSpeed[`${selectedStreet}_${direction}`]}
+          />
           <TrafficLine 
             street={selectedStreet} 
             direction={direction as "to_center" | "from_center"}

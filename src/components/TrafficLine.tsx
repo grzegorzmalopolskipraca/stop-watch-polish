@@ -23,6 +23,61 @@ const SPEED_THRESHOLDS = {
               // < 8 km/h = heavy congestion (red)
 };
 
+// Frustration texts based on speed
+const FRUSTRATION_TEXTS: Record<number, string> = {
+  0: "Windows się zawiesił. Ja też.",
+  1: "Spalić to wszystko i wyprowadzić się w Bieszczady.",
+  2: '"Zaraz tam pójdę i sam tym ruchem pokieruję."',
+  3: "Mam czas przemyśleć wszystkie swoje błędy życiowe.",
+  4: "Auto stoi, ale spalanie emocji rekordowe.",
+  5: "Mój silnik to tło dla podcastu o cierpieniu.",
+  6: "Zaczynam rozumieć, czemu Elon Musk zbudował rakiety.",
+  7: "Zaczynam mówić do samochodu. Samochód nie odpowiada.",
+  8: '"To nie korek, to styl życia."',
+  9: "Pasy bezpieczeństwa trzymają mnie przy zdrowych zmysłach.",
+  10: "Armagedon, tylko bez efektów specjalnych.",
+  11: "Mam déjà vu z wczorajszego korka.",
+  12: "Rozważam teleportację.",
+  13: 'Google Maps: "Za 200 metrów korek." Ja: "Nie żartuj."',
+  14: "Jak to możliwe, że ślimak mnie wyprzedza?",
+  15: "Dostanę pierdolca, ale przynajmniej ekologicznie.",
+  16: "Medytuję na temat sensu kierunkowskazów.",
+  17: "Znam już wszystkich kierowców z pasa obok.",
+  18: '"Czekaj, to ja w ogóle jeszcze jadę?"',
+  19: "Czas płynie, tylko ja nie.",
+  20: "Znowu to samo, deja vu level expert.",
+  21: "Auto turla się z dumą i desperacją.",
+  22: "Już mniej nienawidzę wszystkich.",
+  23: "Zaczynam znów słyszeć muzykę zamiast własnych myśli.",
+  24: "Mam nadzieję. Maleńką, ale jest.",
+  25: 'To tempo już można nazwać "jazdą".',
+  26: '"Tato, ruszyliśmy?" – "Nie przerywaj tacie, on czuje flow."',
+  27: "Czuję, że żyję. Ledwo, ale jednak.",
+  28: "Auto idzie jak marzenie, czyli wolno, ale stabilnie.",
+  29: "Zaczynam ufać światu.",
+  30: "Włączyłem klime, czuję luksus.",
+  31: "Prawie jak ekspresówka, tylko bez ekspresu.",
+  32: "Myślę, że przeżyję ten dzień.",
+  33: "Mam wrażenie, że los mnie testował, ale już zdałem.",
+  34: "Jakbym dostał nowe życie.",
+  35: '"To uczucie, gdy naprawdę JEDZIESZ."',
+  36: "Przy tym tempie można już marzyć o trzecim biegu.",
+  37: "Słyszę ptaki, nie klaksony.",
+  38: "Niebo się otwiera.",
+  39: "Kawa smakuje jak nagroda Nobla.",
+  40: "Tak tu jeszcze nie było. Czuję dumę narodową.",
+  41: "To już nie jazda, to poezja.",
+  42: "Prawy pas staje się pasem zwycięzców.",
+  43: "Mam ochotę pozdrowić kierowców z naprzeciwka.",
+  44: "Radio gra, ja śpiewam, policja patrzy.",
+  45: "Wreszcie czuję sens istnienia.",
+  46: "Chyba mijam czasoprzestrzeń.",
+  47: "To uczucie, gdy nie wiesz, co to korek.",
+  48: "Świat jest piękny. Ludzie są mili. Drogi puste.",
+  49: "Mam ochotę dziękować wszystkim bogom ruchu drogowego.",
+  50: "Chyba zaraz wystartuję. Elon, trzymaj się."
+};
+
 // Street coordinates for Wrocław
 const STREET_COORDINATES: Record<string, StreetCoordinates> = {
   "Zwycięska": {
@@ -412,6 +467,16 @@ export const TrafficLine = ({ street, direction, width = "100%", onSpeedUpdate, 
           <div className="text-sm text-gray-500 font-medium">
             km/h
           </div>
+        </div>
+        
+        {/* Frustration Level */}
+        <div className="mt-6 text-center px-4">
+          <h3 className="text-lg font-semibold text-gray-800 mb-3">
+            Poziom frustracji
+          </h3>
+          <p className="text-sm text-gray-600 italic max-w-md mx-auto">
+            {FRUSTRATION_TEXTS[Math.round(currentSpeed)] || FRUSTRATION_TEXTS[0]}
+          </p>
         </div>
       </div>
     </div>

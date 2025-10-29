@@ -110,8 +110,34 @@ const Index = () => {
   const [trafficTrend, setTrafficTrend] = useState<string | null>(null);
   const [incidentNotificationsEnabled, setIncidentNotificationsEnabled] = useState(false);
   const [latestSpeed, setLatestSpeed] = useState<number | null>(null);
-  const [todayMinSpeed, setTodayMinSpeed] = useState<Record<string, number>>({});
-  const [todayMaxSpeed, setTodayMaxSpeed] = useState<Record<string, number>>({});
+  const [todayMinSpeed, setTodayMinSpeed] = useState<Record<string, number>>(() => {
+    const stored = localStorage.getItem('todayMinSpeed');
+    const storedDate = localStorage.getItem('speedStatsDate');
+    const today = format(new Date(), 'yyyy-MM-dd');
+    
+    if (stored && storedDate === today) {
+      try {
+        return JSON.parse(stored);
+      } catch (e) {
+        return {};
+      }
+    }
+    return {};
+  });
+  const [todayMaxSpeed, setTodayMaxSpeed] = useState<Record<string, number>>(() => {
+    const stored = localStorage.getItem('todayMaxSpeed');
+    const storedDate = localStorage.getItem('speedStatsDate');
+    const today = format(new Date(), 'yyyy-MM-dd');
+    
+    if (stored && storedDate === today) {
+      try {
+        return JSON.parse(stored);
+      } catch (e) {
+        return {};
+      }
+    }
+    return {};
+  });
   const [streetDistance, setStreetDistance] = useState<number | null>(null);
 
   // Format duration helper function
@@ -665,19 +691,20 @@ const Index = () => {
     // Update min/max speeds for today per street+direction
     if (speed !== null && speed > 0) {
       const key = `${selectedStreet}_${direction}`;
+      const today = format(new Date(), 'yyyy-MM-dd');
       
       setTodayMinSpeed(prev => {
-        if (!prev[key] || speed < prev[key]) {
-          return { ...prev, [key]: speed };
-        }
-        return prev;
+        const newValue = !prev[key] || speed < prev[key] ? { ...prev, [key]: speed } : prev;
+        localStorage.setItem('todayMinSpeed', JSON.stringify(newValue));
+        localStorage.setItem('speedStatsDate', today);
+        return newValue;
       });
       
       setTodayMaxSpeed(prev => {
-        if (!prev[key] || speed > prev[key]) {
-          return { ...prev, [key]: speed };
-        }
-        return prev;
+        const newValue = !prev[key] || speed > prev[key] ? { ...prev, [key]: speed } : prev;
+        localStorage.setItem('todayMaxSpeed', JSON.stringify(newValue));
+        localStorage.setItem('speedStatsDate', today);
+        return newValue;
       });
     }
   };

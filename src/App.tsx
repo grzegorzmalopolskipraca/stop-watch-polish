@@ -9,6 +9,7 @@ import TermsAndPrivacy from "./pages/TermsAndPrivacy";
 import Contact from "./pages/Contact";
 import NotFound from "./pages/NotFound";
 import Statystyki from "./pages/Statystyki";
+import Push from "./pages/Push";
 
 const queryClient = new QueryClient();
 
@@ -24,6 +25,7 @@ const App = () => (
           <Route path="/regulamin" element={<TermsAndPrivacy />} />
           <Route path="/kontakt" element={<Contact />} />
           <Route path="/statystyki" element={<Statystyki />} />
+          <Route path="/push" element={<Push />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

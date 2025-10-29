@@ -1,0 +1,153 @@
+import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { Bell, BellOff, Send } from "lucide-react";
+import { toast } from "sonner";
+import { subscribeToWonderPush, unsubscribeFromWonderPush, isWonderPushSubscribed } from "@/utils/wonderpush";
+import { supabase } from "@/integrations/supabase/client";
+
+const Push = () => {
+  const [isPushEnabled, setIsPushEnabled] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const testStreet = "test_device";
+
+  useEffect(() => {
+    // Check initial push status
+    setIsPushEnabled(isWonderPushSubscribed(testStreet));
+  }, []);
+
+  const togglePush = async () => {
+    setIsLoading(true);
+    try {
+      if (isPushEnabled) {
+        // Disable push
+        const success = await unsubscribeFromWonderPush(testStreet);
+        if (success) {
+          setIsPushEnabled(false);
+          toast.success("Powiadomienia push wyłączone");
+        } else {
+          toast.error("Nie udało się wyłączyć powiadomień");
+        }
+      } else {
+        // Enable push
+        const success = await subscribeToWonderPush(testStreet);
+        if (success) {
+          setIsPushEnabled(true);
+          toast.success("Powiadomienia push włączone");
+        } else {
+          toast.error("Nie udało się włączyć powiadomień");
+        }
+      }
+    } catch (error) {
+      console.error("Error toggling push:", error);
+      toast.error("Wystąpił błąd");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const sendTestPush = async () => {
+    if (!isPushEnabled) {
+      toast.error("Najpierw włącz powiadomienia push");
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const { error } = await supabase.functions.invoke("send-push-notifications", {
+        body: {
+          street: testStreet,
+          message: "To jest testowe powiadomienie push!",
+        },
+      });
+
+      if (error) {
+        console.error("Error sending push:", error);
+        toast.error("Nie udało się wysłać powiadomienia");
+      } else {
+        toast.success("Powiadomienie wysłane!");
+      }
+    } catch (error) {
+      console.error("Error sending push:", error);
+      toast.error("Wystąpił błąd");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-background p-4">
+      <div className="max-w-md mx-auto space-y-6 py-8">
+        <header className="text-center space-y-2">
+          <h1 className="text-3xl font-bold text-foreground">
+            Test Push Notifications
+          </h1>
+          <p className="text-muted-foreground">
+            Testuj powiadomienia push na tym urządzeniu
+          </p>
+        </header>
+
+        <div className="space-y-4">
+          {/* Enable/Disable Push Button */}
+          <Button
+            onClick={togglePush}
+            disabled={isLoading}
+            className="w-full h-16 text-lg font-semibold"
+            variant={isPushEnabled ? "outline" : "default"}
+          >
+            {isPushEnabled ? (
+              <>
+                <Bell className="w-6 h-6 mr-2" />
+                Push włączone - kliknij aby wyłączyć
+              </>
+            ) : (
+              <>
+                <BellOff className="w-6 h-6 mr-2" />
+                Push wyłączone - kliknij aby włączyć
+              </>
+            )}
+          </Button>
+
+          {/* Send Test Push Button */}
+          <Button
+            onClick={sendTestPush}
+            disabled={isLoading || !isPushEnabled}
+            className="w-full h-16 text-lg font-semibold"
+            variant="secondary"
+          >
+            <Send className="w-6 h-6 mr-2" />
+            Wyślij testowe powiadomienie
+          </Button>
+
+          {!isPushEnabled && (
+            <p className="text-sm text-muted-foreground text-center">
+              Włącz powiadomienia push, aby móc wysłać testowe powiadomienie
+            </p>
+          )}
+        </div>
+
+        <div className="mt-8 p-4 bg-muted rounded-lg space-y-2">
+          <h2 className="font-semibold text-foreground">Instrukcja:</h2>
+          <ol className="text-sm text-muted-foreground space-y-1 list-decimal list-inside">
+            <li>Kliknij przycisk "Push wyłączone" aby włączyć powiadomienia</li>
+            <li>Zezwól na powiadomienia w przeglądarce</li>
+            <li>Kliknij "Wyślij testowe powiadomienie" aby przetestować</li>
+            <li>Powiadomienie powinno pojawić się na tym urządzeniu</li>
+          </ol>
+        </div>
+
+        <footer className="flex flex-wrap justify-center gap-4 mt-8 pt-6 border-t border-border text-sm">
+          <Link to="/" className="text-primary hover:underline">
+            Strona główna
+          </Link>
+          <span className="text-muted-foreground">•</span>
+          <Link to="/statystyki" className="text-primary hover:underline">
+            Statystyki
+          </Link>
+        </footer>
+      </div>
+    </div>
+  );
+};
+
+export default Push;

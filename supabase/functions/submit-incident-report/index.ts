@@ -26,7 +26,7 @@ const incidentSchema = z.object({
   direction: z.enum(VALID_DIRECTIONS as [string, ...string[]]),
 });
 
-// IP-based rate limiting: max 3 reports per IP per 5 minutes
+// IP-based rate limiting: max 5 reports per IP per 5 minutes
 async function checkIPRateLimit(supabase: any, clientIP: string): Promise<boolean> {
   const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
   
@@ -42,17 +42,9 @@ async function checkIPRateLimit(supabase: any, clientIP: string): Promise<boolea
     return true; // Fail open
   }
 
-  if (data && data.length >= 3) {
+  if (data && data.length >= 5) {
     return false; // IP rate limit exceeded
   }
-
-  // Record this IP request
-  await supabase.from('rate_limits').insert({
-    identifier: `ip_${clientIP}`,
-    action_type: 'incident_report_ip',
-    action_count: 1,
-    last_action_at: new Date().toISOString(),
-  });
 
   return true;
 }
@@ -151,7 +143,7 @@ Deno.serve(async (req) => {
       throw insertError;
     }
 
-    // Update rate limit
+    // Update rate limits
     await supabase
       .from('rate_limits')
       .upsert({
@@ -160,6 +152,14 @@ Deno.serve(async (req) => {
         action_count: 1,
         last_action_at: new Date().toISOString(),
       });
+
+    // Record IP rate limit after successful submission
+    await supabase.from('rate_limits').insert({
+      identifier: `ip_${clientIP}`,
+      action_type: 'incident_report_ip',
+      action_count: 1,
+      last_action_at: new Date().toISOString(),
+    });
 
     // Send push notifications to subscribers
     try {

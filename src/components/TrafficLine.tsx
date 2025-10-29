@@ -290,14 +290,6 @@ export const TrafficLine = ({ street, direction, width = "100%", onSpeedUpdate, 
       {/* Speedometer Gauge */}
       <div className="flex flex-col items-center mt-6">
         <svg width="300" height="180" viewBox="0 0 300 180" className="drop-shadow-lg">
-          {/* Define striped pattern for 0-5 km/h zone */}
-          <defs>
-            <pattern id="dangerStripes" x="0" y="0" width="8" height="20" patternUnits="userSpaceOnUse" patternTransform="rotate(150)">
-              <rect x="0" y="0" width="4" height="20" fill="#000000" />
-              <rect x="4" y="0" width="4" height="20" fill="#dc2626" />
-            </pattern>
-          </defs>
-          
           {/* Outer circle background */}
           <circle cx="150" cy="150" r="120" fill="#f8fafc" stroke="#e2e8f0" strokeWidth="2" />
           
@@ -310,19 +302,10 @@ export const TrafficLine = ({ street, direction, width = "100%", onSpeedUpdate, 
             strokeLinecap="butt"
           />
           
-          {/* Danger zone (0-5 km/h) - striped red and black */}
-          <path
-            d="M 40 150 A 110 110 0 0 0 56 106"
-            fill="none"
-            stroke="url(#dangerStripes)"
-            strokeWidth="20"
-            strokeLinecap="butt"
-          />
+          {/* Fire emoji for danger zone (0-5 km/h) */}
+          <text x="42" y="135" fontSize="24">🔥</text>
           
-          {/* Tick mark at 5 km/h */}
-          <line x1="56" y1="106" x2="62" y2="112" stroke="#1f2937" strokeWidth="3" strokeLinecap="round" />
-          
-          {/* Red zone (5-10 km/h) - 10% of arc */}
+          {/* Red zone (5-10 km/h) */}
           <path
             d="M 56 106 A 110 110 0 0 1 78 72"
             fill="none"

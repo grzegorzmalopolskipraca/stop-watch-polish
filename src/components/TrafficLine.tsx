@@ -398,7 +398,7 @@ export const TrafficLine = ({ street, direction, width = "100%", onSpeedUpdate, 
       </div>
       
       {/* Speedometer Gauge */}
-      <div ref={shareRef} className="flex flex-col items-center mt-6 p-6 bg-white rounded-lg">
+      <div ref={shareRef} className="flex flex-col items-center mt-6 p-6 pb-8 bg-white rounded-lg">
         <svg width="300" height="180" viewBox="0 0 300 180" className="drop-shadow-lg">
           {/* Outer circle background */}
           <circle cx="150" cy="150" r="120" fill="#f8fafc" stroke="#e2e8f0" strokeWidth="2" />
@@ -538,7 +538,7 @@ export const TrafficLine = ({ street, direction, width = "100%", onSpeedUpdate, 
             onClick={handleShare}
             variant="default"
             size="sm"
-            className="gap-2 mt-2 mb-4"
+            className="gap-2 mt-2"
           >
             <Share2 className="h-4 w-4" />
             Udostępnij

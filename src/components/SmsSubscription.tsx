@@ -67,10 +67,12 @@ export const SmsSubscription = ({ selectedStreet }: SmsSubscriptionProps) => {
 
   const validateEmail = (email: string): boolean => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    
     if (!emailRegex.test(email)) {
       toast.error("Podaj prawidłowy adres e-mail");
       return false;
     }
+
     return true;
   };
 

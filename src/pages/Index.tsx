@@ -110,34 +110,8 @@ const Index = () => {
   const [trafficTrend, setTrafficTrend] = useState<string | null>(null);
   const [incidentNotificationsEnabled, setIncidentNotificationsEnabled] = useState(false);
   const [latestSpeed, setLatestSpeed] = useState<number | null>(null);
-  const [todayMinSpeed, setTodayMinSpeed] = useState<Record<string, number>>(() => {
-    const stored = localStorage.getItem('todayMinSpeed');
-    const storedDate = localStorage.getItem('speedStatsDate');
-    const today = format(new Date(), 'yyyy-MM-dd');
-    
-    if (stored && storedDate === today) {
-      try {
-        return JSON.parse(stored);
-      } catch (e) {
-        return {};
-      }
-    }
-    return {};
-  });
-  const [todayMaxSpeed, setTodayMaxSpeed] = useState<Record<string, number>>(() => {
-    const stored = localStorage.getItem('todayMaxSpeed');
-    const storedDate = localStorage.getItem('speedStatsDate');
-    const today = format(new Date(), 'yyyy-MM-dd');
-    
-    if (stored && storedDate === today) {
-      try {
-        return JSON.parse(stored);
-      } catch (e) {
-        return {};
-      }
-    }
-    return {};
-  });
+  const [todayMinSpeed, setTodayMinSpeed] = useState<Record<string, number>>({});
+  const [todayMaxSpeed, setTodayMaxSpeed] = useState<Record<string, number>>({});
   const [streetDistance, setStreetDistance] = useState<number | null>(null);
 
   // Format duration helper function
@@ -627,6 +601,35 @@ const Index = () => {
     }
   };
 
+  const fetchSpeedStats = async () => {
+    try {
+      const today = format(new Date(), 'yyyy-MM-dd');
+      
+      const { data, error } = await supabase
+        .from("daily_speed_stats")
+        .select("street, direction, min_speed, max_speed")
+        .eq("speed_date", today);
+
+      if (error) throw error;
+
+      if (data) {
+        const minSpeeds: Record<string, number> = {};
+        const maxSpeeds: Record<string, number> = {};
+        
+        data.forEach(stat => {
+          const key = `${stat.street}_${stat.direction}`;
+          minSpeeds[key] = stat.min_speed;
+          maxSpeeds[key] = stat.max_speed;
+        });
+        
+        setTodayMinSpeed(minSpeeds);
+        setTodayMaxSpeed(maxSpeeds);
+      }
+    } catch (error) {
+      console.error("Error fetching speed stats:", error);
+    }
+  };
+
   const recordVisit = async () => {
     try {
       let userFingerprint = localStorage.getItem('userFingerprint');
@@ -652,6 +655,7 @@ const Index = () => {
     fetchReports(selectedStreet, direction);
     fetchVisitorStats();
     fetchIncidentCounts();
+    fetchSpeedStats();
     recordVisit();
 
     // Auto-refresh every 60 seconds
@@ -659,6 +663,7 @@ const Index = () => {
       fetchReports(selectedStreet, direction);
       fetchVisitorStats();
       fetchIncidentCounts();
+      fetchSpeedStats();
     }, 60000);
 
     // Subscribe to realtime updates
@@ -684,7 +689,7 @@ const Index = () => {
     };
   }, [selectedStreet, direction]);
 
-  const handleSpeedUpdate = (speed: number | null) => {
+  const handleSpeedUpdate = async (speed: number | null) => {
     console.log(`[AutoSpeed] Speed updated: ${speed} km/h, currentStatus: ${currentStatus}`);
     setLatestSpeed(speed);
     
@@ -693,19 +698,38 @@ const Index = () => {
       const key = `${selectedStreet}_${direction}`;
       const today = format(new Date(), 'yyyy-MM-dd');
       
-      setTodayMinSpeed(prev => {
-        const newValue = !prev[key] || speed < prev[key] ? { ...prev, [key]: speed } : prev;
-        localStorage.setItem('todayMinSpeed', JSON.stringify(newValue));
-        localStorage.setItem('speedStatsDate', today);
-        return newValue;
-      });
+      const currentMin = todayMinSpeed[key];
+      const currentMax = todayMaxSpeed[key];
       
-      setTodayMaxSpeed(prev => {
-        const newValue = !prev[key] || speed > prev[key] ? { ...prev, [key]: speed } : prev;
-        localStorage.setItem('todayMaxSpeed', JSON.stringify(newValue));
-        localStorage.setItem('speedStatsDate', today);
-        return newValue;
-      });
+      const newMin = !currentMin || speed < currentMin ? speed : currentMin;
+      const newMax = !currentMax || speed > currentMax ? speed : currentMax;
+      
+      // Only update if values changed
+      if (newMin !== currentMin || newMax !== currentMax) {
+        try {
+          const { error } = await supabase
+            .from("daily_speed_stats")
+            .upsert({
+              street: selectedStreet,
+              direction: direction,
+              speed_date: today,
+              min_speed: newMin,
+              max_speed: newMax,
+            }, {
+              onConflict: 'street,direction,speed_date'
+            });
+
+          if (error) {
+            console.error("Error updating speed stats:", error);
+          } else {
+            // Update local state after successful database update
+            setTodayMinSpeed(prev => ({ ...prev, [key]: newMin }));
+            setTodayMaxSpeed(prev => ({ ...prev, [key]: newMax }));
+          }
+        } catch (error) {
+          console.error("Error saving speed stats:", error);
+        }
+      }
     }
   };
 

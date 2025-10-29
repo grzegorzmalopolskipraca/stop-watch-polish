@@ -1,14 +1,25 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Bell, BellOff, Send } from "lucide-react";
+import { Bell, BellOff, Send, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { subscribeToWonderPush, unsubscribeFromWonderPush, isWonderPushSubscribed } from "@/utils/wonderpush";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const Push = () => {
   const [isPushEnabled, setIsPushEnabled] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [showBlockedDialog, setShowBlockedDialog] = useState(false);
+  const [blockedMessage, setBlockedMessage] = useState("");
   const testStreet = "test_device";
 
   useEffect(() => {
@@ -76,6 +87,11 @@ const Push = () => {
         error: error,
         stack: error instanceof Error ? error.stack : undefined
       });
+      
+      // Show detailed error dialog
+      setBlockedMessage(errorMessage);
+      setShowBlockedDialog(true);
+      
       toast.error(`❌ ${errorMessage}`, { duration: 5000 });
     } finally {
       setIsLoading(false);
@@ -125,6 +141,38 @@ const Push = () => {
 
   return (
     <div className="min-h-screen bg-background p-4">
+      <AlertDialog open={showBlockedDialog} onOpenChange={setShowBlockedDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertCircle className="w-6 h-6 text-destructive" />
+              Powiadomienia zablokowane
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-4 text-left">
+              <p className="font-semibold text-foreground">{blockedMessage}</p>
+              
+              <div className="space-y-2">
+                <p className="font-semibold text-foreground">Jak to naprawić:</p>
+                <ol className="list-decimal list-inside space-y-2 text-sm">
+                  <li>Kliknij ikonę <strong>kłódki</strong> w pasku adresu przeglądarki (obok URL)</li>
+                  <li>Znajdź ustawienie <strong>"Powiadomienia"</strong></li>
+                  <li>Zmień na <strong>"Zezwalaj"</strong> lub <strong>"Allow"</strong></li>
+                  <li>Odśwież stronę</li>
+                  <li>Spróbuj ponownie włączyć powiadomienia push</li>
+                </ol>
+              </div>
+              
+              <p className="text-xs text-muted-foreground">
+                Powiadomienia push wymagają zgody przeglądarki. Bez tego WonderPush nie może działać.
+              </p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction>Rozumiem</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <div className="max-w-md mx-auto space-y-6 py-8">
         <header className="text-center space-y-2">
           <h1 className="text-3xl font-bold text-foreground">

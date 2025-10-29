@@ -210,10 +210,20 @@ const Statystyki = () => {
     const { data: trafficTimeData } = await supabase
       .from("traffic_reports")
       .select("reported_at")
+      .gte("reported_at", new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())
       .order("reported_at", { ascending: true });
     
     if (trafficTimeData) {
       const dateCounts: Record<string, number> = {};
+      
+      // Generate all 30 days with 0 counts
+      for (let i = 29; i >= 0; i--) {
+        const date = new Date(Date.now() - i * 24 * 60 * 60 * 1000);
+        const dateStr = format(date, "yyyy-MM-dd");
+        dateCounts[dateStr] = 0;
+      }
+      
+      // Add actual counts
       trafficTimeData.forEach((t) => {
         const date = format(parseISO(t.reported_at), "yyyy-MM-dd");
         dateCounts[date] = (dateCounts[date] || 0) + 1;
@@ -221,7 +231,7 @@ const Statystyki = () => {
       
       setTrafficOverTime(
         Object.entries(dateCounts)
-          .slice(-30)
+          .sort(([a], [b]) => a.localeCompare(b))
           .map(([date, count]) => ({
             date: format(parseISO(date), "dd MMM", { locale: pl }),
             raporty: count,
@@ -455,9 +465,9 @@ const Statystyki = () => {
         const dataPoint: any = { hour: `${hour}:00` };
         topStreetsList.forEach((street) => {
           if (streetHourData[hour]?.[street]) {
-            dataPoint[street] = (streetHourData[hour][street].total / streetHourData[hour][street].count).toFixed(2);
+            dataPoint[street] = parseFloat((streetHourData[hour][street].total / streetHourData[hour][street].count).toFixed(2));
           } else {
-            dataPoint[street] = 0;
+            dataPoint[street] = null;
           }
         });
         return dataPoint;
@@ -509,9 +519,9 @@ const Statystyki = () => {
         const dataPoint: any = { day: dayLabels[day] };
         topStreetsList.forEach((street) => {
           if (streetDayData[day]?.[street]) {
-            dataPoint[street] = (streetDayData[day][street].total / streetDayData[day][street].count).toFixed(2);
+            dataPoint[street] = parseFloat((streetDayData[day][street].total / streetDayData[day][street].count).toFixed(2));
           } else {
-            dataPoint[street] = 0;
+            dataPoint[street] = null;
           }
         });
         return dataPoint;
@@ -531,7 +541,7 @@ const Statystyki = () => {
               <ArrowLeft className="w-5 h-5" />
               <span>Powrót</span>
             </Link>
-            <h1 className="text-2xl font-bold text-foreground">Statystyki eJedzie.pl</h1>
+            <h1 className="text-lg md:text-xl font-bold text-foreground whitespace-nowrap">Statystyki eJedzie.pl</h1>
             <div className="w-20"></div>
           </div>
         </div>
@@ -542,12 +552,12 @@ const Statystyki = () => {
         {/* Total Visits Card */}
         <Card className="mb-8 bg-gradient-to-br from-primary/10 via-secondary/10 to-accent/10 border-2 border-primary/20">
           <CardHeader>
-            <CardTitle className="text-3xl text-center bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">
+            <CardTitle className="text-3xl text-center text-foreground">
               Łączna liczba wizyt
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-6xl font-bold text-center bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+            <p className="text-6xl font-bold text-center text-foreground">
               {totalVisits.toLocaleString("pl-PL")}
             </p>
           </CardContent>
@@ -694,6 +704,7 @@ const Statystyki = () => {
                     ))}
                   </Pie>
                   <Tooltip />
+                  <Legend wrapperStyle={{ fontSize: '10px' }} />
                 </PieChart>
               </ResponsiveContainer>
             </CardContent>

@@ -316,8 +316,12 @@ export const TrafficLine = ({ street, direction, width = "100%", onSpeedUpdate, 
         scale: 2,
         logging: false,
         onclone: (clonedDoc) => {
-          // Make eJedzie.pl branding visible in the screenshot
-          const branding = clonedDoc.querySelector('.absolute.bottom-2.right-4');
+          // Make street name and eJedzie.pl branding visible in the screenshot
+          const streetName = clonedDoc.querySelector('h2.opacity-0');
+          if (streetName) {
+            (streetName as HTMLElement).style.opacity = '1';
+          }
+          const branding = clonedDoc.querySelector('.absolute.bottom-2.right-2');
           if (branding) {
             (branding as HTMLElement).style.opacity = '1';
           }
@@ -406,8 +410,8 @@ export const TrafficLine = ({ street, direction, width = "100%", onSpeedUpdate, 
       
       {/* Speedometer Gauge */}
       <div ref={shareRef} className="relative flex flex-col items-center mt-6 p-6 pb-8 bg-white rounded-lg">
-        {/* Street Name at Top */}
-        <h2 className="text-2xl font-bold text-gray-900 mb-4">{street}</h2>
+        {/* Street Name at Top - hidden in UI, visible in export */}
+        <h2 className="text-2xl font-bold text-gray-900 mb-4 opacity-0">{street}</h2>
         
         <svg width="300" height="180" viewBox="0 0 300 180" className="drop-shadow-lg">
           {/* Outer circle background */}
@@ -545,7 +549,7 @@ export const TrafficLine = ({ street, direction, width = "100%", onSpeedUpdate, 
         </div>
         
         {/* eJedzie.pl Branding - hidden in UI, visible in export */}
-        <div className="absolute bottom-2 right-4 text-gray-400 font-medium text-xs opacity-0">
+        <div className="absolute bottom-2 right-2 text-black font-medium opacity-0" style={{ fontSize: '9.6px' }}>
           eJedzie.pl
         </div>
       </div>

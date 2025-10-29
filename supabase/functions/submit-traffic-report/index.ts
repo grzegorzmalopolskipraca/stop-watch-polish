@@ -22,10 +22,10 @@ const reportSchema = z.object({
   direction: z.enum(VALID_DIRECTIONS as [string, ...string[]]),
 });
 
-// Rate limiting: max 1 report per user per street per direction per 5 minutes
-const RATE_LIMIT_WINDOW = 5 * 60 * 1000; // 5 minutes in milliseconds
+// Rate limiting: max 1 report per user per street per direction per 1 minute
+const RATE_LIMIT_WINDOW = 1 * 60 * 1000; // 1 minute in milliseconds
 
-// IP-based rate limiting: max 10 reports per IP per 5 minutes
+// IP-based rate limiting: max 10 reports per IP per 1 minute
 async function checkIPRateLimit(supabase: any, clientIP: string): Promise<boolean> {
   const fiveMinutesAgo = new Date(Date.now() - RATE_LIMIT_WINDOW).toISOString();
   
@@ -74,7 +74,7 @@ async function checkUserStreetRateLimit(
   }
 
   if (!data || data.length === 0) {
-    // First action from this user on this street and direction in the last 5 minutes
+    // First action from this user on this street and direction in the last minute
     await supabase.from('rate_limits').insert({
       identifier,
       action_type: 'traffic_report_user_street',
@@ -83,7 +83,7 @@ async function checkUserStreetRateLimit(
     return true; // Allow
   }
 
-  // User has already submitted a report for this street and direction in the last 5 minutes
+  // User has already submitted a report for this street and direction in the last minute
   return false; // Don't allow
 }
 
@@ -127,7 +127,7 @@ Deno.serve(async (req) => {
 
     const { street, status, userFingerprint, direction } = validationResult.data;
 
-    // Check user-street-direction rate limit (1 report per 5 minutes)
+    // Check user-street-direction rate limit (1 report per minute)
     const canSubmit = await checkUserStreetRateLimit(supabase, userFingerprint, street, direction);
     
     if (canSubmit) {
@@ -154,7 +154,7 @@ Deno.serve(async (req) => {
         console.error('Insert error:', error);
       }
     } else {
-      console.log(`Rate limit: User ${userFingerprint} tried to submit again for ${street} (${direction}) within 5 minutes`);
+      console.log(`Rate limit: User ${userFingerprint} tried to submit again for ${street} (${direction}) within 1 minute`);
     }
 
     // Always return success to show "thank you" message

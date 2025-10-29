@@ -398,7 +398,10 @@ export const TrafficLine = ({ street, direction, width = "100%", onSpeedUpdate, 
       </div>
       
       {/* Speedometer Gauge */}
-      <div ref={shareRef} className="flex flex-col items-center mt-6 p-6 pb-8 bg-white rounded-lg">
+      <div ref={shareRef} className="relative flex flex-col items-center mt-6 p-6 pb-8 bg-white rounded-lg">
+        {/* Street Name at Top */}
+        <h2 className="text-2xl font-bold text-gray-900 mb-4">{street}</h2>
+        
         <svg width="300" height="180" viewBox="0 0 300 180" className="drop-shadow-lg">
           {/* Outer circle background */}
           <circle cx="150" cy="150" r="120" fill="#f8fafc" stroke="#e2e8f0" strokeWidth="2" />
@@ -529,21 +532,28 @@ export const TrafficLine = ({ street, direction, width = "100%", onSpeedUpdate, 
           <h3 className="text-lg font-semibold text-gray-800 mb-3">
             Poziom frustracji
           </h3>
-          <p className="text-sm text-gray-600 italic max-w-md mx-auto mb-4">
+          <p className="text-sm text-gray-600 italic max-w-md mx-auto">
             {FRUSTRATION_TEXTS[Math.round(currentSpeed)] || FRUSTRATION_TEXTS[0]}
           </p>
-          
-          {/* Share Button */}
-          <Button
-            onClick={handleShare}
-            variant="default"
-            size="sm"
-            className="gap-2 mt-2"
-          >
-            <Share2 className="h-4 w-4" />
-            Udostępnij
-          </Button>
         </div>
+        
+        {/* eJedzie.pl Branding */}
+        <div className="absolute bottom-4 right-6 text-gray-500 font-semibold text-sm">
+          eJedzie.pl
+        </div>
+      </div>
+      
+      {/* Share Button - Outside of captured area */}
+      <div className="flex justify-center mt-4">
+        <Button
+          onClick={handleShare}
+          variant="default"
+          size="sm"
+          className="gap-2"
+        >
+          <Share2 className="h-4 w-4" />
+          Udostępnij
+        </Button>
       </div>
     </div>
   );

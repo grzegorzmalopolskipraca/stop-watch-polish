@@ -77,19 +77,19 @@ export const SmsSubscription = ({ selectedStreet }: SmsSubscriptionProps) => {
   };
 
   const handleSubmit = async () => {
-    // Validate that at least phone or email is provided
-    if (!phoneNumber && !email) {
-      toast.error("Podaj numer telefonu lub adres e-mail");
+    // Validate email is required
+    if (!email) {
+      toast.error("Adres e-mail jest wymagany");
+      return;
+    }
+
+    // Validate email format
+    if (!validateEmail(email)) {
       return;
     }
 
     // Validate phone number if provided
     if (phoneNumber && !validatePhoneNumber(phoneNumber)) {
-      return;
-    }
-
-    // Validate email if provided
-    if (email && !validateEmail(email)) {
       return;
     }
 
@@ -210,7 +210,7 @@ export const SmsSubscription = ({ selectedStreet }: SmsSubscriptionProps) => {
         {/* Email */}
         <div>
           <Label htmlFor="email" className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">
-            Adres e-mail (opcjonalnie)
+            Adres e-mail *
           </Label>
           <Input
             id="email"

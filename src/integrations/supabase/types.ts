@@ -202,38 +202,41 @@ export type Database = {
       }
       sms_subscriptions: {
         Row: {
-          back_to_home_hour: string
+          back_to_home_hour: string | null
           consent_data_processing: boolean
           consent_marketing: boolean
           consent_timestamp: string | null
           created_at: string
-          go_to_work_hour: string
+          email: string | null
+          go_to_work_hour: string | null
           id: string
-          phone_number: string
+          phone_number: string | null
           street: string
           updated_at: string
         }
         Insert: {
-          back_to_home_hour: string
+          back_to_home_hour?: string | null
           consent_data_processing?: boolean
           consent_marketing?: boolean
           consent_timestamp?: string | null
           created_at?: string
-          go_to_work_hour: string
+          email?: string | null
+          go_to_work_hour?: string | null
           id?: string
-          phone_number: string
+          phone_number?: string | null
           street: string
           updated_at?: string
         }
         Update: {
-          back_to_home_hour?: string
+          back_to_home_hour?: string | null
           consent_data_processing?: boolean
           consent_marketing?: boolean
           consent_timestamp?: string | null
           created_at?: string
-          go_to_work_hour?: string
+          email?: string | null
+          go_to_work_hour?: string | null
           id?: string
-          phone_number?: string
+          phone_number?: string | null
           street?: string
           updated_at?: string
         }

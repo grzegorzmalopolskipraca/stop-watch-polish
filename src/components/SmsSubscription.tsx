@@ -13,6 +13,7 @@ interface SmsSubscriptionProps {
 
 export const SmsSubscription = ({ selectedStreet }: SmsSubscriptionProps) => {
   const [phoneNumber, setPhoneNumber] = useState("");
+  const [email, setEmail] = useState("");
   const [goToWorkHour, setGoToWorkHour] = useState("");
   const [goToWorkMinute, setGoToWorkMinute] = useState("");
   const [backToHomeHour, setBackToHomeHour] = useState("");
@@ -64,19 +65,39 @@ export const SmsSubscription = ({ selectedStreet }: SmsSubscriptionProps) => {
     return true;
   };
 
+  const validateEmail = (email: string): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      toast.error("Podaj prawidłowy adres e-mail");
+      return false;
+    }
+    return true;
+  };
+
   const handleSubmit = async () => {
-    // Validate phone number
-    if (!validatePhoneNumber(phoneNumber)) {
+    // Validate that at least phone or email is provided
+    if (!phoneNumber && !email) {
+      toast.error("Podaj numer telefonu lub adres e-mail");
       return;
     }
 
-    // Validate work hours
-    if (!validateTime(goToWorkHour, goToWorkMinute, "godziny wyjazdu do pracy")) {
+    // Validate phone number if provided
+    if (phoneNumber && !validatePhoneNumber(phoneNumber)) {
       return;
     }
 
-    // Validate home hours
-    if (!validateTime(backToHomeHour, backToHomeMinute, "godziny powrotu z pracy")) {
+    // Validate email if provided
+    if (email && !validateEmail(email)) {
+      return;
+    }
+
+    // Validate work hours if provided
+    if ((goToWorkHour || goToWorkMinute) && !validateTime(goToWorkHour, goToWorkMinute, "godziny wyjazdu do pracy")) {
+      return;
+    }
+
+    // Validate home hours if provided
+    if ((backToHomeHour || backToHomeMinute) && !validateTime(backToHomeHour, backToHomeMinute, "godziny powrotu z pracy")) {
       return;
     }
 
@@ -87,34 +108,50 @@ export const SmsSubscription = ({ selectedStreet }: SmsSubscriptionProps) => {
     }
 
     if (!consentMarketing) {
-      toast.error("Wymagana jest zgoda na otrzymywanie komunikacji elektronicznej");
+      toast.error("Wymagana jest zgoda na otrzymywanie komunikacji elektroniczną");
       return;
     }
 
     setIsSubmitting(true);
 
     try {
-      const goToWork = `${goToWorkHour.padStart(2, '0')}:${goToWorkMinute.padStart(2, '0')}`;
-      const backToHome = `${backToHomeHour.padStart(2, '0')}:${backToHomeMinute.padStart(2, '0')}`;
+      const dataToInsert: any = {
+        street: selectedStreet,
+        consent_data_processing: consentDataProcessing,
+        consent_marketing: consentMarketing,
+        consent_timestamp: new Date().toISOString(),
+      };
+
+      // Add phone number if provided
+      if (phoneNumber) {
+        dataToInsert.phone_number = `+48${phoneNumber.replace(/\s/g, "")}`;
+      }
+
+      // Add email if provided
+      if (email) {
+        dataToInsert.email = email.trim();
+      }
+
+      // Add hours if provided
+      if (goToWorkHour && goToWorkMinute) {
+        dataToInsert.go_to_work_hour = `${goToWorkHour.padStart(2, '0')}:${goToWorkMinute.padStart(2, '0')}`;
+      }
+
+      if (backToHomeHour && backToHomeMinute) {
+        dataToInsert.back_to_home_hour = `${backToHomeHour.padStart(2, '0')}:${backToHomeMinute.padStart(2, '0')}`;
+      }
 
       const { error } = await supabase
         .from("sms_subscriptions")
-        .insert({
-          street: selectedStreet,
-          phone_number: `+48${phoneNumber.replace(/\s/g, "")}`,
-          go_to_work_hour: goToWork,
-          back_to_home_hour: backToHome,
-          consent_data_processing: consentDataProcessing,
-          consent_marketing: consentMarketing,
-          consent_timestamp: new Date().toISOString(),
-        });
+        .insert(dataToInsert);
 
       if (error) throw error;
 
-      toast.success("Zapisano na powiadomienia SMS!");
+      toast.success("Zapisano na powiadomienia!");
       
       // Clear form
       setPhoneNumber("");
+      setEmail("");
       setGoToWorkHour("");
       setGoToWorkMinute("");
       setBackToHomeHour("");
@@ -122,7 +159,7 @@ export const SmsSubscription = ({ selectedStreet }: SmsSubscriptionProps) => {
       setConsentDataProcessing(false);
       setConsentMarketing(false);
     } catch (error: any) {
-      console.error("Error saving SMS subscription:", error);
+      console.error("Error saving subscription:", error);
       toast.error("Wystąpił błąd podczas zapisywania. Spróbuj ponownie.");
     } finally {
       setIsSubmitting(false);
@@ -133,16 +170,16 @@ export const SmsSubscription = ({ selectedStreet }: SmsSubscriptionProps) => {
     <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-gray-900 rounded-xl p-6 shadow-lg border border-blue-100 dark:border-gray-700">
       <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
         <MessageSquare className="w-6 h-6 text-blue-600 dark:text-blue-400" />
-        Zapisz się na ważne powiadomienia SMS
+        Zapisz się na ważne powiadomienia SMS/E-mail
       </h3>
       
       <p className="text-sm text-gray-700 dark:text-gray-300 mb-2">
-        Otrzymasz SMS, gdy wystąpi <span className="font-semibold">Blokada</span> lub inne nagłe zdarzenie potwierdzone przez kilka osób. 
+        Otrzymasz SMS lub e-mail, gdy wystąpi <span className="font-semibold">Blokada</span> lub inne nagłe zdarzenie potwierdzone przez kilka osób. 
         To pozwoli Ci uniknąć nieprzyjemności.
       </p>
       
       <p className="text-sm text-gray-700 dark:text-gray-300 mb-6">
-        Raz w tygodniu w <span className="font-semibold">Poniedziałek rano</span> otrzymasz SMS z godzinami <span className="font-semibold">Zielonej Fali</span>, 
+        Raz w tygodniu w <span className="font-semibold">Poniedziałek rano</span> otrzymasz wiadomość z godzinami <span className="font-semibold">Zielonej Fali</span>, 
         by dobrze zacząć tydzień i pojechać do pracy bez korków.
       </p>
 
@@ -150,7 +187,7 @@ export const SmsSubscription = ({ selectedStreet }: SmsSubscriptionProps) => {
         {/* Phone Number */}
         <div>
           <Label htmlFor="phone" className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">
-            Numer telefonu
+            Numer telefonu (opcjonalnie)
           </Label>
           <div className="flex items-center gap-2">
             <span className="text-lg font-semibold text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 px-3 py-2 rounded-md border border-gray-300 dark:border-gray-600">
@@ -168,10 +205,25 @@ export const SmsSubscription = ({ selectedStreet }: SmsSubscriptionProps) => {
           </div>
         </div>
 
+        {/* Email */}
+        <div>
+          <Label htmlFor="email" className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">
+            Adres e-mail (opcjonalnie)
+          </Label>
+          <Input
+            id="email"
+            type="email"
+            placeholder="twoj@email.pl"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="w-full"
+          />
+        </div>
+
         {/* Go to Work Time */}
         <div>
           <Label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">
-            Przeważnie wyjeżdżam do pracy o:
+            Przeważnie wyjeżdżam do pracy o (opcjonalnie):
           </Label>
           <div className="flex items-center gap-2">
             <Input
@@ -197,7 +249,7 @@ export const SmsSubscription = ({ selectedStreet }: SmsSubscriptionProps) => {
         {/* Back to Home Time */}
         <div>
           <Label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">
-            Wracam z pracy o godzinie:
+            Wracam z pracy o godzinie (opcjonalnie):
           </Label>
           <div className="flex items-center gap-2">
             <Input
@@ -274,8 +326,8 @@ export const SmsSubscription = ({ selectedStreet }: SmsSubscriptionProps) => {
 
         {/* Disclaimer */}
         <div className="text-xs text-gray-600 dark:text-gray-400 space-y-1 mt-4">
-          <p>* Numer będzie używany wyłącznie do ważnych powiadomień (bez spamu, nie za często)</p>
-          <p>(Można się wypisać w każdej chwili pisząc do mnie mail a w nim podając numer)</p>
+          <p>* Dane będą używane wyłącznie do ważnych powiadomień (bez spamu, nie za często)</p>
+          <p>(Można się wypisać w każdej chwili pisząc do mnie mail a w nim podając numer lub adres e-mail)</p>
         </div>
       </div>
     </div>

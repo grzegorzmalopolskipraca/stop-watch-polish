@@ -1037,6 +1037,11 @@ const Index = () => {
                 Najbliższa zielona fala
               </p>
             </div>
+            {streetDistance !== null && (
+              <p className="text-sm font-medium text-center">
+                Podczas zielonej fali oszczędzasz {(streetDistance * (1/8.0 - 1/40.0) * 60).toFixed(1)} minut
+              </p>
+            )}
           </section>
         )}
 

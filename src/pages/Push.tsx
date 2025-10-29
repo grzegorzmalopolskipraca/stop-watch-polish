@@ -12,66 +12,101 @@ const Push = () => {
   const testStreet = "test_device";
 
   useEffect(() => {
+    console.log("[Push Page] Component mounted");
+    console.log("[Push Page] Test street:", testStreet);
+    console.log("[Push Page] WonderPush global object:", window.WonderPush);
+    console.log("[Push Page] Notification API available:", "Notification" in window);
+    
+    if ("Notification" in window) {
+      console.log("[Push Page] Current notification permission:", Notification.permission);
+    }
+    
     // Check initial push status
-    setIsPushEnabled(isWonderPushSubscribed(testStreet));
+    const isSubscribed = isWonderPushSubscribed(testStreet);
+    console.log("[Push Page] Initial subscription status:", isSubscribed);
+    setIsPushEnabled(isSubscribed);
   }, []);
 
   const togglePush = async () => {
+    console.log("[Push Page] Toggle push clicked, current state:", isPushEnabled);
     setIsLoading(true);
+    
     try {
       if (isPushEnabled) {
         // Disable push
+        console.log("[Push Page] Attempting to unsubscribe from:", testStreet);
         const success = await unsubscribeFromWonderPush(testStreet);
+        console.log("[Push Page] Unsubscribe result:", success);
+        
         if (success) {
           setIsPushEnabled(false);
+          console.log("[Push Page] Successfully unsubscribed");
           toast.success("Powiadomienia push wyłączone");
         } else {
+          console.error("[Push Page] Failed to unsubscribe");
           toast.error("Nie udało się wyłączyć powiadomień");
         }
       } else {
         // Enable push
+        console.log("[Push Page] Attempting to subscribe to:", testStreet);
         const success = await subscribeToWonderPush(testStreet);
+        console.log("[Push Page] Subscribe result:", success);
+        
         if (success) {
           setIsPushEnabled(true);
+          console.log("[Push Page] Successfully subscribed");
           toast.success("Powiadomienia push włączone");
         } else {
+          console.error("[Push Page] Failed to subscribe");
           toast.error("Nie udało się włączyć powiadomień");
         }
       }
     } catch (error) {
-      console.error("Error toggling push:", error);
+      console.error("[Push Page] Error toggling push:", error);
       toast.error("Wystąpił błąd");
     } finally {
       setIsLoading(false);
+      console.log("[Push Page] Toggle push completed, new state:", !isPushEnabled);
     }
   };
 
   const sendTestPush = async () => {
+    console.log("[Push Page] Send test push clicked");
+    console.log("[Push Page] Current push enabled state:", isPushEnabled);
+    
     if (!isPushEnabled) {
+      console.warn("[Push Page] Cannot send push - notifications not enabled");
       toast.error("Najpierw włącz powiadomienia push");
       return;
     }
 
     setIsLoading(true);
+    console.log("[Push Page] Invoking send-push-notifications edge function");
+    console.log("[Push Page] Payload:", { street: testStreet, message: "To jest testowe powiadomienie push!" });
+    
     try {
-      const { error } = await supabase.functions.invoke("send-push-notifications", {
+      const { data, error } = await supabase.functions.invoke("send-push-notifications", {
         body: {
           street: testStreet,
           message: "To jest testowe powiadomienie push!",
         },
       });
 
+      console.log("[Push Page] Edge function response:", { data, error });
+
       if (error) {
-        console.error("Error sending push:", error);
+        console.error("[Push Page] Error sending push:", error);
         toast.error("Nie udało się wysłać powiadomienia");
       } else {
+        console.log("[Push Page] Push notification sent successfully");
         toast.success("Powiadomienie wysłane!");
       }
     } catch (error) {
-      console.error("Error sending push:", error);
+      console.error("[Push Page] Exception sending push:", error);
       toast.error("Wystąpił błąd");
     } finally {
       setIsLoading(false);
+      console.log("[Push Page] Send push completed");
     }
   };
 

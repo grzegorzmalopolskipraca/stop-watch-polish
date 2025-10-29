@@ -25,7 +25,7 @@ const reportSchema = z.object({
 // Rate limiting: max 1 report per user per street per direction per 5 minutes
 const RATE_LIMIT_WINDOW = 5 * 60 * 1000; // 5 minutes in milliseconds
 
-// IP-based rate limiting: max 5 reports per IP per 5 minutes
+// IP-based rate limiting: max 10 reports per IP per 5 minutes
 async function checkIPRateLimit(supabase: any, clientIP: string): Promise<boolean> {
   const fiveMinutesAgo = new Date(Date.now() - RATE_LIMIT_WINDOW).toISOString();
   
@@ -41,17 +41,9 @@ async function checkIPRateLimit(supabase: any, clientIP: string): Promise<boolea
     return true; // Fail open
   }
 
-  if (data && data.length >= 5) {
+  if (data && data.length >= 10) {
     return false; // IP rate limit exceeded
   }
-
-  // Record this IP request
-  await supabase.from('rate_limits').insert({
-    identifier: `ip_${clientIP}`,
-    action_type: 'traffic_report_ip',
-    action_count: 1,
-    last_action_at: new Date().toISOString(),
-  });
 
   return true;
 }
@@ -139,6 +131,14 @@ Deno.serve(async (req) => {
     const canSubmit = await checkUserStreetRateLimit(supabase, userFingerprint, street, direction);
     
     if (canSubmit) {
+      // Record this IP request after successful submission
+      await supabase.from('rate_limits').insert({
+        identifier: `ip_${clientIP}`,
+        action_type: 'traffic_report_ip',
+        action_count: 1,
+        last_action_at: new Date().toISOString(),
+      });
+
       // Insert the traffic report only if rate limit allows
       const { error } = await supabase
         .from('traffic_reports')

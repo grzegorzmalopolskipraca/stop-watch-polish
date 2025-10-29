@@ -52,37 +52,74 @@ export async function subscribeToWonderPush(street: string): Promise<boolean> {
       console.log("Step 3: Permission already granted, skipping request");
     }
 
-    // Step 4: Initialize WonderPush
-    console.log("Step 4: Initializing WonderPush SDK...");
+    // Step 4: Check if WonderPush SDK is loaded
+    console.log("Step 4: Checking WonderPush SDK availability...");
+    
+    // Check if SDK script is loaded
+    const scripts = Array.from(document.scripts);
+    const wonderpushScript = scripts.find(s => s.src.includes('wonderpush'));
+    console.log("WonderPush script found:", !!wonderpushScript);
+    if (wonderpushScript) {
+      console.log("Script src:", wonderpushScript.src);
+    }
+    
+    // Check if WonderPush global exists
     console.log("WonderPush global object exists:", !!window.WonderPush);
+    console.log("WonderPush type:", typeof window.WonderPush);
+    
+    if (!window.WonderPush) {
+      const error = "❌ WonderPush SDK not loaded. Possible causes:\n" +
+        "1. Network issue or slow connection\n" +
+        "2. Ad-blocker or privacy extension blocking WonderPush\n" +
+        "3. Browser security settings\n\n" +
+        "Try:\n" +
+        "- Disable ad-blockers for this site\n" +
+        "- Check browser console for blocked resources\n" +
+        "- Ensure https://cdn.by.wonderpush.com is accessible";
+      console.error(error);
+      throw new Error("WonderPush SDK not loaded. Please disable ad-blockers and try again.");
+    }
+    
+    // Step 5: Initialize WonderPush
+    console.log("Step 5: Initializing WonderPush SDK...");
     
     await new Promise<void>((resolve, reject) => {
       const timeout = setTimeout(() => {
-        const error = "❌ WonderPush initialization timeout (10s)";
+        const error = "❌ WonderPush initialization timeout (20s)\n" +
+          "Possible causes:\n" +
+          "1. Service Worker registration failed\n" +
+          "2. WonderPush servers unreachable\n" +
+          "3. Browser blocking service worker\n\n" +
+          "Try opening Chrome DevTools → Application → Service Workers to check status";
         console.error(error);
-        reject(new Error("WonderPush initialization timeout - SDK may not be loaded"));
-      }, 10000);
+        reject(new Error("WonderPush initialization timeout - check Service Worker registration"));
+      }, 20000);
 
       window.WonderPush = window.WonderPush || [];
       console.log("WonderPush queue length:", window.WonderPush.length);
       
       window.WonderPush.push(() => {
         clearTimeout(timeout);
-        console.log("✅ WonderPush SDK is ready");
+        console.log("✅ WonderPush SDK initialized successfully");
         resolve();
       });
     });
 
-    // Step 5: Subscribe to notifications
-    console.log("Step 5: Subscribing to WonderPush notifications...");
+    // Step 6: Subscribe to notifications
+    console.log("Step 6: Subscribing to WonderPush notifications...");
     console.log("Target tag:", `street_${street}`);
     
     await new Promise<void>((resolve, reject) => {
       const timeout = setTimeout(() => {
-        const error = "❌ Subscription timeout (15s) - WonderPush may not be properly configured";
+        const error = "❌ Subscription timeout (20s)\n" +
+          "This usually means:\n" +
+          "1. WonderPush service worker not responding\n" +
+          "2. Network firewall blocking push service\n" +
+          "3. Push service endpoint unreachable\n\n" +
+          "Check Chrome DevTools → Network tab for failed requests to wonderpush.com";
         console.error(error);
-        reject(new Error(error));
-      }, 15000);
+        reject(new Error("Subscription timeout - check network connectivity to WonderPush servers"));
+      }, 20000);
 
       window.WonderPush.push(["subscribeToNotifications", (error: any) => {
         clearTimeout(timeout);
@@ -97,8 +134,8 @@ export async function subscribeToWonderPush(street: string): Promise<boolean> {
       }]);
     });
 
-    // Step 6: Set user properties
-    console.log("Step 6: Setting user properties...");
+    // Step 7: Set user properties
+    console.log("Step 7: Setting user properties...");
     await new Promise<void>((resolve) => {
       window.WonderPush.push(["putProperties", {
         string_street: street,
@@ -107,8 +144,8 @@ export async function subscribeToWonderPush(street: string): Promise<boolean> {
       resolve();
     });
     
-    // Step 7: Add street tag
-    console.log("Step 7: Adding street tag...");
+    // Step 8: Add street tag
+    console.log("Step 8: Adding street tag...");
     await new Promise<void>((resolve, reject) => {
       const timeout = setTimeout(() => {
         const error = "❌ Add tag timeout (10s)";
@@ -129,8 +166,8 @@ export async function subscribeToWonderPush(street: string): Promise<boolean> {
       }]);
     });
 
-    // Step 8: Save to local storage
-    console.log("Step 8: Saving subscription status...");
+    // Step 9: Save to local storage
+    console.log("Step 9: Saving subscription status...");
     localStorage.setItem(`wonderpush_subscribed_${street}`, "true");
     console.log("✅ Subscription status saved");
     

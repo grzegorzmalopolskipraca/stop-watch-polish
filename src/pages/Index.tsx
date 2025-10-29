@@ -36,6 +36,7 @@ import { CityVoting } from "@/components/CityVoting";
 import { TrafficLine } from "@/components/TrafficLine";
 import { GreenWave } from "@/components/GreenWave";
 import { RssTicker } from "@/components/RssTicker";
+import { SmsSubscription } from "@/components/SmsSubscription";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format, startOfDay } from "date-fns";
 import { pl } from "date-fns/locale";
@@ -1177,6 +1178,11 @@ const Index = () => {
         {/* Weekly Timeline */}
         <section className="bg-card rounded-lg p-5 border border-border">
           <WeeklyTimeline reports={weeklyReports} />
+        </section>
+
+        {/* SMS Subscription */}
+        <section>
+          <SmsSubscription selectedStreet={selectedStreet} />
         </section>
 
         {/* Green Wave */}

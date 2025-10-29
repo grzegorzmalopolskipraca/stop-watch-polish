@@ -200,6 +200,36 @@ export type Database = {
         }
         Relationships: []
       }
+      sms_subscriptions: {
+        Row: {
+          back_to_home_hour: string
+          created_at: string
+          go_to_work_hour: string
+          id: string
+          phone_number: string
+          street: string
+          updated_at: string
+        }
+        Insert: {
+          back_to_home_hour: string
+          created_at?: string
+          go_to_work_hour: string
+          id?: string
+          phone_number: string
+          street: string
+          updated_at?: string
+        }
+        Update: {
+          back_to_home_hour?: string
+          created_at?: string
+          go_to_work_hour?: string
+          id?: string
+          phone_number?: string
+          street?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       street_chat_messages: {
         Row: {
           created_at: string

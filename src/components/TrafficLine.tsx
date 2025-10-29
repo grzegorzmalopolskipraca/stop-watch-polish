@@ -236,9 +236,10 @@ export const TrafficLine = ({ street, direction, width = "100%", onSpeedUpdate, 
   const calculateNeedleAngle = (speed: number) => {
     const maxSpeed = 50;
     const clampedSpeed = Math.max(0, Math.min(speed, maxSpeed));
+    // Apply a slight 5% bias to the speed for visual alignment, then map to angle
+    const biasedSpeed = Math.min(maxSpeed, clampedSpeed * 1.05);
     // Rotate from -90 degrees (0 km/h, left) to 90 degrees (50 km/h, right)
-    // Adding offset to better align with visual tick marks
-    return -90 + (clampedSpeed / maxSpeed) * 180 + 12;
+    return -90 + (biasedSpeed / maxSpeed) * 180 + 12;
   };
 
   const currentSpeed = avgSpeed ? parseFloat(avgSpeed) : 0;

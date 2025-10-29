@@ -302,11 +302,23 @@ export const TrafficLine = ({ street, direction, width = "100%", onSpeedUpdate, 
             strokeLinecap="butt"
           />
           
-          {/* Red zone (0-10 km/h) - 20% of arc */}
+          {/* Dark burning zone (0-5 km/h) - 10% of arc */}
           <path
-            d="M 40 150 A 110 110 0 0 1 78 72"
+            d="M 40 150 A 110 110 0 0 0 56 106"
             fill="none"
-            stroke="#ff4500"
+            stroke="#8b0000"
+            strokeWidth="20"
+            strokeLinecap="butt"
+          />
+          
+          {/* Tick mark at 5 km/h */}
+          <line x1="56" y1="106" x2="62" y2="112" stroke="#1f2937" strokeWidth="3" strokeLinecap="round" />
+          
+          {/* Red zone (5-10 km/h) - 10% of arc */}
+          <path
+            d="M 56 106 A 110 110 0 0 1 78 72"
+            fill="none"
+            stroke="#dc2626"
             strokeWidth="20"
             strokeLinecap="butt"
           />
@@ -340,6 +352,9 @@ export const TrafficLine = ({ street, direction, width = "100%", onSpeedUpdate, 
           <line x1="40" y1="150" x2="50" y2="150" stroke="#1f2937" strokeWidth="2" />
           <text x="25" y="155" fontSize="14" fill="#000000" fontWeight="600">0</text>
           
+          {/* 5 km/h */}
+          <text x="41" y="100" fontSize="14" fill="#000000" fontWeight="600">5</text>
+          
           {/* 10 km/h */}
           <text x="63" y="60" fontSize="14" fill="#000000" fontWeight="600">10</text>
           
@@ -358,8 +373,7 @@ export const TrafficLine = ({ street, direction, width = "100%", onSpeedUpdate, 
           <line x1="260" y1="150" x2="250" y2="150" stroke="#1f2937" strokeWidth="2" />
           <text x="263" y="155" fontSize="14" fill="#000000" fontWeight="600">50</text>
           
-          {/* Minor tick marks every 5 km/h */}
-          <line x1="56" y1="106" x2="62" y2="112" stroke="#94a3b8" strokeWidth="1.5" />
+          {/* Minor tick marks every 5 km/h - removed the one at 5 since it's now a major mark */}
           <line x1="109" y1="56" x2="114" y2="62" stroke="#94a3b8" strokeWidth="1.5" />
           <line x1="150" y1="40" x2="150" y2="50" stroke="#94a3b8" strokeWidth="1.5" />
           <line x1="238" y1="82" x2="232" y2="88" stroke="#94a3b8" strokeWidth="1.5" />

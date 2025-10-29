@@ -55,24 +55,45 @@ export async function subscribeToWonderPush(street: string): Promise<boolean> {
     // Subscribe user to street-specific tag
     console.log("Subscribing to notifications for tag:", `street_${street}`);
     
-    await new Promise<void>((resolve) => {
-      window.WonderPush.push(["subscribeToNotifications", () => {
-        console.log("Subscribed to notifications");
-        resolve();
+    // Subscribe to notifications and wait for completion
+    await new Promise<void>((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        reject(new Error("Subscription timeout"));
+      }, 15000);
+
+      window.WonderPush.push(["subscribeToNotifications", (error: any) => {
+        clearTimeout(timeout);
+        if (error) {
+          console.error("Error subscribing to notifications:", error);
+          reject(error);
+        } else {
+          console.log("Successfully subscribed to notifications");
+          resolve();
+        }
       }]);
     });
 
-    window.WonderPush.push(["putProperties", {
-      string_street: street,
-    }]);
+    // Set user properties
+    await new Promise<void>((resolve) => {
+      window.WonderPush.push(["putProperties", {
+        string_street: street,
+      }]);
+      console.log("Set user properties for street:", street);
+      resolve();
+    });
     
-    window.WonderPush.push(["addTag", `street_${street}`, (error: any) => {
-      if (error) {
-        console.error("Error adding tag:", error);
-      } else {
-        console.log("Successfully added tag:", `street_${street}`);
-      }
-    }]);
+    // Add tag and wait for completion
+    await new Promise<void>((resolve, reject) => {
+      window.WonderPush.push(["addTag", `street_${street}`, (error: any) => {
+        if (error) {
+          console.error("Error adding tag:", error);
+          reject(error);
+        } else {
+          console.log("Successfully added tag:", `street_${street}`);
+          resolve();
+        }
+      }]);
+    });
 
     console.log("Subscribed to WonderPush for street:", street);
     

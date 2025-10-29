@@ -306,7 +306,7 @@ export const TrafficLine = ({ street, direction, width = "100%", onSpeedUpdate, 
           <path
             d="M 40 150 A 110 110 0 0 1 78 72"
             fill="none"
-            stroke="#dc2626"
+            stroke="#ff4500"
             strokeWidth="20"
             strokeLinecap="butt"
           />

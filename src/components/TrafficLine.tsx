@@ -361,8 +361,8 @@ export const TrafficLine = ({ street, direction, width = "100%", onSpeedUpdate, 
           {/* Minor tick marks every 5 km/h */}
           <line x1="56" y1="106" x2="62" y2="112" stroke="#94a3b8" strokeWidth="1.5" />
           <line x1="109" y1="56" x2="114" y2="62" stroke="#94a3b8" strokeWidth="1.5" />
-          <line x1="191" y1="56" x2="186" y2="62" stroke="#94a3b8" strokeWidth="1.5" />
-          <line x1="244" y1="106" x2="238" y2="112" stroke="#94a3b8" strokeWidth="1.5" />
+          <line x1="150" y1="40" x2="150" y2="50" stroke="#94a3b8" strokeWidth="1.5" />
+          <line x1="238" y1="82" x2="232" y2="88" stroke="#94a3b8" strokeWidth="1.5" />
           
           {/* Center circle */}
           <circle cx="150" cy="150" r="10" fill="#1f2937" />
@@ -393,17 +393,6 @@ export const TrafficLine = ({ street, direction, width = "100%", onSpeedUpdate, 
             style={{ transition: 'transform 0.5s ease' }}
           />
           
-          {/* Needle tip circle */}
-          <circle 
-            cx="150" 
-            cy="55" 
-            r="6" 
-            fill="#ef4444"
-            stroke="#1f2937"
-            strokeWidth="1"
-            transform={`rotate(${needleAngle} 150 150)`}
-            style={{ transition: 'transform 0.5s ease' }}
-          />
           
           {/* Center bolt */}
           <circle cx="150" cy="150" r="6" fill="#374151" />

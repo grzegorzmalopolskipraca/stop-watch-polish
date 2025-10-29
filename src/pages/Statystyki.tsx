@@ -4,7 +4,7 @@ import { ArrowLeft } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, AreaChart, Area } from "recharts";
-import { format, parseISO, getHours } from "date-fns";
+import { format, parseISO, getHours, getDay } from "date-fns";
 import { pl } from "date-fns/locale";
 
 const COLORS = ['#8b5cf6', '#06b6d4', '#10b981', '#f59e0b', '#ef4444', '#ec4899', '#6366f1', '#14b8a6', '#f97316', '#84cc16'];
@@ -33,6 +33,8 @@ const Statystyki = () => {
   const [trafficByHour, setTrafficByHour] = useState<any[]>([]);
   const [chatOverTime, setChatOverTime] = useState<any[]>([]);
   const [topActiveStreets, setTopActiveStreets] = useState<any[]>([]);
+  const [trafficByStreetAndHour, setTrafficByStreetAndHour] = useState<any[]>([]);
+  const [trafficByStreetAndDay, setTrafficByStreetAndDay] = useState<any[]>([]);
 
   useEffect(() => {
     fetchAllStatistics();
@@ -410,6 +412,113 @@ const Statystyki = () => {
         .sort((a, b) => (b.Głosy + b.Ruch + b.Zdarzenia + b.Czat) - (a.Głosy + a.Ruch + a.Zdarzenia + a.Czat))
         .slice(0, 10)
     );
+
+    // 16. Traffic status by street and hour of day
+    const { data: trafficByHourStreetData } = await supabase
+      .from("traffic_reports")
+      .select("street, status, reported_at");
+    
+    if (trafficByHourStreetData) {
+      // Get top 5 streets by traffic reports
+      const streetCounts: Record<string, number> = {};
+      trafficByHourStreetData.forEach((t) => {
+        streetCounts[t.street] = (streetCounts[t.street] || 0) + 1;
+      });
+      
+      const topStreetsList = Object.entries(streetCounts)
+        .sort(([, a], [, b]) => b - a)
+        .slice(0, 5)
+        .map(([street]) => street);
+      
+      // Calculate average traffic score by hour for each street
+      // smooth = 1, slow = 2, congested = 3
+      const statusScore: Record<string, number> = {
+        smooth: 1,
+        slow: 2,
+        congested: 3,
+      };
+      
+      const streetHourData: Record<number, Record<string, { total: number; count: number }>> = {};
+      
+      trafficByHourStreetData.forEach((t) => {
+        if (topStreetsList.includes(t.street)) {
+          const hour = getHours(parseISO(t.reported_at));
+          if (!streetHourData[hour]) streetHourData[hour] = {};
+          if (!streetHourData[hour][t.street]) streetHourData[hour][t.street] = { total: 0, count: 0 };
+          
+          streetHourData[hour][t.street].total += statusScore[t.status] || 0;
+          streetHourData[hour][t.street].count += 1;
+        }
+      });
+      
+      const hourlyData = Array.from({ length: 24 }, (_, hour) => {
+        const dataPoint: any = { hour: `${hour}:00` };
+        topStreetsList.forEach((street) => {
+          if (streetHourData[hour]?.[street]) {
+            dataPoint[street] = (streetHourData[hour][street].total / streetHourData[hour][street].count).toFixed(2);
+          } else {
+            dataPoint[street] = 0;
+          }
+        });
+        return dataPoint;
+      });
+      
+      setTrafficByStreetAndHour(hourlyData);
+    }
+
+    // 17. Traffic status by street and day of week
+    const { data: trafficByDayStreetData } = await supabase
+      .from("traffic_reports")
+      .select("street, status, reported_at");
+    
+    if (trafficByDayStreetData) {
+      // Get top 5 streets by traffic reports
+      const streetCounts: Record<string, number> = {};
+      trafficByDayStreetData.forEach((t) => {
+        streetCounts[t.street] = (streetCounts[t.street] || 0) + 1;
+      });
+      
+      const topStreetsList = Object.entries(streetCounts)
+        .sort(([, a], [, b]) => b - a)
+        .slice(0, 5)
+        .map(([street]) => street);
+      
+      // Calculate average traffic score by day of week for each street
+      const statusScore: Record<string, number> = {
+        smooth: 1,
+        slow: 2,
+        congested: 3,
+      };
+      
+      const streetDayData: Record<number, Record<string, { total: number; count: number }>> = {};
+      
+      trafficByDayStreetData.forEach((t) => {
+        if (topStreetsList.includes(t.street)) {
+          const day = getDay(parseISO(t.reported_at)); // 0 = Sunday, 1 = Monday, etc.
+          if (!streetDayData[day]) streetDayData[day] = {};
+          if (!streetDayData[day][t.street]) streetDayData[day][t.street] = { total: 0, count: 0 };
+          
+          streetDayData[day][t.street].total += statusScore[t.status] || 0;
+          streetDayData[day][t.street].count += 1;
+        }
+      });
+      
+      const dayLabels = ["Niedziela", "Poniedziałek", "Wtorek", "Środa", "Czwartek", "Piątek", "Sobota"];
+      
+      const dailyData = Array.from({ length: 7 }, (_, day) => {
+        const dataPoint: any = { day: dayLabels[day] };
+        topStreetsList.forEach((street) => {
+          if (streetDayData[day]?.[street]) {
+            dataPoint[street] = (streetDayData[day][street].total / streetDayData[day][street].count).toFixed(2);
+          } else {
+            dataPoint[street] = 0;
+          }
+        });
+        return dataPoint;
+      });
+      
+      setTrafficByStreetAndDay(dailyData);
+    }
   };
 
   return (
@@ -804,6 +913,66 @@ const Statystyki = () => {
                   <Bar dataKey="Ruch" stackId="a" fill="#06b6d4" radius={[0, 0, 0, 0]} />
                   <Bar dataKey="Zdarzenia" stackId="a" fill="#ef4444" radius={[0, 0, 0, 0]} />
                   <Bar dataKey="Czat" stackId="a" fill="#10b981" radius={[8, 8, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+
+          {/* 16. Traffic Status by Street and Hour */}
+          <Card className="lg:col-span-2 bg-gradient-to-br from-yellow-500/5 to-orange-500/5 border-yellow-200 dark:border-yellow-800">
+            <CardHeader>
+              <CardTitle className="text-yellow-700 dark:text-yellow-400">Średni status ruchu według godzin - top 5 ulic</CardTitle>
+              <CardDescription>Średni poziom natężenia ruchu w ciągu doby (1=płynny, 2=wolny, 3=zator)</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={400}>
+                <LineChart data={trafficByStreetAndHour}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                  <XAxis dataKey="hour" fontSize={10} angle={-45} textAnchor="end" height={80} />
+                  <YAxis fontSize={12} domain={[0, 3]} />
+                  <Tooltip />
+                  <Legend wrapperStyle={{ fontSize: '12px' }} />
+                  {trafficByStreetAndHour.length > 0 && Object.keys(trafficByStreetAndHour[0])
+                    .filter(key => key !== 'hour')
+                    .map((street, index) => (
+                      <Line 
+                        key={street} 
+                        type="monotone" 
+                        dataKey={street} 
+                        stroke={COLORS[index % COLORS.length]} 
+                        strokeWidth={2}
+                        dot={{ r: 3 }}
+                      />
+                    ))}
+                </LineChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+
+          {/* 17. Traffic Status by Street and Day of Week */}
+          <Card className="lg:col-span-2 bg-gradient-to-br from-slate-500/5 to-gray-500/5 border-slate-200 dark:border-slate-800">
+            <CardHeader>
+              <CardTitle className="text-slate-700 dark:text-slate-400">Średni status ruchu według dni tygodnia - top 5 ulic</CardTitle>
+              <CardDescription>Średni poziom natężenia ruchu w poszczególne dni tygodnia (1=płynny, 2=wolny, 3=zator)</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={400}>
+                <BarChart data={trafficByStreetAndDay}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                  <XAxis dataKey="day" fontSize={10} angle={-45} textAnchor="end" height={80} />
+                  <YAxis fontSize={12} domain={[0, 3]} />
+                  <Tooltip />
+                  <Legend wrapperStyle={{ fontSize: '12px' }} />
+                  {trafficByStreetAndDay.length > 0 && Object.keys(trafficByStreetAndDay[0])
+                    .filter(key => key !== 'day')
+                    .map((street, index) => (
+                      <Bar 
+                        key={street} 
+                        dataKey={street} 
+                        fill={COLORS[index % COLORS.length]} 
+                        radius={[8, 8, 0, 0]}
+                      />
+                    ))}
                 </BarChart>
               </ResponsiveContainer>
             </CardContent>

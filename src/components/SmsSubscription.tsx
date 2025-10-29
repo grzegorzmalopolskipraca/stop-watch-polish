@@ -213,8 +213,8 @@ export const SmsSubscription = ({ selectedStreet }: SmsSubscriptionProps) => {
 
         {/* Disclaimer */}
         <div className="text-xs text-gray-600 dark:text-gray-400 space-y-1 mt-4">
-          <p>* Numer będzie używany wyłącznie do powiadomień</p>
-          <p>(Można się wypisać pisząc do mnie mail a w nim podając numer)</p>
+          <p>* Numer będzie używany wyłącznie do ważnych powiadomień (bez spamu, nie za często)</p>
+          <p>(Można się wypisać w każdej chwili pisząc do mnie mail a w nim podając numer)</p>
         </div>
       </div>
     </div>

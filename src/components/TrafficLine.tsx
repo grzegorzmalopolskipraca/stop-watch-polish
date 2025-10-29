@@ -320,6 +320,7 @@ export const TrafficLine = ({ street, direction, width = "100%", onSpeedUpdate, 
           const streetName = clonedDoc.querySelector('h2.opacity-0');
           if (streetName) {
             (streetName as HTMLElement).style.opacity = '1';
+            (streetName as HTMLElement).style.height = 'auto';
           }
           const branding = clonedDoc.querySelector('.absolute.bottom-2.right-2');
           if (branding) {
@@ -411,7 +412,7 @@ export const TrafficLine = ({ street, direction, width = "100%", onSpeedUpdate, 
       {/* Speedometer Gauge */}
       <div ref={shareRef} className="relative flex flex-col items-center mt-6 p-6 pb-8 bg-white rounded-lg">
         {/* Street Name at Top - hidden in UI, visible in export */}
-        <h2 className="text-2xl font-bold text-gray-900 mb-4 opacity-0">{street}</h2>
+        <h2 className="text-2xl font-bold text-gray-900 opacity-0 h-0 mb-4">{street}</h2>
         
         <svg width="300" height="180" viewBox="0 0 300 180" className="drop-shadow-lg">
           {/* Outer circle background */}

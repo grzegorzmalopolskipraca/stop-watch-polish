@@ -232,6 +232,17 @@ export const TrafficLine = ({ street, direction, width = "100%", onSpeedUpdate, 
     console.log(`[TrafficLine] UI render state -> loading=${isLoading}, level=${level}, color=${barColor}`);
   }, [isLoading, level]);
 
+  // Calculate needle angle based on speed (0-50 km/h)
+  const calculateNeedleAngle = (speed: number) => {
+    const maxSpeed = 50;
+    const clampedSpeed = Math.max(0, Math.min(speed, maxSpeed));
+    // Rotate from -90 degrees (0 km/h, left) to 90 degrees (50 km/h, right)
+    return -90 + (clampedSpeed / maxSpeed) * 180;
+  };
+
+  const currentSpeed = avgSpeed ? parseFloat(avgSpeed) : 0;
+  const needleAngle = calculateNeedleAngle(currentSpeed);
+
   return (
     <div className="w-full space-y-2">
       <div className="flex items-center justify-between text-xs" style={{ color: '#94a3b8' }}>
@@ -272,6 +283,101 @@ export const TrafficLine = ({ street, direction, width = "100%", onSpeedUpdate, 
             />
           );
         })()}
+      </div>
+      
+      {/* Speedometer Gauge */}
+      <div className="flex justify-center mt-6">
+        <svg width="280" height="160" viewBox="0 0 280 160" className="drop-shadow-md">
+          {/* Background arc */}
+          <path
+            d="M 30 140 A 110 110 0 0 1 250 140"
+            fill="none"
+            stroke="#e5e7eb"
+            strokeWidth="24"
+            strokeLinecap="round"
+          />
+          
+          {/* Red zone (0-10 km/h) - 20% of arc */}
+          <path
+            d="M 30 140 A 110 110 0 0 1 74 68"
+            fill="none"
+            stroke="#e74c3c"
+            strokeWidth="24"
+            strokeLinecap="round"
+          />
+          
+          {/* Yellow zone (10-20 km/h) - 20% of arc */}
+          <path
+            d="M 74 68 A 110 110 0 0 1 140 38"
+            fill="none"
+            stroke="#f39c12"
+            strokeWidth="24"
+            strokeLinecap="round"
+          />
+          
+          {/* Green zone (20-50 km/h) - 60% of arc */}
+          <path
+            d="M 140 38 A 110 110 0 0 1 250 140"
+            fill="none"
+            stroke="#2ecc71"
+            strokeWidth="24"
+            strokeLinecap="round"
+          />
+          
+          {/* Speed markers and labels */}
+          <text x="20" y="150" fontSize="12" fill="#94a3b8" fontWeight="bold">0</text>
+          <text x="65" y="60" fontSize="12" fill="#94a3b8" fontWeight="bold">10</text>
+          <text x="135" y="28" fontSize="12" fill="#94a3b8" fontWeight="bold">20</text>
+          <text x="205" y="60" fontSize="12" fill="#94a3b8" fontWeight="bold">30</text>
+          <text x="250" y="150" fontSize="12" fill="#94a3b8" fontWeight="bold">50</text>
+          
+          {/* Center circle */}
+          <circle cx="140" cy="140" r="8" fill="#1f2937" />
+          
+          {/* Needle */}
+          <line
+            x1="140"
+            y1="140"
+            x2="140"
+            y2="50"
+            stroke="#1f2937"
+            strokeWidth="3"
+            strokeLinecap="round"
+            transform={`rotate(${needleAngle} 140 140)`}
+            style={{ transition: 'transform 0.5s ease' }}
+          />
+          
+          {/* Needle tip circle */}
+          <circle 
+            cx="140" 
+            cy="50" 
+            r="5" 
+            fill="#ef4444"
+            transform={`rotate(${needleAngle} 140 140)`}
+            style={{ transition: 'transform 0.5s ease' }}
+          />
+          
+          {/* Speed display */}
+          <text 
+            x="140" 
+            y="125" 
+            fontSize="24" 
+            fontWeight="bold" 
+            fill="#1f2937" 
+            textAnchor="middle"
+          >
+            {currentSpeed.toFixed(0)}
+          </text>
+          <text 
+            x="140" 
+            y="138" 
+            fontSize="10" 
+            fill="#94a3b8" 
+            textAnchor="middle"
+          >
+            km/h
+          </text>
+        </svg>
       </div>
     </div>
   );

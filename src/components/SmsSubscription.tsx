@@ -114,7 +114,7 @@ export const SmsSubscription = ({ selectedStreet }: SmsSubscriptionProps) => {
     <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-gray-900 rounded-xl p-6 shadow-lg border border-blue-100 dark:border-gray-700">
       <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
         <MessageSquare className="w-6 h-6 text-blue-600 dark:text-blue-400" />
-        Zapisz się na powiadomienia SMS
+        Zapisz się na ważne powiadomienia SMS
       </h3>
       
       <p className="text-sm text-gray-700 dark:text-gray-300 mb-2">

@@ -41,6 +41,39 @@ export type Database = {
         }
         Relationships: []
       }
+      daily_speed_stats: {
+        Row: {
+          created_at: string | null
+          direction: string
+          id: string
+          max_speed: number
+          min_speed: number
+          speed_date: string
+          street: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          direction: string
+          id?: string
+          max_speed: number
+          min_speed: number
+          speed_date?: string
+          street: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          direction?: string
+          id?: string
+          max_speed?: number
+          min_speed?: number
+          speed_date?: string
+          street?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       daily_visit_stats: {
         Row: {
           created_at: string

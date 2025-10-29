@@ -286,98 +286,137 @@ export const TrafficLine = ({ street, direction, width = "100%", onSpeedUpdate, 
       </div>
       
       {/* Speedometer Gauge */}
-      <div className="flex justify-center mt-6">
-        <svg width="280" height="160" viewBox="0 0 280 160" className="drop-shadow-md">
+      <div className="flex flex-col items-center mt-6">
+        <svg width="300" height="180" viewBox="0 0 300 180" className="drop-shadow-lg">
+          {/* Outer circle background */}
+          <circle cx="150" cy="150" r="120" fill="#f8fafc" stroke="#e2e8f0" strokeWidth="2" />
+          
           {/* Background arc */}
           <path
-            d="M 30 140 A 110 110 0 0 1 250 140"
+            d="M 40 150 A 110 110 0 0 1 260 150"
             fill="none"
             stroke="#e5e7eb"
-            strokeWidth="24"
-            strokeLinecap="round"
+            strokeWidth="20"
+            strokeLinecap="butt"
           />
           
           {/* Red zone (0-10 km/h) - 20% of arc */}
           <path
-            d="M 30 140 A 110 110 0 0 1 74 68"
+            d="M 40 150 A 110 110 0 0 1 78 72"
             fill="none"
-            stroke="#e74c3c"
-            strokeWidth="24"
-            strokeLinecap="round"
+            stroke="#dc2626"
+            strokeWidth="20"
+            strokeLinecap="butt"
           />
+          
+          {/* Tick mark at 10 km/h */}
+          <line x1="78" y1="72" x2="88" y2="82" stroke="#1f2937" strokeWidth="3" strokeLinecap="round" />
           
           {/* Yellow zone (10-20 km/h) - 20% of arc */}
           <path
-            d="M 74 68 A 110 110 0 0 1 140 38"
+            d="M 78 72 A 110 110 0 0 1 150 40"
             fill="none"
-            stroke="#f39c12"
-            strokeWidth="24"
-            strokeLinecap="round"
+            stroke="#eab308"
+            strokeWidth="20"
+            strokeLinecap="butt"
           />
+          
+          {/* Tick mark at 20 km/h */}
+          <line x1="150" y1="40" x2="150" y2="50" stroke="#1f2937" strokeWidth="3" strokeLinecap="round" />
           
           {/* Green zone (20-50 km/h) - 60% of arc */}
           <path
-            d="M 140 38 A 110 110 0 0 1 250 140"
+            d="M 150 40 A 110 110 0 0 1 260 150"
             fill="none"
-            stroke="#2ecc71"
-            strokeWidth="24"
-            strokeLinecap="round"
+            stroke="#16a34a"
+            strokeWidth="20"
+            strokeLinecap="butt"
           />
           
-          {/* Speed markers and labels */}
-          <text x="20" y="150" fontSize="12" fill="#94a3b8" fontWeight="bold">0</text>
-          <text x="65" y="60" fontSize="12" fill="#94a3b8" fontWeight="bold">10</text>
-          <text x="135" y="28" fontSize="12" fill="#94a3b8" fontWeight="bold">20</text>
-          <text x="205" y="60" fontSize="12" fill="#94a3b8" fontWeight="bold">30</text>
-          <text x="250" y="150" fontSize="12" fill="#94a3b8" fontWeight="bold">50</text>
+          {/* Speed markers with tick lines */}
+          {/* 0 km/h */}
+          <line x1="40" y1="150" x2="50" y2="150" stroke="#1f2937" strokeWidth="2" />
+          <text x="25" y="155" fontSize="14" fill="#000000" fontWeight="600">0</text>
+          
+          {/* 10 km/h */}
+          <text x="63" y="60" fontSize="14" fill="#000000" fontWeight="600">10</text>
+          
+          {/* 20 km/h */}
+          <text x="143" y="20" fontSize="14" fill="#000000" fontWeight="600">20</text>
+          
+          {/* 30 km/h */}
+          <line x1="222" y1="72" x2="212" y2="82" stroke="#1f2937" strokeWidth="2" />
+          <text x="223" y="60" fontSize="14" fill="#000000" fontWeight="600">30</text>
+          
+          {/* 40 km/h */}
+          <line x1="250" y1="110" x2="240" y2="115" stroke="#1f2937" strokeWidth="2" />
+          <text x="253" y="108" fontSize="14" fill="#000000" fontWeight="600">40</text>
+          
+          {/* 50 km/h */}
+          <line x1="260" y1="150" x2="250" y2="150" stroke="#1f2937" strokeWidth="2" />
+          <text x="263" y="155" fontSize="14" fill="#000000" fontWeight="600">50</text>
+          
+          {/* Minor tick marks every 5 km/h */}
+          <line x1="56" y1="106" x2="62" y2="112" stroke="#94a3b8" strokeWidth="1.5" />
+          <line x1="109" y1="56" x2="114" y2="62" stroke="#94a3b8" strokeWidth="1.5" />
+          <line x1="191" y1="56" x2="186" y2="62" stroke="#94a3b8" strokeWidth="1.5" />
+          <line x1="244" y1="106" x2="238" y2="112" stroke="#94a3b8" strokeWidth="1.5" />
           
           {/* Center circle */}
-          <circle cx="140" cy="140" r="8" fill="#1f2937" />
+          <circle cx="150" cy="150" r="10" fill="#1f2937" />
+          
+          {/* Needle shadow */}
+          <line
+            x1="150"
+            y1="150"
+            x2="150"
+            y2="55"
+            stroke="#00000020"
+            strokeWidth="4"
+            strokeLinecap="round"
+            transform={`rotate(${needleAngle} 150 150) translate(2, 2)`}
+            style={{ transition: 'transform 0.5s ease' }}
+          />
           
           {/* Needle */}
           <line
-            x1="140"
-            y1="140"
-            x2="140"
-            y2="50"
+            x1="150"
+            y1="150"
+            x2="150"
+            y2="55"
             stroke="#1f2937"
-            strokeWidth="3"
+            strokeWidth="4"
             strokeLinecap="round"
-            transform={`rotate(${needleAngle} 140 140)`}
+            transform={`rotate(${needleAngle} 150 150)`}
             style={{ transition: 'transform 0.5s ease' }}
           />
           
           {/* Needle tip circle */}
           <circle 
-            cx="140" 
-            cy="50" 
-            r="5" 
+            cx="150" 
+            cy="55" 
+            r="6" 
             fill="#ef4444"
-            transform={`rotate(${needleAngle} 140 140)`}
+            stroke="#1f2937"
+            strokeWidth="1"
+            transform={`rotate(${needleAngle} 150 150)`}
             style={{ transition: 'transform 0.5s ease' }}
           />
           
-          {/* Speed display */}
-          <text 
-            x="140" 
-            y="125" 
-            fontSize="24" 
-            fontWeight="bold" 
-            fill="#1f2937" 
-            textAnchor="middle"
-          >
-            {currentSpeed.toFixed(0)}
-          </text>
-          <text 
-            x="140" 
-            y="138" 
-            fontSize="10" 
-            fill="#94a3b8" 
-            textAnchor="middle"
-          >
-            km/h
-          </text>
+          {/* Center bolt */}
+          <circle cx="150" cy="150" r="6" fill="#374151" />
+          <circle cx="150" cy="150" r="3" fill="#1f2937" />
         </svg>
+        
+        {/* Speed display below gauge */}
+        <div className="mt-2 text-center">
+          <div className="text-4xl font-bold text-gray-900">
+            {currentSpeed.toFixed(0)}
+          </div>
+          <div className="text-sm text-gray-500 font-medium">
+            km/h
+          </div>
+        </div>
       </div>
     </div>
   );

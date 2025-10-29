@@ -13,14 +13,27 @@ export async function subscribeToWonderPush(street: string): Promise<boolean> {
   try {
     if (!("Notification" in window)) {
       console.error("Browser doesn't support notifications");
-      return false;
+      throw new Error("Browser doesn't support notifications");
     }
 
-    // Request notification permission
-    const permission = await Notification.requestPermission();
-    if (permission !== "granted") {
-      console.error("Notification permission denied");
-      return false;
+    // Check current permission status
+    const currentPermission = Notification.permission;
+    console.log("Current notification permission:", currentPermission);
+
+    if (currentPermission === "denied") {
+      console.error("Notification permission was previously denied");
+      throw new Error("Notifications blocked. Please enable them in your browser settings (click the lock icon in the address bar)");
+    }
+
+    // Request notification permission if not already granted
+    if (currentPermission !== "granted") {
+      const permission = await Notification.requestPermission();
+      console.log("Permission request result:", permission);
+      
+      if (permission !== "granted") {
+        console.error("Notification permission denied by user");
+        throw new Error("Notification permission denied");
+      }
     }
 
     console.log("Notification permission granted, initializing WonderPush...");

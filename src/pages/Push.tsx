@@ -63,7 +63,8 @@ const Push = () => {
       }
     } catch (error) {
       console.error("[Push Page] Error toggling push:", error);
-      toast.error("Wystąpił błąd");
+      const errorMessage = error instanceof Error ? error.message : "Wystąpił błąd";
+      toast.error(errorMessage);
     } finally {
       setIsLoading(false);
       console.log("[Push Page] Toggle push completed, new state:", !isPushEnabled);

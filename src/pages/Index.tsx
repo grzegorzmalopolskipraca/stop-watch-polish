@@ -1034,14 +1034,9 @@ const Index = () => {
                 </span>
               </div>
               <p className="text-sm text-muted-foreground/60 mt-2">
-                Najbliższa zielona fala
+                Najbliższa zielona fala. {streetDistance !== null && `Możesz oszczędzić około ${(streetDistance * (1/5.0 - 1/40.0) * 60).toFixed(1)} minut`}
               </p>
             </div>
-            {streetDistance !== null && (
-              <p className="text-sm font-medium text-center">
-                Podczas zielonej fali oszczędzasz {(streetDistance * (1/5.0 - 1/40.0) * 60).toFixed(1)} minut
-              </p>
-            )}
           </section>
         )}
 

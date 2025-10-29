@@ -11,99 +11,138 @@ declare global {
  */
 export async function subscribeToWonderPush(street: string): Promise<boolean> {
   try {
+    console.log("=== WONDERPUSH SUBSCRIPTION START ===");
+    console.log("Street:", street);
+    console.log("Timestamp:", new Date().toISOString());
+    
+    // Step 1: Check if browser supports notifications
+    console.log("Step 1: Checking browser notification support...");
     if (!("Notification" in window)) {
-      console.error("Browser doesn't support notifications");
-      throw new Error("Browser doesn't support notifications");
+      const error = "❌ Browser doesn't support notifications";
+      console.error(error);
+      throw new Error(error);
     }
+    console.log("✅ Browser supports notifications");
 
-    // Check current permission status
+    // Step 2: Check current permission status
+    console.log("Step 2: Checking notification permission...");
     const currentPermission = Notification.permission;
-    console.log("Current notification permission:", currentPermission);
+    console.log("Current permission:", currentPermission);
 
     if (currentPermission === "denied") {
-      console.error("Notification permission was previously denied");
+      const error = "❌ Notification permission was DENIED. Go to browser settings (lock icon in address bar) and allow notifications for this site.";
+      console.error(error);
       throw new Error("Notifications blocked. Please enable them in your browser settings (click the lock icon in the address bar)");
     }
+    console.log("✅ Permission not denied");
 
-    // Request notification permission if not already granted
+    // Step 3: Request notification permission if needed
     if (currentPermission !== "granted") {
+      console.log("Step 3: Requesting notification permission...");
       const permission = await Notification.requestPermission();
       console.log("Permission request result:", permission);
       
       if (permission !== "granted") {
-        console.error("Notification permission denied by user");
+        const error = "❌ User denied notification permission";
+        console.error(error);
         throw new Error("Notification permission denied");
       }
+      console.log("✅ Permission granted by user");
+    } else {
+      console.log("Step 3: Permission already granted, skipping request");
     }
 
-    console.log("Notification permission granted, initializing WonderPush...");
-
-    // Wait for WonderPush to be ready with timeout
+    // Step 4: Initialize WonderPush
+    console.log("Step 4: Initializing WonderPush SDK...");
+    console.log("WonderPush global object exists:", !!window.WonderPush);
+    
     await new Promise<void>((resolve, reject) => {
       const timeout = setTimeout(() => {
-        reject(new Error("WonderPush initialization timeout"));
-      }, 10000); // 10 second timeout
+        const error = "❌ WonderPush initialization timeout (10s)";
+        console.error(error);
+        reject(new Error("WonderPush initialization timeout - SDK may not be loaded"));
+      }, 10000);
 
       window.WonderPush = window.WonderPush || [];
+      console.log("WonderPush queue length:", window.WonderPush.length);
+      
       window.WonderPush.push(() => {
         clearTimeout(timeout);
-        console.log("WonderPush is ready");
+        console.log("✅ WonderPush SDK is ready");
         resolve();
       });
     });
 
-    // Subscribe user to street-specific tag
-    console.log("Subscribing to notifications for tag:", `street_${street}`);
+    // Step 5: Subscribe to notifications
+    console.log("Step 5: Subscribing to WonderPush notifications...");
+    console.log("Target tag:", `street_${street}`);
     
-    // Subscribe to notifications and wait for completion
     await new Promise<void>((resolve, reject) => {
       const timeout = setTimeout(() => {
-        reject(new Error("Subscription timeout"));
+        const error = "❌ Subscription timeout (15s) - WonderPush may not be properly configured";
+        console.error(error);
+        reject(new Error(error));
       }, 15000);
 
       window.WonderPush.push(["subscribeToNotifications", (error: any) => {
         clearTimeout(timeout);
         if (error) {
-          console.error("Error subscribing to notifications:", error);
-          reject(error);
+          console.error("❌ WonderPush subscribeToNotifications error:", error);
+          console.error("Error details:", JSON.stringify(error, null, 2));
+          reject(new Error(`Subscription failed: ${error.message || error}`));
         } else {
-          console.log("Successfully subscribed to notifications");
+          console.log("✅ Successfully subscribed to WonderPush notifications");
           resolve();
         }
       }]);
     });
 
-    // Set user properties
+    // Step 6: Set user properties
+    console.log("Step 6: Setting user properties...");
     await new Promise<void>((resolve) => {
       window.WonderPush.push(["putProperties", {
         string_street: street,
       }]);
-      console.log("Set user properties for street:", street);
+      console.log("✅ User properties set for street:", street);
       resolve();
     });
     
-    // Add tag and wait for completion
+    // Step 7: Add street tag
+    console.log("Step 7: Adding street tag...");
     await new Promise<void>((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        const error = "❌ Add tag timeout (10s)";
+        console.error(error);
+        reject(new Error(error));
+      }, 10000);
+
       window.WonderPush.push(["addTag", `street_${street}`, (error: any) => {
+        clearTimeout(timeout);
         if (error) {
-          console.error("Error adding tag:", error);
-          reject(error);
+          console.error("❌ Error adding tag:", error);
+          console.error("Error details:", JSON.stringify(error, null, 2));
+          reject(new Error(`Failed to add tag: ${error.message || error}`));
         } else {
-          console.log("Successfully added tag:", `street_${street}`);
+          console.log("✅ Successfully added tag:", `street_${street}`);
           resolve();
         }
       }]);
     });
 
-    console.log("Subscribed to WonderPush for street:", street);
-    
-    // Save subscription status locally
+    // Step 8: Save to local storage
+    console.log("Step 8: Saving subscription status...");
     localStorage.setItem(`wonderpush_subscribed_${street}`, "true");
+    console.log("✅ Subscription status saved");
     
+    console.log("=== WONDERPUSH SUBSCRIPTION COMPLETED SUCCESSFULLY ===");
     return true;
   } catch (error) {
-    console.error("Error subscribing to WonderPush:", error);
-    return false;
+    console.error("=== WONDERPUSH SUBSCRIPTION FAILED ===");
+    console.error("Error:", error);
+    console.error("Error type:", typeof error);
+    console.error("Error message:", error instanceof Error ? error.message : String(error));
+    console.error("Error stack:", error instanceof Error ? error.stack : "N/A");
+    throw error;
   }
 }
 

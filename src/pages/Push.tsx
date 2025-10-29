@@ -49,22 +49,34 @@ const Push = () => {
       } else {
         // Enable push
         console.log("[Push Page] Attempting to subscribe to:", testStreet);
-        const success = await subscribeToWonderPush(testStreet);
-        console.log("[Push Page] Subscribe result:", success);
+        console.log("[Push Page] Check console for detailed subscription logs");
         
-        if (success) {
-          setIsPushEnabled(true);
-          console.log("[Push Page] Successfully subscribed");
-          toast.success("Powiadomienia push włączone");
-        } else {
-          console.error("[Push Page] Failed to subscribe");
-          toast.error("Nie udało się włączyć powiadomień");
+        try {
+          const success = await subscribeToWonderPush(testStreet);
+          console.log("[Push Page] Subscribe result:", success);
+          
+          if (success) {
+            setIsPushEnabled(true);
+            console.log("[Push Page] Successfully subscribed");
+            toast.success("✅ Powiadomienia push włączone");
+          } else {
+            console.error("[Push Page] Failed to subscribe");
+            toast.error("❌ Nie udało się włączyć powiadomień - sprawdź konsolę");
+          }
+        } catch (subscribeError) {
+          console.error("[Push Page] Subscribe threw error:", subscribeError);
+          throw subscribeError; // Re-throw to be caught by outer catch
         }
       }
     } catch (error) {
       console.error("[Push Page] Error toggling push:", error);
       const errorMessage = error instanceof Error ? error.message : "Wystąpił błąd";
-      toast.error(errorMessage);
+      console.error("[Push Page] Full error details:", {
+        message: errorMessage,
+        error: error,
+        stack: error instanceof Error ? error.stack : undefined
+      });
+      toast.error(`❌ ${errorMessage}`, { duration: 5000 });
     } finally {
       setIsLoading(false);
       console.log("[Push Page] Toggle push completed, new state:", !isPushEnabled);

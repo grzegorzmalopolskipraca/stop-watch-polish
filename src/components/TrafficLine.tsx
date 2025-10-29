@@ -1,5 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { Share2 } from "lucide-react";
+import html2canvas from "html2canvas";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
 type TrafficLevel = "low" | "medium" | "high";
 
@@ -141,6 +145,7 @@ export const TrafficLine = ({ street, direction, width = "100%", onSpeedUpdate, 
   const [durationMinutes, setDurationMinutes] = useState<number>(0);
   const [distanceKm, setDistanceKm] = useState<string>("");
   const [avgSpeed, setAvgSpeed] = useState<string>("");
+  const shareRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     async function fetchTraffic() {
@@ -300,6 +305,56 @@ export const TrafficLine = ({ street, direction, width = "100%", onSpeedUpdate, 
   const currentSpeed = avgSpeed ? parseFloat(avgSpeed) : 0;
   const needleAngle = calculateNeedleAngle(currentSpeed);
 
+  const handleShare = async () => {
+    if (!shareRef.current) return;
+
+    try {
+      toast.info("Generowanie obrazu...");
+      
+      const canvas = await html2canvas(shareRef.current, {
+        backgroundColor: "#ffffff",
+        scale: 2,
+        logging: false,
+      });
+
+      canvas.toBlob(async (blob) => {
+        if (!blob) {
+          toast.error("Nie udało się utworzyć obrazu");
+          return;
+        }
+
+        const file = new File([blob], "frustration-level.png", { type: "image/png" });
+
+        if (navigator.share && navigator.canShare({ files: [file] })) {
+          try {
+            await navigator.share({
+              files: [file],
+              title: "Poziom frustracji w korku",
+              text: `Moja prędkość: ${currentSpeed.toFixed(0)} km/h - ${FRUSTRATION_TEXTS[Math.round(currentSpeed)] || FRUSTRATION_TEXTS[0]}`,
+            });
+            toast.success("Udostępniono!");
+          } catch (err) {
+            if ((err as Error).name !== "AbortError") {
+              toast.error("Nie udało się udostępnić");
+            }
+          }
+        } else {
+          // Fallback: download image
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = "frustration-level.png";
+          a.click();
+          URL.revokeObjectURL(url);
+          toast.success("Obraz został pobrany");
+        }
+      }, "image/png");
+    } catch (error) {
+      console.error("Share error:", error);
+      toast.error("Wystąpił błąd podczas udostępniania");
+    }
+  };
+
   return (
     <div className="w-full space-y-2">
       <div className="flex items-center justify-between text-xs" style={{ color: '#94a3b8' }}>
@@ -343,7 +398,7 @@ export const TrafficLine = ({ street, direction, width = "100%", onSpeedUpdate, 
       </div>
       
       {/* Speedometer Gauge */}
-      <div className="flex flex-col items-center mt-6">
+      <div ref={shareRef} className="flex flex-col items-center mt-6 p-6 bg-white rounded-lg">
         <svg width="300" height="180" viewBox="0 0 300 180" className="drop-shadow-lg">
           {/* Outer circle background */}
           <circle cx="150" cy="150" r="120" fill="#f8fafc" stroke="#e2e8f0" strokeWidth="2" />
@@ -474,9 +529,20 @@ export const TrafficLine = ({ street, direction, width = "100%", onSpeedUpdate, 
           <h3 className="text-lg font-semibold text-gray-800 mb-3">
             Poziom frustracji
           </h3>
-          <p className="text-sm text-gray-600 italic max-w-md mx-auto">
+          <p className="text-sm text-gray-600 italic max-w-md mx-auto mb-4">
             {FRUSTRATION_TEXTS[Math.round(currentSpeed)] || FRUSTRATION_TEXTS[0]}
           </p>
+          
+          {/* Share Button */}
+          <Button
+            onClick={handleShare}
+            variant="default"
+            size="sm"
+            className="gap-2 mt-2 mb-4"
+          >
+            <Share2 className="h-4 w-4" />
+            Udostępnij
+          </Button>
         </div>
       </div>
     </div>

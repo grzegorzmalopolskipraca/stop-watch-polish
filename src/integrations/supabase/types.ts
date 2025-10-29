@@ -203,6 +203,9 @@ export type Database = {
       sms_subscriptions: {
         Row: {
           back_to_home_hour: string
+          consent_data_processing: boolean
+          consent_marketing: boolean
+          consent_timestamp: string | null
           created_at: string
           go_to_work_hour: string
           id: string
@@ -212,6 +215,9 @@ export type Database = {
         }
         Insert: {
           back_to_home_hour: string
+          consent_data_processing?: boolean
+          consent_marketing?: boolean
+          consent_timestamp?: string | null
           created_at?: string
           go_to_work_hour: string
           id?: string
@@ -221,6 +227,9 @@ export type Database = {
         }
         Update: {
           back_to_home_hour?: string
+          consent_data_processing?: boolean
+          consent_marketing?: boolean
+          consent_timestamp?: string | null
           created_at?: string
           go_to_work_hour?: string
           id?: string

@@ -1,10 +1,12 @@
 import { useMemo } from "react";
 import { format, addDays, subDays } from "date-fns";
 import { pl } from "date-fns/locale";
+import { calculateWeeklyTrafficBlocks } from "@/utils/trafficCalculations";
 
 interface Report {
   status: string;
   reported_at: string;
+  direction: string;
 }
 
 interface WeeklyTimelineProps {
@@ -21,56 +23,54 @@ const COLORS = {
 export const WeeklyTimeline = ({ reports }: WeeklyTimelineProps) => {
   const weekData = useMemo(() => {
     const now = new Date();
-    // Start from 7 days ago to show last 8 days (including today)
-    const weekStart = subDays(now, 7);
+    const weeklyData = calculateWeeklyTrafficBlocks(reports);
     
-    // Create 8 days × 48 blocks (30-minute intervals)
-    const grid: { day: Date; hours: string[] }[] = [];
+    // Add today to show 8 days total
+    const today = new Date();
+    const startHour = 5;
+    const endHour = 22;
+    const totalBlocks = (endHour - startHour) * 2;
     
-    for (let day = 0; day < 8; day++) {
-      const currentDay = addDays(weekStart, day);
-      const blocks: string[] = [];
+    const todayBlocks: string[] = [];
+    for (let block = 0; block < totalBlocks; block++) {
+      const hour = startHour + Math.floor(block / 2);
+      const minute = (block % 2) * 30;
       
-      // 34 blocks per day (from 5:00 to 22:00 = 17 hours * 2)
-      const startHour = 5;
-      const endHour = 22;
-      const totalBlocks = (endHour - startHour) * 2;
+      const blockStart = new Date(today);
+      blockStart.setHours(hour, minute, 0, 0);
       
-      for (let block = 0; block < totalBlocks; block++) {
-        const hour = startHour + Math.floor(block / 2);
-        const minute = (block % 2) * 30;
+      const blockEnd = new Date(blockStart);
+      blockEnd.setMinutes(blockEnd.getMinutes() + 30);
+      
+      const blockReports = reports.filter((r) => {
+        const reportTime = new Date(r.reported_at);
+        return reportTime >= blockStart && reportTime < blockEnd;
+      });
+      
+      if (blockReports.length === 0) {
+        todayBlocks.push("neutral");
+      } else {
+        const statusCounts = blockReports.reduce((acc, r) => {
+          acc[r.status] = (acc[r.status] || 0) + 1;
+          return acc;
+        }, {} as Record<string, number>);
         
-        const blockStart = new Date(currentDay);
-        blockStart.setHours(hour, minute, 0, 0);
+        const majorityStatus = Object.entries(statusCounts).sort(
+          ([, a], [, b]) => b - a
+        )[0][0];
         
-        const blockEnd = new Date(blockStart);
-        blockEnd.setMinutes(blockEnd.getMinutes() + 30);
-        
-        // Filter reports for this 30-minute block
-        const blockReports = reports.filter((r) => {
-          const reportTime = new Date(r.reported_at);
-          return reportTime >= blockStart && reportTime < blockEnd;
-        });
-        
-        // Calculate majority status
-        if (blockReports.length === 0) {
-          blocks.push("neutral");
-        } else {
-          const statusCounts = blockReports.reduce((acc, r) => {
-            acc[r.status] = (acc[r.status] || 0) + 1;
-            return acc;
-          }, {} as Record<string, number>);
-          
-          const majorityStatus = Object.entries(statusCounts).sort(
-            ([, a], [, b]) => b - a
-          )[0][0];
-          
-          blocks.push(majorityStatus);
-        }
+        todayBlocks.push(majorityStatus);
       }
-      
-      grid.push({ day: currentDay, hours: blocks });
     }
+    
+    // Convert weekly data to old format
+    const grid = weeklyData.map(dayData => ({
+      day: dayData.day,
+      hours: dayData.blocks.map(b => b.status)
+    }));
+    
+    // Add today
+    grid.push({ day: today, hours: todayBlocks });
     
     return grid;
   }, [reports]);

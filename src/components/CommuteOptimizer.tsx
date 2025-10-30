@@ -1,8 +1,9 @@
 import { useState, useMemo } from "react";
-import { format, subDays, startOfDay, startOfWeek, addDays } from "date-fns";
+import { format } from "date-fns";
 import { pl } from "date-fns/locale";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { getStatusForTime } from "@/utils/trafficCalculations";
 
 interface Report {
   status: string;
@@ -44,109 +45,27 @@ export const CommuteOptimizer = ({ reports }: CommuteOptimizerProps) => {
   const [departureTime, setDepartureTime] = useState<string>("07:00");
   const [returnTime, setReturnTime] = useState<string>("16:00");
 
-  const calculateStatus = (reportsInWindow: Report[]): string => {
-    if (reportsInWindow.length === 0) return "neutral";
-
-    // Count each status type
-    let countStatusStoi = 0;
-    let countStatusToczySie = 0;
-    let countStatusJedzie = 0;
-
-    reportsInWindow.forEach((r) => {
-      if (r.status === "stoi") {
-        countStatusStoi++;
-      } else if (r.status === "toczy_sie") {
-        countStatusToczySie++;
-      } else if (r.status === "jedzie") {
-        countStatusJedzie++;
-      }
-    });
-
-    // Determine status based on highest count
-    if (countStatusStoi >= countStatusToczySie && countStatusStoi >= countStatusJedzie) {
-      return 'stoi';
-    } else if (countStatusToczySie >= countStatusStoi && countStatusToczySie >= countStatusJedzie) {
-      return 'toczy_sie';
-    } else {
-      return 'jedzie';
-    }
-  };
-
   const weeklyCommuteData = useMemo(() => {
-    const yesterday = subDays(startOfDay(new Date()), 1);
-    
     // Parse selected times
     const [depHour, depMin] = departureTime.split(':').map(Number);
     const [retHour, retMin] = returnTime.split(':').map(Number);
 
-    // Collect data for each day of the week, keeping only the most recent occurrence
-    const dayOfWeekData = new Map<number, {
-      date: Date;
-      departureStatus: string;
-      returnStatus: string;
-    }>();
+    // Get status for departure and return times using shared calculation
+    const departureData = getStatusForTime(reports, depHour, depMin, "to_center");
+    const returnData = getStatusForTime(reports, retHour, retMin, "from_center");
 
-    // Go through last 7 days from yesterday
-    for (let dayOffset = 0; dayOffset < 7; dayOffset++) {
-      const targetDate = subDays(yesterday, dayOffset);
-      const dayOfWeek = targetDate.getDay() === 0 ? 6 : targetDate.getDay() - 1; // Mon=0, Sun=6
-
-      // Skip if we already have a more recent date for this day of week
-      if (dayOfWeekData.has(dayOfWeek)) continue;
-
-      // Calculate status for departure time (to city) - 30-minute window
-      const departureReports = reports.filter((r) => {
-        const reportDate = new Date(r.reported_at);
-        const reportTotalMinutes = reportDate.getHours() * 60 + reportDate.getMinutes();
-        const targetTotalMinutes = depHour * 60 + depMin;
-        
-        return (
-          r.direction === "to_center" &&
-          reportDate.getFullYear() === targetDate.getFullYear() &&
-          reportDate.getMonth() === targetDate.getMonth() &&
-          reportDate.getDate() === targetDate.getDate() &&
-          reportTotalMinutes >= targetTotalMinutes &&
-          reportTotalMinutes < targetTotalMinutes + 30
-        );
-      });
-
-      const departureStatus = calculateStatus(departureReports);
-
-      // Calculate status for return time (from city) - 30-minute window
-      const returnReports = reports.filter((r) => {
-        const reportDate = new Date(r.reported_at);
-        const reportTotalMinutes = reportDate.getHours() * 60 + reportDate.getMinutes();
-        const targetTotalMinutes = retHour * 60 + retMin;
-        
-        return (
-          r.direction === "from_center" &&
-          reportDate.getFullYear() === targetDate.getFullYear() &&
-          reportDate.getMonth() === targetDate.getMonth() &&
-          reportDate.getDate() === targetDate.getDate() &&
-          reportTotalMinutes >= targetTotalMinutes &&
-          reportTotalMinutes < targetTotalMinutes + 30
-        );
-      });
-
-      const returnStatus = calculateStatus(returnReports);
-
-      dayOfWeekData.set(dayOfWeek, {
-        date: targetDate,
-        departureStatus,
-        returnStatus,
-      });
-    }
-
-    // Convert to array sorted Monday to Sunday
+    // Build week data for Monday to Sunday
     const weekData = [];
     for (let dayIndex = 0; dayIndex < 7; dayIndex++) {
-      const dayData = dayOfWeekData.get(dayIndex);
-      if (dayData) {
+      const depInfo = departureData[dayIndex];
+      const retInfo = returnData[dayIndex];
+      
+      if (depInfo || retInfo) {
         weekData.push({
           day: DAY_NAMES[dayIndex],
-          date: dayData.date,
-          departureStatus: dayData.departureStatus,
-          returnStatus: dayData.returnStatus,
+          date: depInfo?.date || retInfo?.date || new Date(),
+          departureStatus: depInfo?.status || "neutral",
+          returnStatus: retInfo?.status || "neutral",
         });
       }
     }

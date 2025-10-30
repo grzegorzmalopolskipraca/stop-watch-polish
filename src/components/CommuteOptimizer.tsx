@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { format, subDays, startOfDay } from "date-fns";
+import { format, subDays, startOfDay, startOfWeek, addDays } from "date-fns";
 import { pl } from "date-fns/locale";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -63,10 +63,14 @@ export const CommuteOptimizer = ({ reports }: CommuteOptimizerProps) => {
     const now = new Date();
     const weekData = [];
 
-    // Calculate traffic status for each of the last 7 days
-    for (let dayOffset = 6; dayOffset >= 0; dayOffset--) {
-      const targetDate = subDays(startOfDay(now), dayOffset);
-      const dayName = DAY_NAMES[targetDate.getDay() === 0 ? 6 : targetDate.getDay() - 1];
+    // Get last week's Monday (start of last week)
+    const thisWeekMonday = startOfWeek(now, { weekStartsOn: 1 });
+    const lastWeekMonday = subDays(thisWeekMonday, 7);
+
+    // Calculate traffic status for each day from last week (Monday to Sunday)
+    for (let dayOffset = 0; dayOffset < 7; dayOffset++) {
+      const targetDate = addDays(lastWeekMonday, dayOffset);
+      const dayName = DAY_NAMES[dayOffset];
 
       // Parse selected times
       const [depHour, depMin] = departureTime.split(':').map(Number);

@@ -85,9 +85,12 @@ export const getStatusForTimeFromGrid = (
 ): { [dayOfWeek: number]: { date: Date; status: string } } => {
   const result: { [dayOfWeek: number]: { date: Date; status: string } } = {};
   
+  // Round down to nearest 30-minute block
+  const blockMinute = targetMinute < 30 ? 0 : 30;
+  
   weeklyData.forEach((dayData) => {
     const block = dayData.blocks.find(
-      b => b.hour === targetHour && b.minute === targetMinute
+      b => b.hour === targetHour && b.minute === blockMinute
     );
     
     if (block) {

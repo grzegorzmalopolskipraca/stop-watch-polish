@@ -24,5 +24,8 @@ verify_jwt = false
 [functions.submit-street-vote]
 verify_jwt = false
 
+[functions.submit-carpooling-vote]
+verify_jwt = false
+
 [functions.fetch-rss-feed]
 verify_jwt = false

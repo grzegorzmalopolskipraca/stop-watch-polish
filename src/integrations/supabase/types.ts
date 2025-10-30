@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      carpooling_votes: {
+        Row: {
+          created_at: string
+          id: string
+          title: string
+          updated_at: string
+          vote_count: number
+          voter_fingerprints: string[]
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          title: string
+          updated_at?: string
+          vote_count?: number
+          voter_fingerprints?: string[]
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          title?: string
+          updated_at?: string
+          vote_count?: number
+          voter_fingerprints?: string[]
+        }
+        Relationships: []
+      }
       city_votes: {
         Row: {
           city_name: string

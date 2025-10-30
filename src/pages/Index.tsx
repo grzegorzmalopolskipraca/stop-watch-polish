@@ -33,6 +33,7 @@ import { Legend } from "@/components/Legend";
 import { StreetChat } from "@/components/StreetChat";
 import { StreetVoting } from "@/components/StreetVoting";
 import { CityVoting } from "@/components/CityVoting";
+import { CarpoolingVoting } from "@/components/CarpoolingVoting";
 import { TrafficLine } from "@/components/TrafficLine";
 import { GreenWave } from "@/components/GreenWave";
 import { RssTicker } from "@/components/RssTicker";
@@ -1749,20 +1750,7 @@ const Index = () => {
           </Button>
           <div className="mt-6 space-y-4 text-sm">
             <p className="font-semibold text-base text-center mb-4">Co dalej?</p>
-            <div className="space-y-3">
-              <div className="flex items-start gap-3 p-3 bg-muted/50 rounded-lg hover:bg-muted/70 transition-colors">
-                <Users className="w-6 h-6 text-primary flex-shrink-0 mt-0.5" />
-                <p className="text-left">Wspólne przejazdy do pracy - 50% mniej kosztów paliwa i samochodów na drodze</p>
-              </div>
-              <div className="flex items-start gap-3 p-3 bg-muted/50 rounded-lg hover:bg-muted/70 transition-colors">
-                <ThumbsUp className="w-6 h-6 text-primary flex-shrink-0 mt-0.5" />
-                <p className="text-left">AutoStop sąsiedzki - Gdy uciekł Ci autobus</p>
-              </div>
-              <div className="flex items-start gap-3 p-3 bg-muted/50 rounded-lg hover:bg-muted/70 transition-colors">
-                <Baby className="w-6 h-6 text-primary flex-shrink-0 mt-0.5" />
-                <p className="text-left">Dowóz dzieci do szkoły na zmianę z sąsiadką</p>
-              </div>
-            </div>
+            <CarpoolingVoting />
           </div>
         </div>
 

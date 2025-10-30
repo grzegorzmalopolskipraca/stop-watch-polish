@@ -60,18 +60,13 @@ export const CommuteOptimizer = ({ reports }: CommuteOptimizerProps) => {
   };
 
   const weeklyCommuteData = useMemo(() => {
-    const now = new Date();
-    const weekData = [];
+    const yesterday = subDays(startOfDay(new Date()), 1);
+    const tempData = [];
 
-    // Get last week's Monday (start of last week)
-    const thisWeekMonday = startOfWeek(now, { weekStartsOn: 1 });
-    const lastWeekMonday = subDays(thisWeekMonday, 7);
-
-    // Calculate traffic status for each day from last week (Monday to Sunday)
+    // Get last 7 days from yesterday
     for (let dayOffset = 0; dayOffset < 7; dayOffset++) {
-      const targetDate = addDays(lastWeekMonday, dayOffset);
-      const dayName = DAY_NAMES[dayOffset];
-
+      const targetDate = subDays(yesterday, dayOffset);
+      
       // Parse selected times
       const [depHour, depMin] = departureTime.split(':').map(Number);
       const [retHour, retMin] = returnTime.split(':').map(Number);
@@ -106,15 +101,25 @@ export const CommuteOptimizer = ({ reports }: CommuteOptimizerProps) => {
 
       const returnStatus = calculateStatus(returnReports);
 
-      weekData.push({
-        day: dayName,
+      tempData.push({
         date: targetDate,
         departureStatus,
         returnStatus,
       });
     }
 
-    return weekData;
+    // Sort by day of week (Monday to Sunday)
+    const sortedData = tempData.sort((a, b) => {
+      const dayA = a.date.getDay() === 0 ? 6 : a.date.getDay() - 1; // Convert Sunday=0 to Sunday=6
+      const dayB = b.date.getDay() === 0 ? 6 : b.date.getDay() - 1;
+      return dayA - dayB;
+    });
+
+    // Add day names
+    return sortedData.map(item => ({
+      ...item,
+      day: DAY_NAMES[item.date.getDay() === 0 ? 6 : item.date.getDay() - 1],
+    }));
   }, [reports, departureTime, returnTime]);
 
   return (

@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { format, addDays, subDays } from "date-fns";
 import { pl } from "date-fns/locale";
 import { calculateWeeklyTrafficBlocks } from "@/utils/trafficCalculations";
+import { Calendar } from "lucide-react";
 
 interface Report {
   status: string;
@@ -76,11 +77,18 @@ export const WeeklyTimeline = ({ reports }: WeeklyTimelineProps) => {
   }, [reports]);
 
   return (
-    <div className="space-y-3">
-      <h2 className="text-lg font-semibold">Ruch tygodniowy</h2>
-      <p className="text-sm text-muted-foreground">
-        Ostatnie 7 dni
-      </p>
+    <div className="space-y-4 p-6 rounded-xl bg-gradient-to-br from-purple-50/50 via-white to-purple-50/30 dark:from-purple-950/20 dark:via-background dark:to-purple-900/10 border border-purple-200/50 dark:border-purple-800/30 shadow-lg">
+      <div className="flex items-start gap-4">
+        <div className="flex-shrink-0 p-3 rounded-full bg-purple-100 dark:bg-purple-900/30 animate-pulse">
+          <Calendar className="w-12 h-12 text-purple-600 dark:text-purple-400" />
+        </div>
+        <div className="flex-1">
+          <h2 className="text-lg font-semibold text-foreground">Ruch tygodniowy</h2>
+          <p className="text-sm text-muted-foreground mt-1">
+            Ostatnie 7 dni
+          </p>
+        </div>
+      </div>
       
       <div className="space-y-1">
         {weekData.map(({ day, hours }, dayIndex) => (
@@ -92,7 +100,7 @@ export const WeeklyTimeline = ({ reports }: WeeklyTimelineProps) => {
               {hours.map((status, hourIndex) => (
                 <div
                   key={hourIndex}
-                  className={`flex-1 h-4 rounded-sm transition-colors ${
+                  className={`flex-1 h-4 rounded-sm transition-all duration-300 hover:scale-110 hover:shadow-md ${
                     COLORS[status as keyof typeof COLORS]
                   }`}
                   title={`${format(day, "dd.MM")} ${5 + Math.floor(hourIndex / 2)}:${(hourIndex % 2) * 30 === 0 ? '00' : '30'} - ${status}`}

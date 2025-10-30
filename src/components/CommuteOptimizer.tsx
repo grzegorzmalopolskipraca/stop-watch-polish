@@ -23,11 +23,11 @@ const COLORS = {
 
 const DAY_NAMES = ["Pon", "Wt", "Śr", "Cz", "Pt", "So", "Nd"];
 
-// Generate time slots in 20-minute intervals
+// Generate time slots in 30-minute intervals
 const generateTimeSlots = (startHour: number, endHour: number) => {
   const slots: string[] = [];
   for (let hour = startHour; hour <= endHour; hour++) {
-    for (let minute = 0; minute < 60; minute += 20) {
+    for (let minute = 0; minute < 60; minute += 30) {
       const timeStr = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
       // Don't add slots beyond the end hour
       if (hour === endHour && minute > 0) break;
@@ -47,16 +47,29 @@ export const CommuteOptimizer = ({ reports }: CommuteOptimizerProps) => {
   const calculateStatus = (reportsInWindow: Report[]): string => {
     if (reportsInWindow.length === 0) return "neutral";
 
-    const statusCounts = reportsInWindow.reduce((acc, r) => {
-      acc[r.status] = (acc[r.status] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
+    // Count each status type
+    let countStatusStoi = 0;
+    let countStatusToczySie = 0;
+    let countStatusJedzie = 0;
 
-    const majorityStatus = Object.entries(statusCounts).sort(
-      ([, a], [, b]) => b - a
-    )[0][0];
+    reportsInWindow.forEach((r) => {
+      if (r.status === "stoi") {
+        countStatusStoi++;
+      } else if (r.status === "toczy_sie") {
+        countStatusToczySie++;
+      } else if (r.status === "jedzie") {
+        countStatusJedzie++;
+      }
+    });
 
-    return majorityStatus;
+    // Determine status based on highest count
+    if (countStatusStoi >= countStatusToczySie && countStatusStoi >= countStatusJedzie) {
+      return 'stoi';
+    } else if (countStatusToczySie >= countStatusStoi && countStatusToczySie >= countStatusJedzie) {
+      return 'toczy_sie';
+    } else {
+      return 'jedzie';
+    }
   };
 
   const weeklyCommuteData = useMemo(() => {
@@ -81,31 +94,37 @@ export const CommuteOptimizer = ({ reports }: CommuteOptimizerProps) => {
       // Skip if we already have a more recent date for this day of week
       if (dayOfWeekData.has(dayOfWeek)) continue;
 
-      // Calculate status for departure time (to city)
+      // Calculate status for departure time (to city) - 30-minute window
       const departureReports = reports.filter((r) => {
         const reportDate = new Date(r.reported_at);
+        const reportTotalMinutes = reportDate.getHours() * 60 + reportDate.getMinutes();
+        const targetTotalMinutes = depHour * 60 + depMin;
+        
         return (
           r.direction === "to_center" &&
           reportDate.getFullYear() === targetDate.getFullYear() &&
           reportDate.getMonth() === targetDate.getMonth() &&
           reportDate.getDate() === targetDate.getDate() &&
-          reportDate.getHours() === depHour &&
-          Math.abs(reportDate.getMinutes() - depMin) < 30
+          reportTotalMinutes >= targetTotalMinutes &&
+          reportTotalMinutes < targetTotalMinutes + 30
         );
       });
 
       const departureStatus = calculateStatus(departureReports);
 
-      // Calculate status for return time (from city)
+      // Calculate status for return time (from city) - 30-minute window
       const returnReports = reports.filter((r) => {
         const reportDate = new Date(r.reported_at);
+        const reportTotalMinutes = reportDate.getHours() * 60 + reportDate.getMinutes();
+        const targetTotalMinutes = retHour * 60 + retMin;
+        
         return (
           r.direction === "from_center" &&
           reportDate.getFullYear() === targetDate.getFullYear() &&
           reportDate.getMonth() === targetDate.getMonth() &&
           reportDate.getDate() === targetDate.getDate() &&
-          reportDate.getHours() === retHour &&
-          Math.abs(reportDate.getMinutes() - retMin) < 30
+          reportTotalMinutes >= targetTotalMinutes &&
+          reportTotalMinutes < targetTotalMinutes + 30
         );
       });
 

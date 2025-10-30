@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { ThumbsUp, Umbrella } from "lucide-react";
+import { ThumbsUp, CloudRain } from "lucide-react";
 
 interface WeatherSlot {
   timeFrom: string;
@@ -122,26 +122,28 @@ export const WeatherForecast = ({ street }: Props) => {
 
   if (isLoading) {
     return (
-      <div className="space-y-4">
-        <div className="space-y-2">
-          <div>
-            <h3 className="text-lg font-semibold">
-              Jeździsz rowerem lub motocyklem?
-            </h3>
-            <p className="text-sm text-muted-foreground">
-              Wyjedź, gdy nie będzie padać
-            </p>
+      <div className="space-y-4 p-6 rounded-xl bg-gradient-to-br from-blue-50/50 via-white to-blue-50/30 dark:from-blue-950/20 dark:via-background dark:to-blue-900/10 border border-blue-200/50 dark:border-blue-800/30 shadow-lg">
+        <div className="flex items-start gap-4">
+          <div className="flex-shrink-0 p-3 rounded-full bg-blue-100 dark:bg-blue-900/30">
+            <CloudRain className="w-12 h-12 text-blue-600 dark:text-blue-400" />
           </div>
-          <div className="flex items-center gap-2">
-            <p className="text-sm text-muted-foreground">
+          <div className="flex-1 space-y-2">
+            <div>
+              <h3 className="text-lg font-semibold text-foreground">
+                Jeździsz rowerem lub motocyklem?
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                Wyjedź, gdy nie będzie padać
+              </p>
+            </div>
+            <p className="text-sm font-medium text-blue-700 dark:text-blue-300">
               Najlepsze 20 minut by nie zmoknąć w ciągu najbliższych 2 godzin
             </p>
-            <Umbrella className="w-20 h-20 text-muted-foreground" />
           </div>
         </div>
         <div className="space-y-2">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="h-10 bg-muted/50 rounded animate-pulse" />
+            <div key={i} className="h-10 bg-muted/50 rounded-lg animate-pulse" />
           ))}
         </div>
       </div>
@@ -150,24 +152,26 @@ export const WeatherForecast = ({ street }: Props) => {
 
   if (weatherSlots.length === 0) {
     return (
-      <div className="space-y-4">
-        <div className="space-y-2">
-          <div>
-            <h3 className="text-lg font-semibold">
-              Jeździsz rowerem lub motocyklem?
-            </h3>
-            <p className="text-sm text-muted-foreground">
-              Wyjedź, gdy nie będzie padać
-            </p>
+      <div className="space-y-4 p-6 rounded-xl bg-gradient-to-br from-blue-50/50 via-white to-blue-50/30 dark:from-blue-950/20 dark:via-background dark:to-blue-900/10 border border-blue-200/50 dark:border-blue-800/30 shadow-lg">
+        <div className="flex items-start gap-4">
+          <div className="flex-shrink-0 p-3 rounded-full bg-blue-100 dark:bg-blue-900/30">
+            <CloudRain className="w-12 h-12 text-blue-600 dark:text-blue-400" />
           </div>
-          <div className="flex items-center gap-2">
-            <p className="text-sm text-muted-foreground">
+          <div className="flex-1 space-y-2">
+            <div>
+              <h3 className="text-lg font-semibold text-foreground">
+                Jeździsz rowerem lub motocyklem?
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                Wyjedź, gdy nie będzie padać
+              </p>
+            </div>
+            <p className="text-sm font-medium text-blue-700 dark:text-blue-300">
               Najlepsze 20 minut by nie zmoknąć w ciągu najbliższych 2 godzin
             </p>
-            <Umbrella className="w-20 h-20 text-muted-foreground" />
           </div>
         </div>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-sm text-muted-foreground text-center py-4">
           Brak danych pogodowych
         </p>
       </div>
@@ -175,21 +179,23 @@ export const WeatherForecast = ({ street }: Props) => {
   }
 
   return (
-    <div className="space-y-4">
-      <div className="space-y-2">
-        <div>
-          <h3 className="text-lg font-semibold">
-            Jeździsz rowerem lub motocyklem?
-          </h3>
-          <p className="text-sm text-muted-foreground">
-            Wyjedź, gdy nie będzie padać
-          </p>
+    <div className="space-y-4 p-6 rounded-xl bg-gradient-to-br from-blue-50/50 via-white to-blue-50/30 dark:from-blue-950/20 dark:via-background dark:to-blue-900/10 border border-blue-200/50 dark:border-blue-800/30 shadow-lg">
+      <div className="flex items-start gap-4">
+        <div className="flex-shrink-0 p-3 rounded-full bg-blue-100 dark:bg-blue-900/30 animate-pulse">
+          <CloudRain className="w-12 h-12 text-blue-600 dark:text-blue-400" />
         </div>
-        <div className="flex items-center gap-2">
-          <p className="text-sm text-muted-foreground">
+        <div className="flex-1 space-y-2">
+          <div>
+            <h3 className="text-lg font-semibold text-foreground">
+              Jeździsz rowerem lub motocyklem?
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              Wyjedź, gdy nie będzie padać
+            </p>
+          </div>
+          <p className="text-sm font-medium text-blue-700 dark:text-blue-300">
             Najlepsze 20 minut by nie zmoknąć w ciągu najbliższych 2 godzin
           </p>
-          <Umbrella className="w-20 h-20 text-muted-foreground" />
         </div>
       </div>
       <div className="space-y-2">
@@ -212,7 +218,7 @@ export const WeatherForecast = ({ street }: Props) => {
           return (
             <div
               key={index}
-              className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 rounded-lg border"
+              className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 rounded-lg border transition-all duration-300 hover:shadow-md hover:scale-[1.02]"
               style={{ 
                 backgroundColor: bgColor,
                 borderColor: borderColor

@@ -1,6 +1,7 @@
 import { useMemo, useEffect, useRef } from "react";
 import { format, startOfDay } from "date-fns";
 import { pl } from "date-fns/locale";
+import { TrendingUp } from "lucide-react";
 
 interface Report {
   status: string;
@@ -243,27 +244,41 @@ export const GreenWave = ({ reports }: GreenWaveProps) => {
 
   if (greenWaveRanges.length === 0) {
     return (
-      <div className="space-y-3">
-        <h2 className="text-lg font-semibold">Zielona fala</h2>
-        <p className="text-sm text-muted-foreground">
-          Brak danych o płynnym ruchu w ciągu ostatniego tygodnia
-        </p>
+      <div className="space-y-4 p-6 rounded-xl bg-gradient-to-br from-green-50/50 via-white to-green-50/30 dark:from-green-950/20 dark:via-background dark:to-green-900/10 border border-green-200/50 dark:border-green-800/30 shadow-lg">
+        <div className="flex items-start gap-4">
+          <div className="flex-shrink-0 p-3 rounded-full bg-green-100 dark:bg-green-900/30">
+            <TrendingUp className="w-12 h-12 text-green-600 dark:text-green-400" />
+          </div>
+          <div className="flex-1">
+            <h2 className="text-lg font-semibold text-foreground">Zielona fala</h2>
+            <p className="text-sm text-muted-foreground mt-2">
+              Brak danych o płynnym ruchu w ciągu ostatniego tygodnia
+            </p>
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-3">
-      <h2 className="text-lg font-semibold">Zielona fala</h2>
-      <p className="text-sm text-muted-foreground">
-        Korzystaj z zielonej fali i wyjeżdżaj z domu w czasie mniejszego ruchu. Szybciej zajedziesz i odciążysz korki. Informuj jak wygląda ruch na Twojej ulicy a Zielona Fala będzie się aktualizować
-      </p>
-      <p className="text-sm text-muted-foreground">
-        Zielona fala analizuje dane z Naszych zgłoszeń. Im więcej prawidłowych zgłoszeń, tym będzie dokładniejsza.
-      </p>
-      <p className="text-sm font-semibold">
-        Wyjedź, kiedy masz zielony slot:
-      </p>
+    <div className="space-y-4 p-6 rounded-xl bg-gradient-to-br from-green-50/50 via-white to-green-50/30 dark:from-green-950/20 dark:via-background dark:to-green-900/10 border border-green-200/50 dark:border-green-800/30 shadow-lg">
+      <div className="flex items-start gap-4">
+        <div className="flex-shrink-0 p-3 rounded-full bg-green-100 dark:bg-green-900/30 animate-pulse">
+          <TrendingUp className="w-12 h-12 text-green-600 dark:text-green-400" />
+        </div>
+        <div className="flex-1 space-y-2">
+          <h2 className="text-lg font-semibold text-foreground">Zielona fala</h2>
+          <p className="text-sm text-muted-foreground">
+            Korzystaj z zielonej fali i wyjeżdżaj z domu w czasie mniejszego ruchu. Szybciej zajedziesz i odciążysz korki. Informuj jak wygląda ruch na Twojej ulicy a Zielona Fala będzie się aktualizować
+          </p>
+          <p className="text-sm text-muted-foreground">
+            Zielona fala analizuje dane z Naszych zgłoszeń. Im więcej prawidłowych zgłoszeń, tym będzie dokładniejsza.
+          </p>
+          <p className="text-sm font-semibold text-green-700 dark:text-green-300">
+            Wyjedź, kiedy masz zielony slot:
+          </p>
+        </div>
+      </div>
       
       <div ref={containerRef} className="space-y-2 h-[45vh] overflow-y-auto pr-2">
         {greenWaveRanges.map((range, index) => {
@@ -277,7 +292,7 @@ export const GreenWave = ({ reports }: GreenWaveProps) => {
             <div 
               key={index}
               ref={(el) => (itemRefs.current[index] = el)}
-              className={`flex items-center justify-between p-3 rounded-lg border ${bgColor}`}
+              className={`flex items-center justify-between p-3 rounded-lg border ${bgColor} transition-all duration-300 hover:shadow-md hover:scale-[1.02]`}
             >
               <div className="flex items-center gap-2">
                 <span className="text-sm font-medium">

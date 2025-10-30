@@ -39,6 +39,7 @@ import { GreenWave } from "@/components/GreenWave";
 import { RssTicker } from "@/components/RssTicker";
 import { SmsSubscription } from "@/components/SmsSubscription";
 import { WeatherForecast } from "@/components/WeatherForecast";
+import { CommuteOptimizer } from "@/components/CommuteOptimizer";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format, startOfDay } from "date-fns";
 import { pl } from "date-fns/locale";
@@ -84,6 +85,7 @@ interface Report {
   street: string;
   status: string;
   reported_at: string;
+  direction: string;
 }
 
 const Index = () => {
@@ -93,6 +95,7 @@ const Index = () => {
   });
   const [currentStatus, setCurrentStatus] = useState<string | null>(null);
   const [weeklyReports, setWeeklyReports] = useState<Report[]>([]);
+  const [commuteReports, setCommuteReports] = useState<Report[]>([]);
   const [todayReports, setTodayReports] = useState<Report[]>([]);
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
   const [isLoading, setIsLoading] = useState(true);
@@ -712,6 +715,17 @@ const Index = () => {
 
       if (weekError) throw weekError;
       setWeeklyReports(weekData || []);
+
+      // Fetch reports for both directions for commute optimizer
+      const { data: commuteData, error: commuteError } = await supabase
+        .from("traffic_reports")
+        .select("*")
+        .eq("street", street)
+        .gte("reported_at", weekAgo.toISOString())
+        .order("reported_at", { ascending: false });
+
+      if (commuteError) throw commuteError;
+      setCommuteReports(commuteData || []);
 
       // Fetch today's reports for today timeline
       const startOfDay = new Date();
@@ -1532,6 +1546,11 @@ const Index = () => {
         {/* Green Wave */}
         <section className="bg-card rounded-lg p-5 border border-border">
           <GreenWave reports={weeklyReports} />
+        </section>
+
+        {/* Commute Optimizer */}
+        <section className="bg-card rounded-lg p-5 border border-border">
+          <CommuteOptimizer reports={commuteReports} />
         </section>
 
         {/* Use Cases */}

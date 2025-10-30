@@ -1494,7 +1494,7 @@ const Index = () => {
         </section>
 
         {/* Incident Reports */}
-        <section className="bg-card rounded-lg p-5 border border-border space-y-4">
+        <section className="bg-card rounded-lg p-5 border-2 border-destructive shadow-lg shadow-destructive/20 space-y-4">
           <h3 className="text-lg font-semibold text-center">
             Zgłoś zdarzenie na drodze
           </h3>

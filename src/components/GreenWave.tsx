@@ -262,22 +262,23 @@ export const GreenWave = ({ reports }: GreenWaveProps) => {
 
   return (
     <div className="space-y-4 p-6 rounded-xl bg-gradient-to-br from-green-50/50 via-white to-green-50/30 dark:from-green-950/20 dark:via-background dark:to-green-900/10 border border-green-200/50 dark:border-green-800/30 shadow-lg">
-      <div className="flex items-start gap-4">
+      <div className="flex items-center gap-3">
         <div className="flex-shrink-0 p-3 rounded-full bg-green-100 dark:bg-green-900/30 animate-pulse">
           <TrendingUp className="w-12 h-12 text-green-600 dark:text-green-400" />
         </div>
-        <div className="flex-1 space-y-2">
-          <h2 className="text-lg font-semibold text-foreground">Zielona fala</h2>
-          <p className="text-sm text-muted-foreground">
-            Korzystaj z zielonej fali i wyjeżdżaj z domu w czasie mniejszego ruchu. Szybciej zajedziesz i odciążysz korki. Informuj jak wygląda ruch na Twojej ulicy a Zielona Fala będzie się aktualizować
-          </p>
-          <p className="text-sm text-muted-foreground">
-            Zielona fala analizuje dane z Naszych zgłoszeń. Im więcej prawidłowych zgłoszeń, tym będzie dokładniejsza.
-          </p>
-          <p className="text-sm font-semibold text-green-700 dark:text-green-300">
-            Wyjedź, kiedy masz zielony slot:
-          </p>
-        </div>
+        <h2 className="text-lg font-semibold text-foreground">Zielona fala</h2>
+      </div>
+      
+      <div className="space-y-2">
+        <p className="text-sm text-muted-foreground">
+          Korzystaj z zielonej fali i wyjeżdżaj z domu w czasie mniejszego ruchu. Szybciej zajedziesz i odciążysz korki. Informuj jak wygląda ruch na Twojej ulicy a Zielona Fala będzie się aktualizować
+        </p>
+        <p className="text-sm text-muted-foreground">
+          Zielona fala analizuje dane z Naszych zgłoszeń. Im więcej prawidłowych zgłoszeń, tym będzie dokładniejsza.
+        </p>
+        <p className="text-sm font-semibold text-green-700 dark:text-green-300">
+          Wyjedź, kiedy masz zielony slot:
+        </p>
       </div>
       
       <div ref={containerRef} className="space-y-2 h-[45vh] overflow-y-auto pr-2">

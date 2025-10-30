@@ -124,7 +124,9 @@ export const WeatherForecast = ({ street }: Props) => {
       <div className="space-y-4">
         <div className="space-y-2">
           <h3 className="text-lg font-semibold">
-            Jedziesz rowerem, skuterem, motocyklem? Jedź kiedy będzie najlepsza pogoda.
+            Jeździsz rowerem lub motocyklem?
+            <br />
+            Wyjedź, gdy nie będzie padać
           </h3>
           <p className="text-sm text-muted-foreground">
             Najlepsze 20 minut w ciągu najbliższych 2 godzin
@@ -144,7 +146,9 @@ export const WeatherForecast = ({ street }: Props) => {
       <div className="space-y-4">
         <div className="space-y-2">
           <h3 className="text-lg font-semibold">
-            Jedziesz rowerem, skuterem, motocyklem? Jedź kiedy będzie najlepsza pogoda.
+            Jeździsz rowerem lub motocyklem?
+            <br />
+            Wyjedź, gdy nie będzie padać
           </h3>
           <p className="text-sm text-muted-foreground">
             Najlepsze 20 minut w ciągu najbliższych 2 godzin
@@ -161,7 +165,9 @@ export const WeatherForecast = ({ street }: Props) => {
     <div className="space-y-4">
       <div className="space-y-2">
         <h3 className="text-lg font-semibold">
-          Jedziesz rowerem, skuterem, motocyklem? Jedź kiedy będzie najlepsza pogoda.
+          Jeździsz rowerem lub motocyklem?
+          <br />
+          Wyjedź, gdy nie będzie padać
         </h3>
         <p className="text-sm text-muted-foreground">
           Najlepsze 20 minut w ciągu najbliższych 2 godzin
@@ -170,7 +176,7 @@ export const WeatherForecast = ({ street }: Props) => {
       <div className="space-y-2">
         {weatherSlots.map((slot, index) => {
           // Determine background color based on rain chance
-          let bgColor = "bg-green-100 dark:bg-green-900/20 border-green-300 dark:border-green-700";
+          let bgColor = "bg-blue-100 dark:bg-blue-900/20 border-blue-300 dark:border-blue-700";
           if (slot.rainPercent >= 60) {
             bgColor = "bg-red-100 dark:bg-red-900/20 border-red-300 dark:border-red-700";
           } else if (slot.rainPercent >= 40) {

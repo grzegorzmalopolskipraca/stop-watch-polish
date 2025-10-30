@@ -44,6 +44,21 @@ export const CommuteOptimizer = ({ reports }: CommuteOptimizerProps) => {
   const [departureTime, setDepartureTime] = useState<string>("07:00");
   const [returnTime, setReturnTime] = useState<string>("16:00");
 
+  const calculateStatus = (reportsInWindow: Report[]): string => {
+    if (reportsInWindow.length === 0) return "neutral";
+
+    const statusCounts = reportsInWindow.reduce((acc, r) => {
+      acc[r.status] = (acc[r.status] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+
+    const majorityStatus = Object.entries(statusCounts).sort(
+      ([, a], [, b]) => b - a
+    )[0][0];
+
+    return majorityStatus;
+  };
+
   const weeklyCommuteData = useMemo(() => {
     const now = new Date();
     const weekData = [];
@@ -97,21 +112,6 @@ export const CommuteOptimizer = ({ reports }: CommuteOptimizerProps) => {
 
     return weekData;
   }, [reports, departureTime, returnTime]);
-
-  const calculateStatus = (reportsInWindow: Report[]): string => {
-    if (reportsInWindow.length === 0) return "neutral";
-
-    const statusCounts = reportsInWindow.reduce((acc, r) => {
-      acc[r.status] = (acc[r.status] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
-
-    const majorityStatus = Object.entries(statusCounts).sort(
-      ([, a], [, b]) => b - a
-    )[0][0];
-
-    return majorityStatus;
-  };
 
   return (
     <div className="space-y-4">

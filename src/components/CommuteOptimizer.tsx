@@ -127,7 +127,7 @@ export const CommuteOptimizer = ({ reports }: CommuteOptimizerProps) => {
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="departure-time" className="text-sm">
-            Wyjeżdżam o godzinie:
+            Wyjeżdżam o:
           </Label>
           <Select value={departureTime} onValueChange={setDepartureTime}>
             <SelectTrigger id="departure-time">
@@ -145,7 +145,7 @@ export const CommuteOptimizer = ({ reports }: CommuteOptimizerProps) => {
 
         <div className="space-y-2">
           <Label htmlFor="return-time" className="text-sm">
-            Wracam o godzinie:
+            Wracam o:
           </Label>
           <Select value={returnTime} onValueChange={setReturnTime}>
             <SelectTrigger id="return-time">

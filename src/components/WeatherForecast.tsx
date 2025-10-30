@@ -232,11 +232,11 @@ export const WeatherForecast = ({ street }: Props) => {
                   <ThumbsUp className="w-4 h-4 text-green-600" />
                 )}
               </div>
-              <div className="flex items-center gap-3 text-sm">
-                <span>
+              <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-sm">
+                <span className="whitespace-nowrap">
                   Szansa na deszcz <strong>{slot.rainPercent}%</strong>
                 </span>
-                <span>
+                <span className="whitespace-nowrap">
                   Opady <strong>{slot.rainfallMillis} mm</strong>
                 </span>
               </div>

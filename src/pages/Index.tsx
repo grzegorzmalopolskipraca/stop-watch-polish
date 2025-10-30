@@ -1421,7 +1421,7 @@ const Index = () => {
             {nextStoiSlot && (
               <>
                 <p className="text-sm font-semibold">
-                  bo najbliższy Aaarmaageeedoon! jest o:
+                  bo najbliższy Armaageeedoon! jest o:
                 </p>
                 <div className="bg-traffic-stoi/10 border border-traffic-stoi/20 rounded-lg p-4 space-y-2">
                   <div className="flex items-center justify-between">

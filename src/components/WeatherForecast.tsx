@@ -124,13 +124,16 @@ export const WeatherForecast = ({ street }: Props) => {
     return (
       <div className="space-y-4">
         <div className="space-y-2">
-          <h3 className="text-lg font-semibold">
-            Jeździsz rowerem lub motocyklem?
-            <br />
-            Wyjedź, gdy nie będzie padać
-          </h3>
+          <div>
+            <h3 className="text-lg font-semibold">
+              Jeździsz rowerem lub motocyklem?
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              Wyjedź, gdy nie będzie padać
+            </p>
+          </div>
           <p className="text-sm text-muted-foreground">
-            Najlepsze 20 minut w ciągu najbliższych 2 godzin
+            Najlepsze 20 minut by nie zmoknąć w ciągu najbliższych 2 godzin
           </p>
         </div>
         <div className="space-y-2">
@@ -146,13 +149,16 @@ export const WeatherForecast = ({ street }: Props) => {
     return (
       <div className="space-y-4">
         <div className="space-y-2">
-          <h3 className="text-lg font-semibold">
-            Jeździsz rowerem lub motocyklem?
-            <br />
-            Wyjedź, gdy nie będzie padać
-          </h3>
+          <div>
+            <h3 className="text-lg font-semibold">
+              Jeździsz rowerem lub motocyklem?
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              Wyjedź, gdy nie będzie padać
+            </p>
+          </div>
           <p className="text-sm text-muted-foreground">
-            Najlepsze 20 minut w ciągu najbliższych 2 godzin
+            Najlepsze 20 minut by nie zmoknąć w ciągu najbliższych 2 godzin
           </p>
         </div>
         <p className="text-sm text-muted-foreground">
@@ -165,13 +171,16 @@ export const WeatherForecast = ({ street }: Props) => {
   return (
     <div className="space-y-4">
       <div className="space-y-2">
-        <h3 className="text-lg font-semibold">
-          Jeździsz rowerem lub motocyklem?
-          <br />
-          Wyjedź, gdy nie będzie padać
-        </h3>
+        <div>
+          <h3 className="text-lg font-semibold">
+            Jeździsz rowerem lub motocyklem?
+          </h3>
+          <p className="text-sm text-muted-foreground">
+            Wyjedź, gdy nie będzie padać
+          </p>
+        </div>
         <p className="text-sm text-muted-foreground">
-          Najlepsze 20 minut w ciągu najbliższych 2 godzin
+          Najlepsze 20 minut by nie zmoknąć w ciągu najbliższych 2 godzin
         </p>
       </div>
       <div className="space-y-2">

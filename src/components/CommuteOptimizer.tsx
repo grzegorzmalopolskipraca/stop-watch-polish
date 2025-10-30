@@ -81,7 +81,7 @@ export const CommuteOptimizer = ({ reports }: CommuteOptimizerProps) => {
           reportDate.getMonth() === targetDate.getMonth() &&
           reportDate.getDate() === targetDate.getDate() &&
           reportDate.getHours() === depHour &&
-          Math.abs(reportDate.getMinutes() - depMin) < 10
+          Math.abs(reportDate.getMinutes() - depMin) < 30
         );
       });
 
@@ -96,7 +96,7 @@ export const CommuteOptimizer = ({ reports }: CommuteOptimizerProps) => {
           reportDate.getMonth() === targetDate.getMonth() &&
           reportDate.getDate() === targetDate.getDate() &&
           reportDate.getHours() === retHour &&
-          Math.abs(reportDate.getMinutes() - retMin) < 10
+          Math.abs(reportDate.getMinutes() - retMin) < 30
         );
       });
 

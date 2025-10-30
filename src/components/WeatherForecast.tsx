@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { ThumbsUp } from "lucide-react";
+import { ThumbsUp, Umbrella } from "lucide-react";
 
 interface WeatherSlot {
   timeFrom: string;
@@ -132,9 +132,12 @@ export const WeatherForecast = ({ street }: Props) => {
               Wyjedź, gdy nie będzie padać
             </p>
           </div>
-          <p className="text-sm text-muted-foreground">
-            Najlepsze 20 minut by nie zmoknąć w ciągu najbliższych 2 godzin
-          </p>
+          <div className="flex items-center gap-2">
+            <p className="text-sm text-muted-foreground">
+              Najlepsze 20 minut by nie zmoknąć w ciągu najbliższych 2 godzin
+            </p>
+            <Umbrella className="w-5 h-5 text-muted-foreground" />
+          </div>
         </div>
         <div className="space-y-2">
           {[1, 2, 3].map((i) => (
@@ -157,9 +160,12 @@ export const WeatherForecast = ({ street }: Props) => {
               Wyjedź, gdy nie będzie padać
             </p>
           </div>
-          <p className="text-sm text-muted-foreground">
-            Najlepsze 20 minut by nie zmoknąć w ciągu najbliższych 2 godzin
-          </p>
+          <div className="flex items-center gap-2">
+            <p className="text-sm text-muted-foreground">
+              Najlepsze 20 minut by nie zmoknąć w ciągu najbliższych 2 godzin
+            </p>
+            <Umbrella className="w-5 h-5 text-muted-foreground" />
+          </div>
         </div>
         <p className="text-sm text-muted-foreground">
           Brak danych pogodowych
@@ -179,9 +185,12 @@ export const WeatherForecast = ({ street }: Props) => {
             Wyjedź, gdy nie będzie padać
           </p>
         </div>
-        <p className="text-sm text-muted-foreground">
-          Najlepsze 20 minut by nie zmoknąć w ciągu najbliższych 2 godzin
-        </p>
+        <div className="flex items-center gap-2">
+          <p className="text-sm text-muted-foreground">
+            Najlepsze 20 minut by nie zmoknąć w ciągu najbliższych 2 godzin
+          </p>
+          <Umbrella className="w-5 h-5 text-muted-foreground" />
+        </div>
       </div>
       <div className="space-y-2">
         {weatherSlots.map((slot, index) => {

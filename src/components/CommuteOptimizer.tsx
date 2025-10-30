@@ -1,9 +1,8 @@
 import { useState, useMemo } from "react";
-import { format } from "date-fns";
+import { format, startOfDay, subDays, isWithinInterval, getDay } from "date-fns";
 import { pl } from "date-fns/locale";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { calculateWeeklyTrafficBlocks, getStatusForTimeFromGrid } from "@/utils/trafficCalculations";
 
 interface Report {
   status: string;
@@ -50,34 +49,73 @@ export const CommuteOptimizer = ({ reports }: CommuteOptimizerProps) => {
     const [depHour, depMin] = departureTime.split(':').map(Number);
     const [retHour, retMin] = returnTime.split(':').map(Number);
 
-    // Round to 30-minute blocks
-    const depBlockMin = depMin < 30 ? 0 : 30;
-    const retBlockMin = retMin < 30 ? 0 : 30;
+    // Get last 7 days (from 7 days ago to today)
+    const today = startOfDay(new Date());
+    const last7Days = Array.from({ length: 7 }, (_, i) => subDays(today, 6 - i));
 
-    // Calculate weekly grid for EACH direction separately
-    const toCenterReports = reports.filter(r => r.direction === "to_center");
-    const fromCenterReports = reports.filter(r => r.direction === "from_center");
-    
-    const toCenterGrid = calculateWeeklyTrafficBlocks(toCenterReports);
-    const fromCenterGrid = calculateWeeklyTrafficBlocks(fromCenterReports);
-
-    // Build week data in chronological order
-    const weekData = toCenterGrid.map((dayData, index) => {
-      // Departure: use to_center direction
-      const depBlock = dayData.blocks.find(
-        b => b.hour === depHour && b.minute === depBlockMin
-      );
+    // Helper function to calculate status for a specific day and time window
+    const getStatusForDayAndTime = (
+      date: Date,
+      hour: number,
+      minute: number,
+      direction: string
+    ): string => {
+      // Create time window: from hour:minute to hour:minute+30
+      const dayStart = startOfDay(date);
+      const windowStart = new Date(dayStart);
+      windowStart.setHours(hour, minute, 0, 0);
       
-      // Return: use from_center direction
-      const returnDayData = fromCenterGrid[index];
-      const retBlock = returnDayData?.blocks.find(
-        b => b.hour === retHour && b.minute === retBlockMin
-      );
+      const windowEnd = new Date(windowStart);
+      windowEnd.setMinutes(windowEnd.getMinutes() + 30);
+
+      // Filter reports for this specific day, time window, and direction
+      const relevantReports = reports.filter((report) => {
+        const reportDate = new Date(report.reported_at);
+        const reportDayStart = startOfDay(reportDate);
+        
+        // Check if report is from the same day
+        if (reportDayStart.getTime() !== dayStart.getTime()) return false;
+        
+        // Check if report is in the time window
+        if (!isWithinInterval(reportDate, { start: windowStart, end: windowEnd })) return false;
+        
+        // Check direction
+        if (report.direction !== direction) return false;
+        
+        return true;
+      });
+
+      // If no reports, return neutral
+      if (relevantReports.length === 0) return "neutral";
+
+      // Count status occurrences
+      const statusCounts: { [key: string]: number } = {};
+      relevantReports.forEach((report) => {
+        statusCounts[report.status] = (statusCounts[report.status] || 0) + 1;
+      });
+
+      // Find the majority status
+      let maxCount = 0;
+      let majorityStatus = "neutral";
+      Object.entries(statusCounts).forEach(([status, count]) => {
+        if (count > maxCount) {
+          maxCount = count;
+          majorityStatus = status;
+        }
+      });
+
+      return majorityStatus;
+    };
+
+    // Build week data for all 7 days
+    const weekData = last7Days.map((date) => {
+      const departureStatus = getStatusForDayAndTime(date, depHour, depMin, "to_center");
+      const returnStatus = getStatusForDayAndTime(date, retHour, retMin, "from_center");
 
       return {
-        date: dayData.day,
-        departureStatus: depBlock?.status || "neutral",
-        returnStatus: retBlock?.status || "neutral",
+        date,
+        departureStatus,
+        returnStatus,
       };
     });
 

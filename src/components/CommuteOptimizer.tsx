@@ -119,6 +119,16 @@ export const CommuteOptimizer = ({ reports }: CommuteOptimizerProps) => {
       };
     });
 
+    // Sort by day of week: Monday (1) to Sunday (0)
+    weekData.sort((a, b) => {
+      const dayA = getDay(a.date);
+      const dayB = getDay(b.date);
+      // Convert Sunday (0) to 7 for sorting
+      const sortDayA = dayA === 0 ? 7 : dayA;
+      const sortDayB = dayB === 0 ? 7 : dayB;
+      return sortDayA - sortDayB;
+    });
+
     return weekData;
   }, [reports, departureTime, returnTime]);
 

@@ -120,14 +120,14 @@ serve(async (req) => {
       throw new Error('No forecast data available');
     }
 
-    // Get current time and filter for next 2 hours
+    // Get current time and filter for next 3 hours to ensure we have enough data
     const currentTime = new Date();
-    const twoHoursLater = new Date(currentTime.getTime() + 2 * 60 * 60 * 1000);
+    const threeHoursLater = new Date(currentTime.getTime() + 3 * 60 * 60 * 1000);
     
     const relevantHours = data.forecastHours.filter((hour: any) => {
       const hourTime = new Date(hour.interval.startTime);
-      return hourTime >= currentTime && hourTime <= twoHoursLater;
-    }).slice(0, 3); // Get up to 3 hours for interpolation
+      return hourTime >= currentTime && hourTime <= threeHoursLater;
+    }).slice(0, 4); // Get up to 4 hours for better interpolation
 
     console.log('[get-weather-forecast] Found', relevantHours.length, 'relevant hours');
 
@@ -145,6 +145,8 @@ serve(async (req) => {
     }
 
     // Filter slots to only those within the next 2 hours from now
+    const twoHoursLater = new Date(currentTime.getTime() + 2 * 60 * 60 * 1000);
+    
     const filteredSlots = allSlots.filter(slot => {
       const [hours, minutes] = slot.timeFrom.split(':').map(Number);
       const slotTime = new Date(currentTime);
@@ -155,18 +157,21 @@ serve(async (req) => {
         slotTime.setDate(slotTime.getDate() + 1);
       }
       
-      return slotTime >= currentTime && slotTime <= twoHoursLater;
-    }).slice(0, 6); // Maximum 6 slots (2 hours)
+      return slotTime >= currentTime && slotTime < twoHoursLater;
+    });
+    
+    // Ensure we always return exactly 6 slots (even if some extend slightly beyond 2 hours)
+    const finalSlots = filteredSlots.length >= 6 ? filteredSlots.slice(0, 6) : allSlots.slice(0, 6);
 
     // Sort by best weather conditions (lowest rain probability, then lowest rainfall)
-    const sortedSlots = [...filteredSlots].sort((a, b) => {
+    const sortedSlots = [...finalSlots].sort((a, b) => {
       if (a.rainPercent !== b.rainPercent) {
         return a.rainPercent - b.rainPercent;
       }
       return a.rainfallMillis - b.rainfallMillis;
     });
 
-    console.log('[get-weather-forecast] Generated', sortedSlots.length, 'slots');
+    console.log('[get-weather-forecast] Generated', sortedSlots.length, 'slots for 2 hours');
 
     // Cache the results
     weatherCache.set(cacheKey, {

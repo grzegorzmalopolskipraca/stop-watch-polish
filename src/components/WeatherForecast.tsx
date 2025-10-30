@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { ThumbsUp } from "lucide-react";
 
 interface WeatherSlot {
   timeFrom: string;
@@ -175,22 +176,38 @@ export const WeatherForecast = ({ street }: Props) => {
       </div>
       <div className="space-y-2">
         {weatherSlots.map((slot, index) => {
-          // Determine background color based on rain chance
-          let bgColor = "bg-blue-100 dark:bg-blue-900/20 border-blue-300 dark:border-blue-700";
-          if (slot.rainPercent >= 60) {
-            bgColor = "bg-red-100 dark:bg-red-900/20 border-red-300 dark:border-red-700";
-          } else if (slot.rainPercent >= 40) {
-            bgColor = "bg-yellow-100 dark:bg-yellow-900/20 border-yellow-300 dark:border-yellow-700";
-          }
+          // Find minimum rainfall
+          const minRainfall = Math.min(...weatherSlots.map(s => s.rainfallMillis));
+          const isMinRainfall = slot.rainfallMillis === minRainfall;
+          const isFirstMinRainfall = isMinRainfall && weatherSlots.findIndex(s => s.rainfallMillis === minRainfall) === index;
+          
+          // Calculate background color based on rainfall (0-20mm scale)
+          const rainfallCapped = Math.min(slot.rainfallMillis, 20);
+          const intensity = rainfallCapped / 20; // 0 to 1
+          
+          // Create blue color gradient: lighter blue (low rain) to darker blue (high rain)
+          const lightness = Math.round(95 - (intensity * 35)); // 95% to 60%
+          const bgColor = `hsl(210 100% ${lightness}%)`;
+          const borderLightness = Math.round(70 - (intensity * 30)); // 70% to 40%
+          const borderColor = `hsl(210 100% ${borderLightness}%)`;
 
           return (
             <div
               key={index}
-              className={`flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 rounded-lg border ${bgColor}`}
+              className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 rounded-lg border"
+              style={{ 
+                backgroundColor: bgColor,
+                borderColor: borderColor
+              }}
             >
-              <span className="font-medium">
-                {slot.timeFrom} - {slot.timeTo}
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="font-medium">
+                  {slot.timeFrom} - {slot.timeTo}
+                </span>
+                {isFirstMinRainfall && (
+                  <ThumbsUp className="w-4 h-4 text-green-600" />
+                )}
+              </div>
               <div className="flex items-center gap-3 text-sm">
                 <span>
                   Szansa na deszcz <strong>{slot.rainPercent}%</strong>

@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { format } from "date-fns";
 import { pl } from "date-fns/locale";
+import { Activity } from "lucide-react";
 
 interface Report {
   status: string;
@@ -63,8 +64,15 @@ export const TodayTimeline = ({ reports, street, minSpeed, maxSpeed }: TodayTime
   const currentHour = new Date().getHours();
 
   return (
-    <div className="space-y-3">
-      <h2 className="text-lg font-semibold">Dziś: stan ruchu na {street}</h2>
+    <div className="space-y-4 p-6 rounded-xl bg-gradient-to-br from-orange-50/50 via-white to-orange-50/30 dark:from-orange-950/20 dark:via-background dark:to-orange-900/10 border border-orange-200/50 dark:border-orange-800/30 shadow-lg">
+      <div className="flex items-start gap-4">
+        <div className="flex-shrink-0 p-3 rounded-full bg-orange-100 dark:bg-orange-900/30 animate-pulse">
+          <Activity className="w-12 h-12 text-orange-600 dark:text-orange-400" />
+        </div>
+        <div className="flex-1">
+          <h2 className="text-lg font-semibold text-foreground">Dziś: stan ruchu na {street}</h2>
+        </div>
+      </div>
       
       <div className="space-y-2">
         <div className="flex justify-between text-xs text-muted-foreground px-1">
@@ -76,7 +84,7 @@ export const TodayTimeline = ({ reports, street, minSpeed, maxSpeed }: TodayTime
           {todayData.map((status, hour) => (
             <div
               key={hour}
-              className={`flex-1 h-8 rounded transition-colors relative ${
+              className={`flex-1 h-8 rounded transition-all duration-300 hover:scale-110 hover:shadow-md relative ${
                 COLORS[status as keyof typeof COLORS]
               } ${hour === currentHour ? "ring-2 ring-primary ring-offset-1" : ""}`}
               title={`${hour}:00 - ${status}`}

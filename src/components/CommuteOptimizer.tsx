@@ -213,7 +213,7 @@ export const CommuteOptimizer = ({ reports }: CommuteOptimizerProps) => {
       </div>
 
       <p className="text-xs text-muted-foreground">
-        Lewa połowa - dojazd do centrum, prawa połowa - powrót z centrum
+        Lewa połowa - dojazd do centrum, prawa połowa - powrót z centrum. Najlepsze dni to takie gdzie z lewej i prawej jest zielono
       </p>
     </div>
   );

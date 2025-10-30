@@ -1439,7 +1439,7 @@ const Index = () => {
                     </span>
                   </div>
                   <p className="text-sm text-muted-foreground/60 mt-2">
-                    Jak już musisz, jedź rowerem popatrzeć sobie jak inni stoją
+                    Jak już musisz, jedź rowerem popatrzeć sobie jak inni stoją lub zrób sobie małą drzemkę
                   </p>
                 </div>
               </>

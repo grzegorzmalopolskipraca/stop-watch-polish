@@ -61,20 +61,19 @@ export const CommuteOptimizer = ({ reports }: CommuteOptimizerProps) => {
     const departureData = getStatusForTimeFromGrid(toCenterGrid, depHour, depMin);
     const returnData = getStatusForTimeFromGrid(fromCenterGrid, retHour, retMin);
 
-    // Build week data for Monday to Sunday
+    // Build week data for all 7 days (Monday to Sunday)
     const weekData = [];
     for (let dayIndex = 0; dayIndex < 7; dayIndex++) {
       const depInfo = departureData[dayIndex];
       const retInfo = returnData[dayIndex];
       
-      if (depInfo || retInfo) {
-        weekData.push({
-          day: DAY_NAMES[dayIndex],
-          date: depInfo?.date || retInfo?.date || new Date(),
-          departureStatus: depInfo?.status || "neutral",
-          returnStatus: retInfo?.status || "neutral",
-        });
-      }
+      // Always add the day, even if no data (will show as neutral)
+      weekData.push({
+        day: DAY_NAMES[dayIndex],
+        date: depInfo?.date || retInfo?.date || new Date(),
+        departureStatus: depInfo?.status || "neutral",
+        returnStatus: retInfo?.status || "neutral",
+      });
     }
 
     return weekData;

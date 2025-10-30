@@ -97,7 +97,7 @@ export const WeatherForecast = ({ street }: Props) => {
         console.log(`[WeatherForecast] Fetching weather for ${street}:`, { latitude, longitude });
 
         const { data, error } = await supabase.functions.invoke('get-weather-forecast', {
-          body: { latitude, longitude }
+          body: { latitude, longitude, street }
         });
 
         if (error) {

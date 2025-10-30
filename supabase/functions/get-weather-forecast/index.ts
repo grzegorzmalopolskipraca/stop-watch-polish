@@ -9,6 +9,7 @@ const corsHeaders = {
 interface WeatherRequest {
   latitude: number;
   longitude: number;
+  street?: string;
 }
 
 interface WeatherSlot {
@@ -18,13 +19,7 @@ interface WeatherSlot {
   rainfallMillis: number;
 }
 
-// Cache weather data for 10 minutes per location
-const weatherCache = new Map<string, { data: WeatherSlot[], timestamp: number }>();
 const CACHE_DURATION_MS = 10 * 60 * 1000; // 10 minutes
-
-function getCacheKey(lat: number, lng: number): string {
-  return `${lat.toFixed(4)}_${lng.toFixed(4)}`;
-}
 
 function interpolateWeatherData(hour1: any, hour2: any, intervalMinutes: number): WeatherSlot[] {
   const slots: WeatherSlot[] = [];
@@ -67,24 +62,38 @@ serve(async (req) => {
   }
 
   try {
-    const { latitude, longitude }: WeatherRequest = await req.json();
+    const { latitude, longitude, street }: WeatherRequest = await req.json();
     
-    console.log('[get-weather-forecast] Request for:', { latitude, longitude });
+    console.log('[get-weather-forecast] Request for:', { latitude, longitude, street });
     
-    // Check cache first
-    const cacheKey = getCacheKey(latitude, longitude);
-    const cached = weatherCache.get(cacheKey);
-    const now = Date.now();
+    // Initialize Supabase client
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
     
-    if (cached && (now - cached.timestamp) < CACHE_DURATION_MS) {
-      console.log('[get-weather-forecast] Returning cached data');
-      return new Response(
-        JSON.stringify(cached.data),
-        { 
-          status: 200, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+    // Check database cache first
+    if (street) {
+      const { data: cachedData, error: cacheError } = await supabase
+        .from('weather_cache')
+        .select('weather_data, cached_at')
+        .eq('street', street)
+        .single();
+      
+      if (!cacheError && cachedData) {
+        const cachedAt = new Date(cachedData.cached_at).getTime();
+        const now = Date.now();
+        
+        if ((now - cachedAt) < CACHE_DURATION_MS) {
+          console.log('[get-weather-forecast] Returning cached data from database');
+          return new Response(
+            JSON.stringify(cachedData.weather_data),
+            { 
+              status: 200, 
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+            }
+          );
         }
-      );
+      }
     }
     
     const apiKey = Deno.env.get('GOOGLE_MAPS_API_KEY');
@@ -173,18 +182,33 @@ serve(async (req) => {
 
     console.log('[get-weather-forecast] Generated', sortedSlots.length, 'slots for 2 hours');
 
-    // Cache the results
-    weatherCache.set(cacheKey, {
-      data: sortedSlots,
-      timestamp: now,
-    });
-
-    // Clean old cache entries
-    for (const [key, value] of weatherCache.entries()) {
-      if (now - value.timestamp > CACHE_DURATION_MS) {
-        weatherCache.delete(key);
+    // Cache the results in database
+    if (street) {
+      const { error: upsertError } = await supabase
+        .from('weather_cache')
+        .upsert({
+          street,
+          latitude,
+          longitude,
+          weather_data: sortedSlots,
+          cached_at: new Date().toISOString(),
+        }, {
+          onConflict: 'street'
+        });
+      
+      if (upsertError) {
+        console.error('[get-weather-forecast] Error caching weather data:', upsertError);
+      } else {
+        console.log('[get-weather-forecast] Weather data cached in database');
       }
     }
+
+    // Clean old cache entries (older than 1 hour)
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+    await supabase
+      .from('weather_cache')
+      .delete()
+      .lt('cached_at', oneHourAgo);
 
     return new Response(
       JSON.stringify(sortedSlots),

@@ -300,8 +300,8 @@ export const TrafficLine = ({ street, direction, width = "100%", onSpeedUpdate, 
 
     const interval = setInterval(() => {
       const baseSpeed = avgSpeed ? parseFloat(avgSpeed) : 0;
-      // Random variation of +/- 1-2 km/h
-      const variation = (Math.random() * 2 - 1) * 2;
+      // Random variation of +/- 0.5 km/h
+      const variation = (Math.random() * 2 - 1) * 0.5;
       const newSpeed = Math.max(0, Math.min(50, baseSpeed + variation));
       setAnimatedSpeed(newSpeed);
     }, 1500); // Update every 1.5 seconds for smooth animation

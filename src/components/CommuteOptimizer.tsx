@@ -61,15 +61,25 @@ export const CommuteOptimizer = ({ reports }: CommuteOptimizerProps) => {
 
   const weeklyCommuteData = useMemo(() => {
     const yesterday = subDays(startOfDay(new Date()), 1);
-    const tempData = [];
+    
+    // Parse selected times
+    const [depHour, depMin] = departureTime.split(':').map(Number);
+    const [retHour, retMin] = returnTime.split(':').map(Number);
 
-    // Get last 7 days from yesterday
+    // Collect data for each day of the week, keeping only the most recent occurrence
+    const dayOfWeekData = new Map<number, {
+      date: Date;
+      departureStatus: string;
+      returnStatus: string;
+    }>();
+
+    // Go through last 7 days from yesterday
     for (let dayOffset = 0; dayOffset < 7; dayOffset++) {
       const targetDate = subDays(yesterday, dayOffset);
-      
-      // Parse selected times
-      const [depHour, depMin] = departureTime.split(':').map(Number);
-      const [retHour, retMin] = returnTime.split(':').map(Number);
+      const dayOfWeek = targetDate.getDay() === 0 ? 6 : targetDate.getDay() - 1; // Mon=0, Sun=6
+
+      // Skip if we already have a more recent date for this day of week
+      if (dayOfWeekData.has(dayOfWeek)) continue;
 
       // Calculate status for departure time (to city)
       const departureReports = reports.filter((r) => {
@@ -101,25 +111,28 @@ export const CommuteOptimizer = ({ reports }: CommuteOptimizerProps) => {
 
       const returnStatus = calculateStatus(returnReports);
 
-      tempData.push({
+      dayOfWeekData.set(dayOfWeek, {
         date: targetDate,
         departureStatus,
         returnStatus,
       });
     }
 
-    // Sort by day of week (Monday to Sunday)
-    const sortedData = tempData.sort((a, b) => {
-      const dayA = a.date.getDay() === 0 ? 6 : a.date.getDay() - 1; // Convert Sunday=0 to Sunday=6
-      const dayB = b.date.getDay() === 0 ? 6 : b.date.getDay() - 1;
-      return dayA - dayB;
-    });
+    // Convert to array sorted Monday to Sunday
+    const weekData = [];
+    for (let dayIndex = 0; dayIndex < 7; dayIndex++) {
+      const dayData = dayOfWeekData.get(dayIndex);
+      if (dayData) {
+        weekData.push({
+          day: DAY_NAMES[dayIndex],
+          date: dayData.date,
+          departureStatus: dayData.departureStatus,
+          returnStatus: dayData.returnStatus,
+        });
+      }
+    }
 
-    // Add day names
-    return sortedData.map(item => ({
-      ...item,
-      day: DAY_NAMES[item.date.getDay() === 0 ? 6 : item.date.getDay() - 1],
-    }));
+    return weekData;
   }, [reports, departureTime, returnTime]);
 
   return (

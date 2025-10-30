@@ -175,7 +175,7 @@ export const CommuteOptimizer = ({ reports }: CommuteOptimizerProps) => {
                 }`}
                 title={`${format(date, "dd.MM")} ${departureTime} - ${departureStatus}`}
               >
-                <span className="text-xs font-medium opacity-70">Do</span>
+                <span className="text-xs font-medium opacity-70">Wyjazd</span>
               </div>
               <div
                 className={`flex-1 h-8 rounded-md transition-colors flex items-center justify-center ${
@@ -183,7 +183,7 @@ export const CommuteOptimizer = ({ reports }: CommuteOptimizerProps) => {
                 }`}
                 title={`${format(date, "dd.MM")} ${returnTime} - ${returnStatus}`}
               >
-                <span className="text-xs font-medium opacity-70">Z</span>
+                <span className="text-xs font-medium opacity-70">Powrót</span>
               </div>
             </div>
           </div>

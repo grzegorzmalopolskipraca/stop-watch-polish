@@ -368,6 +368,36 @@ export type Database = {
         }
         Relationships: []
       }
+      weather_cache: {
+        Row: {
+          cached_at: string
+          id: string
+          latitude: number
+          longitude: number
+          street: string
+          updated_at: string
+          weather_data: Json
+        }
+        Insert: {
+          cached_at?: string
+          id?: string
+          latitude: number
+          longitude: number
+          street: string
+          updated_at?: string
+          weather_data: Json
+        }
+        Update: {
+          cached_at?: string
+          id?: string
+          latitude?: number
+          longitude?: number
+          street?: string
+          updated_at?: string
+          weather_data?: Json
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

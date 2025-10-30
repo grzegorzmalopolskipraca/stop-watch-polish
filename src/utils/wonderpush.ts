@@ -82,44 +82,32 @@ export async function subscribeToWonderPush(street: string): Promise<boolean> {
     
     // Step 5: Wait for WonderPush SDK to be ready
     console.log("Step 5: Waiting for WonderPush SDK to be ready...");
+    console.log("WonderPush current type:", typeof window.WonderPush);
+    console.log("WonderPush is array:", Array.isArray(window.WonderPush));
     
     await new Promise<void>((resolve, reject) => {
       const timeout = setTimeout(() => {
         const error = "❌ WonderPush SDK ready timeout (30s)\n" +
           "Possible causes:\n" +
-          "1. WonderPush script failed to load\n" +
+          "1. WonderPush loader script not executing\n" +
           "2. Network connectivity issues\n" +
           "3. Ad-blocker blocking the SDK\n\n" +
-          "Try opening Chrome DevTools → Console to check for errors";
+          "Check Chrome DevTools → Network tab for failed requests to cdn.by.wonderpush.com";
         console.error(error);
-        reject(new Error("WonderPush SDK failed to initialize - check browser console for errors"));
+        reject(new Error("WonderPush SDK failed to initialize - check network tab for blocked requests"));
       }, 30000);
 
-      // Initialize the queue if it doesn't exist
+      // Ensure the queue exists (should already be initialized by the loader)
       window.WonderPush = window.WonderPush || [];
-      console.log("WonderPush initial queue length:", window.WonderPush.length);
       
-      // Check if SDK is already initialized (queue has been replaced by SDK object)
-      const checkReady = () => {
-        if (window.WonderPush && typeof (window.WonderPush as any).isReady === 'function') {
-          console.log("✅ WonderPush SDK object detected");
-          clearTimeout(timeout);
-          resolve();
-        } else {
-          // Not ready yet, check again soon
-          setTimeout(checkReady, 100);
-        }
-      };
-      
-      // Push a function to the queue that will execute when SDK is ready
+      // Push a callback to the queue - the SDK will execute it when ready
+      console.log("Pushing initialization callback to WonderPush queue...");
       window.WonderPush.push(function() {
-        console.log("✅ WonderPush SDK initialization callback fired");
+        console.log("✅ WonderPush SDK initialization callback executed");
+        console.log("SDK is now ready for API calls");
         clearTimeout(timeout);
         resolve();
       });
-      
-      // Also poll for the SDK to be ready in case the callback doesn't fire
-      checkReady();
     });
 
     // Step 6: Subscribe to notifications

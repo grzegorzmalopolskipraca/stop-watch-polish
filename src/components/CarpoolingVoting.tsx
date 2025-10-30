@@ -148,14 +148,12 @@ export const CarpoolingVoting = () => {
       {votes.map((vote) => (
         <div
           key={vote.id}
-          className="flex items-center justify-between gap-4 p-3 rounded-lg bg-card border border-border hover:bg-accent/50 transition-colors"
+          className="flex flex-col gap-3 p-3 rounded-lg bg-card border border-border hover:bg-accent/50 transition-colors"
         >
-          <div className="flex-1">
-            <p className="text-sm text-foreground">{vote.title}</p>
-          </div>
+          <p className="text-sm text-foreground">{vote.title}</p>
           
-          <div className="flex items-center gap-3">
-            <span className="text-sm font-medium text-muted-foreground min-w-[60px] text-right">
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-sm font-medium text-muted-foreground">
               {vote.vote_count} {vote.vote_count === 1 ? 'głos' : 'głosów'}
             </span>
             

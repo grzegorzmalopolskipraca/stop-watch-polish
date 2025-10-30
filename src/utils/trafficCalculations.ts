@@ -76,20 +76,16 @@ export const calculateWeeklyTrafficBlocks = (reports: Report[]): DayData[] => {
 
 /**
  * Get traffic status for specific hour and minute from weekly data
- * Filters by direction
+ * Returns status indexed by day of week (Monday = 0, Sunday = 6)
  */
-export const getStatusForTime = (
-  reports: Report[],
+export const getStatusForTimeFromGrid = (
+  weeklyData: DayData[],
   targetHour: number,
-  targetMinute: number,
-  direction: "to_center" | "from_center"
+  targetMinute: number
 ): { [dayOfWeek: number]: { date: Date; status: string } } => {
-  const filteredReports = reports.filter(r => r.direction === direction);
-  const weekData = calculateWeeklyTrafficBlocks(filteredReports);
-  
   const result: { [dayOfWeek: number]: { date: Date; status: string } } = {};
   
-  weekData.forEach((dayData) => {
+  weeklyData.forEach((dayData) => {
     const block = dayData.blocks.find(
       b => b.hour === targetHour && b.minute === targetMinute
     );

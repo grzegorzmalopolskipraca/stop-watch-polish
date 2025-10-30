@@ -3,7 +3,7 @@ import { format } from "date-fns";
 import { pl } from "date-fns/locale";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { getStatusForTime } from "@/utils/trafficCalculations";
+import { calculateWeeklyTrafficBlocks, getStatusForTimeFromGrid } from "@/utils/trafficCalculations";
 
 interface Report {
   status: string;
@@ -50,9 +50,16 @@ export const CommuteOptimizer = ({ reports }: CommuteOptimizerProps) => {
     const [depHour, depMin] = departureTime.split(':').map(Number);
     const [retHour, retMin] = returnTime.split(':').map(Number);
 
-    // Get status for departure and return times using shared calculation
-    const departureData = getStatusForTime(reports, depHour, depMin, "to_center");
-    const returnData = getStatusForTime(reports, retHour, retMin, "from_center");
+    // Calculate weekly grid for each direction (same as WeeklyTimeline)
+    const toCenterReports = reports.filter(r => r.direction === "to_center");
+    const fromCenterReports = reports.filter(r => r.direction === "from_center");
+    
+    const toCenterGrid = calculateWeeklyTrafficBlocks(toCenterReports);
+    const fromCenterGrid = calculateWeeklyTrafficBlocks(fromCenterReports);
+
+    // Get status for departure and return times by looking up in the grid
+    const departureData = getStatusForTimeFromGrid(toCenterGrid, depHour, depMin);
+    const returnData = getStatusForTimeFromGrid(fromCenterGrid, retHour, retMin);
 
     // Build week data for Monday to Sunday
     const weekData = [];

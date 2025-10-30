@@ -115,50 +115,54 @@ export const CommuteOptimizer = ({ reports }: CommuteOptimizerProps) => {
 
   return (
     <div className="space-y-4">
-      <div>
-        <h2 className="text-lg font-semibold">
+      <div className="space-y-2">
+        <h2 className="text-base font-semibold">
           Jeździsz do pracy tylko kilka razy w tygodniu? Resztę pracujesz w domu?
         </h2>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-base text-muted-foreground">
           Wybierz lepsze dni na dojazd do pracy unikając korka
         </p>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-2 gap-3">
         <div className="space-y-2">
-          <Label htmlFor="departure-time" className="text-sm">
+          <Label htmlFor="departure-time" className="text-sm ml-8">
             Wyjeżdżam o:
           </Label>
-          <Select value={departureTime} onValueChange={setDepartureTime}>
-            <SelectTrigger id="departure-time">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {DEPARTURE_SLOTS.map((slot) => (
-                <SelectItem key={slot} value={slot}>
-                  {slot}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="ml-8">
+            <Select value={departureTime} onValueChange={setDepartureTime}>
+              <SelectTrigger id="departure-time">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {DEPARTURE_SLOTS.map((slot) => (
+                  <SelectItem key={slot} value={slot}>
+                    {slot}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="return-time" className="text-sm">
+          <Label htmlFor="return-time" className="text-sm ml-2">
             Wracam o:
           </Label>
-          <Select value={returnTime} onValueChange={setReturnTime}>
-            <SelectTrigger id="return-time">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {RETURN_SLOTS.map((slot) => (
-                <SelectItem key={slot} value={slot}>
-                  {slot}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="ml-2">
+            <Select value={returnTime} onValueChange={setReturnTime}>
+              <SelectTrigger id="return-time">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {RETURN_SLOTS.map((slot) => (
+                  <SelectItem key={slot} value={slot}>
+                    {slot}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       </div>
 
@@ -168,7 +172,7 @@ export const CommuteOptimizer = ({ reports }: CommuteOptimizerProps) => {
             <div className="w-8 text-xs font-medium text-muted-foreground">
               {day}
             </div>
-            <div className="flex-1 flex gap-1">
+            <div className="flex-1 flex gap-2">
               <div
                 className={`flex-1 h-8 rounded-md transition-colors flex items-center justify-center ${
                   COLORS[departureStatus as keyof typeof COLORS]

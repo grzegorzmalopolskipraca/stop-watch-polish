@@ -282,6 +282,146 @@ const Index = () => {
     return null;
   }, [weeklyReports]);
 
+  // Calculate next toczy_sie slot
+  const nextToczySlot = useMemo(() => {
+    if (!weeklyReports || weeklyReports.length === 0) {
+      return null;
+    }
+
+    const today = startOfDay(new Date());
+    const weekAgo = new Date(today);
+    weekAgo.setDate(weekAgo.getDate() - 7);
+
+    const relevantReports = weeklyReports.filter((r) => {
+      const reportDate = new Date(r.reported_at);
+      return reportDate >= weekAgo && reportDate <= new Date();
+    });
+
+    interface IntervalStatus {
+      time: string;
+      averageStatus: 'stoi' | 'toczy_sie' | 'jedzie';
+    }
+    
+    const resultStatusList: IntervalStatus[] = [];
+
+    for (let totalMinutes = 0; totalMinutes < 24 * 60; totalMinutes += 10) {
+      const hour = Math.floor(totalMinutes / 60);
+      const minute = totalMinutes % 60;
+      const endMinutes = totalMinutes + 10;
+
+      let countStatusStoi = 0;
+      let countStatusToczySie = 0;
+      let countStatusJedzie = 0;
+
+      relevantReports.forEach((r) => {
+        const reportDate = new Date(r.reported_at);
+        const reportTotalMinutes = reportDate.getHours() * 60 + reportDate.getMinutes();
+        
+        if (reportTotalMinutes >= totalMinutes && reportTotalMinutes < endMinutes) {
+          if (r.status === "stoi") {
+            countStatusStoi++;
+          } else if (r.status === "toczy_sie") {
+            countStatusToczySie++;
+          } else if (r.status === "jedzie") {
+            countStatusJedzie++;
+          }
+        }
+      });
+
+      let averageStatus: 'stoi' | 'toczy_sie' | 'jedzie' = 'jedzie';
+      
+      if (countStatusStoi === 0 && countStatusToczySie === 0 && countStatusJedzie === 0) {
+        averageStatus = 'jedzie';
+      } else if (countStatusStoi >= countStatusToczySie && countStatusStoi >= countStatusJedzie) {
+        averageStatus = 'stoi';
+      } else if (countStatusToczySie >= countStatusStoi && countStatusToczySie >= countStatusJedzie) {
+        averageStatus = 'toczy_sie';
+      } else {
+        averageStatus = 'jedzie';
+      }
+
+      resultStatusList.push({
+        time: `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`,
+        averageStatus,
+      });
+    }
+
+    interface TimeRange {
+      start: string;
+      end: string;
+      durationMinutes: number;
+      status: 'stoi' | 'toczy_sie' | 'jedzie';
+    }
+
+    const ranges: TimeRange[] = [];
+    let rangeStart: string | null = null;
+    let rangeStartMinutes = 0;
+    let currentStatusInRange: 'stoi' | 'toczy_sie' | 'jedzie' | null = null;
+
+    resultStatusList.forEach((item, index) => {
+      if (rangeStart === null) {
+        rangeStart = item.time;
+        rangeStartMinutes = index * 10;
+        currentStatusInRange = item.averageStatus;
+      } else if (item.averageStatus !== currentStatusInRange) {
+        const endMinutes = index * 10;
+        const durationMinutes = endMinutes - rangeStartMinutes;
+        
+        ranges.push({
+          start: rangeStart,
+          end: item.time,
+          durationMinutes,
+          status: currentStatusInRange!,
+        });
+        
+        rangeStart = item.time;
+        rangeStartMinutes = index * 10;
+        currentStatusInRange = item.averageStatus;
+      }
+    });
+
+    if (rangeStart !== null && currentStatusInRange !== null) {
+      const endMinutes = 24 * 60;
+      const durationMinutes = endMinutes - rangeStartMinutes;
+      
+      ranges.push({
+        start: rangeStart,
+        end: '24:00',
+        durationMinutes,
+        status: currentStatusInRange,
+      });
+    }
+
+    const now = new Date();
+    const currentHour = now.getHours();
+    const currentMinute = now.getMinutes();
+    const currentTotalMinutes = currentHour * 60 + currentMinute;
+
+    const toczySlots = ranges.filter(range => range.status === 'toczy_sie');
+    
+    for (const slot of toczySlots) {
+      const [startHour, startMin] = slot.start.split(':').map(Number);
+      const startMinutes = startHour * 60 + startMin;
+      
+      if (startMinutes > currentTotalMinutes && startMinutes >= 5 * 60 && startMinutes < 22 * 60) {
+        const [endHour, endMin] = slot.end.split(':').map(Number);
+        const endMinutes = endHour * 60 + endMin;
+        const adjustedEnd = Math.min(endMinutes, 22 * 60);
+        
+        const adjustedEndHour = Math.floor(adjustedEnd / 60);
+        const adjustedEndMin = adjustedEnd % 60;
+        
+        return {
+          ...slot,
+          end: `${String(adjustedEndHour).padStart(2, '0')}:${String(adjustedEndMin).padStart(2, '0')}`,
+          durationMinutes: adjustedEnd - startMinutes,
+        };
+      }
+    }
+
+    return null;
+  }, [weeklyReports]);
+
   // Save selected street to localStorage
   useEffect(() => {
     console.log(`[StreetChange] Street or direction changed: ${selectedStreet} (${direction})`);
@@ -1083,30 +1223,60 @@ const Index = () => {
         </section>
 
         {/* Next Green Slot */}
-        {nextGreenSlot && (
+        {(nextGreenSlot || nextToczySlot) && (
           <section className="bg-card rounded-lg p-5 border border-border space-y-3">
             <h3 className="text-lg font-semibold">
               Korzystaj! Wyjedź, gdy ruch jest mniejszy:
             </h3>
-            <div className="bg-traffic-jedzie/10 border border-traffic-jedzie/20 rounded-lg p-4 space-y-2">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="text-lg font-semibold">
-                    {nextGreenSlot.start}
-                  </span>
-                  <span className="text-muted-foreground">do</span>
-                  <span className="text-lg font-semibold">
-                    {nextGreenSlot.end}
+            
+            {nextGreenSlot && (
+              <div className="bg-traffic-jedzie/10 border border-traffic-jedzie/20 rounded-lg p-4 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg font-semibold">
+                      {nextGreenSlot.start}
+                    </span>
+                    <span className="text-muted-foreground">do</span>
+                    <span className="text-lg font-semibold">
+                      {nextGreenSlot.end}
+                    </span>
+                  </div>
+                  <span className="text-sm text-muted-foreground">
+                    trwa {formatDuration(nextGreenSlot.durationMinutes)}
                   </span>
                 </div>
-                <span className="text-sm text-muted-foreground">
-                  trwa {formatDuration(nextGreenSlot.durationMinutes)}
-                </span>
+                <p className="text-sm text-muted-foreground/60 mt-2">
+                  Najbliższa zielona fala. {streetDistance !== null && `Możesz oszczędzić około ${(streetDistance * (1/6.0 - 1/40.0) * 60).toFixed(1)} minut`}
+                </p>
               </div>
-              <p className="text-sm text-muted-foreground/60 mt-2">
-                Najbliższa zielona fala. {streetDistance !== null && `Możesz oszczędzić około ${(streetDistance * (1/6.0 - 1/40.0) * 60).toFixed(1)} minut`}
-              </p>
-            </div>
+            )}
+
+            {nextToczySlot && (
+              <>
+                <p className="text-sm font-semibold">
+                  lub chociaż kiedy to jakoś się toczy:
+                </p>
+                <div className="bg-traffic-toczy/10 border border-traffic-toczy/20 rounded-lg p-4 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="text-lg font-semibold">
+                        {nextToczySlot.start}
+                      </span>
+                      <span className="text-muted-foreground">do</span>
+                      <span className="text-lg font-semibold">
+                        {nextToczySlot.end}
+                      </span>
+                    </div>
+                    <span className="text-sm text-muted-foreground">
+                      trwa {formatDuration(nextToczySlot.durationMinutes)}
+                    </span>
+                  </div>
+                  <p className="text-sm text-muted-foreground/60 mt-2">
+                    Najbliższy slot kiedy się toczy. {streetDistance !== null && `Możesz oszczędzić około ${(streetDistance * (1/10.0 - 1/40.0) * 60).toFixed(1)} minut`}
+                  </p>
+                </div>
+              </>
+            )}
           </section>
         )}
 

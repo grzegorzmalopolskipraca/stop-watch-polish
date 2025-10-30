@@ -265,75 +265,35 @@ export const GreenWave = ({ reports }: GreenWaveProps) => {
         Wyjedź, kiedy masz zielony slot:
       </p>
       
-      <div ref={containerRef} className="space-y-4 h-[45vh] overflow-y-auto pr-2">
-        {/* Jedzie section */}
-        <div className="space-y-2">
-          {greenWaveRanges
-            .map((range, originalIndex) => ({ ...range, originalIndex }))
-            .filter(range => range.status === 'jedzie')
-            .map(({ originalIndex, ...range }) => {
-              const bgColor = 'bg-traffic-jedzie/10 border-traffic-jedzie/20';
-              
-              return (
-                <div 
-                  key={`jedzie-${originalIndex}`}
-                  ref={(el) => (itemRefs.current[originalIndex] = el)}
-                  className={`flex items-center justify-between p-3 rounded-lg border ${bgColor}`}
-                >
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium">
-                      {range.start}
-                    </span>
-                    <span className="text-muted-foreground">do</span>
-                    <span className="text-sm font-medium">
-                      {range.end}
-                    </span>
-                  </div>
-                  <span className="text-sm text-muted-foreground">
-                    {formatDuration(range.durationMinutes)}
-                  </span>
-                </div>
-              );
-            })}
-        </div>
-
-        {/* Separator text */}
-        {greenWaveRanges.some(r => r.status === 'toczy_sie') && (
-          <p className="text-sm font-semibold pt-2">
-            lub chociaż kiedy to jakoś się toczy:
-          </p>
-        )}
-
-        {/* Toczy sie section */}
-        <div className="space-y-2">
-          {greenWaveRanges
-            .map((range, originalIndex) => ({ ...range, originalIndex }))
-            .filter(range => range.status === 'toczy_sie')
-            .map(({ originalIndex, ...range }) => {
-              const bgColor = 'bg-traffic-toczy/10 border-traffic-toczy/20';
-              
-              return (
-                <div 
-                  key={`toczy-${originalIndex}`}
-                  ref={(el) => (itemRefs.current[originalIndex] = el)}
-                  className={`flex items-center justify-between p-3 rounded-lg border ${bgColor}`}
-                >
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium">
-                      {range.start}
-                    </span>
-                    <span className="text-muted-foreground">do</span>
-                    <span className="text-sm font-medium">
-                      {range.end}
-                    </span>
-                  </div>
-                  <span className="text-sm text-muted-foreground">
-                    {formatDuration(range.durationMinutes)}
-                  </span>
-                </div>
-              );
-            })}
-        </div>
+      <div ref={containerRef} className="space-y-2 h-[45vh] overflow-y-auto pr-2">
+        {greenWaveRanges.map((range, index) => {
+          const bgColor = range.status === 'jedzie' 
+            ? 'bg-traffic-jedzie/10 border-traffic-jedzie/20' 
+            : range.status === 'stoi'
+            ? 'bg-traffic-stoi/10 border-traffic-stoi/20'
+            : 'bg-traffic-toczy/10 border-traffic-toczy/20';
+          
+          return (
+            <div 
+              key={index}
+              ref={(el) => (itemRefs.current[index] = el)}
+              className={`flex items-center justify-between p-3 rounded-lg border ${bgColor}`}
+            >
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium">
+                  {range.start}
+                </span>
+                <span className="text-muted-foreground">do</span>
+                <span className="text-sm font-medium">
+                  {range.end}
+                </span>
+              </div>
+              <span className="text-sm text-muted-foreground">
+                {formatDuration(range.durationMinutes)}
+              </span>
+            </div>
+          );
+        })}
       </div>
     </div>
   );

@@ -54,23 +54,18 @@ export const CommuteOptimizer = ({ reports }: CommuteOptimizerProps) => {
     const depBlockMin = depMin < 30 ? 0 : 30;
     const retBlockMin = retMin < 30 ? 0 : 30;
 
-    // Calculate weekly grid for each direction (same as WeeklyTimeline)
-    const toCenterReports = reports.filter(r => r.direction === "to_center");
-    const fromCenterReports = reports.filter(r => r.direction === "from_center");
-    
-    const toCenterGrid = calculateWeeklyTrafficBlocks(toCenterReports);
-    const fromCenterGrid = calculateWeeklyTrafficBlocks(fromCenterReports);
+    // Calculate weekly grid using ALL reports (same as WeeklyTimeline - no direction filtering)
+    const weeklyGrid = calculateWeeklyTrafficBlocks(reports);
 
     // Build week data in chronological order (same as WeeklyTimeline)
-    const weekData = toCenterGrid.map((dayData, index) => {
+    const weekData = weeklyGrid.map((dayData) => {
       // Find the matching departure block
       const depBlock = dayData.blocks.find(
         b => b.hour === depHour && b.minute === depBlockMin
       );
       
-      // Find the matching return block from the same day
-      const returnDayData = fromCenterGrid[index];
-      const retBlock = returnDayData?.blocks.find(
+      // Find the matching return block
+      const retBlock = dayData.blocks.find(
         b => b.hour === retHour && b.minute === retBlockMin
       );
 

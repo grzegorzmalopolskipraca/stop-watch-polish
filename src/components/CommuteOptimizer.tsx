@@ -117,10 +117,10 @@ export const CommuteOptimizer = ({ reports }: CommuteOptimizerProps) => {
     <div className="space-y-4">
       <div>
         <h2 className="text-lg font-semibold">
-          Jeździsz do pracy tylko kilka razy w tygodniu?
+          Jeździsz do pracy tylko kilka razy w tygodniu? Resztę pracujesz w domu?
         </h2>
         <p className="text-sm text-muted-foreground">
-          Wybierz najlepsze dni na dojazd do pracy bez korka
+          Wybierz lepsze dni na dojazd do pracy unikając korka
         </p>
       </div>
 

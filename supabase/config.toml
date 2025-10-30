@@ -21,6 +21,9 @@ verify_jwt = false
 [functions.get-traffic-data]
 verify_jwt = false
 
+[functions.get-weather-forecast]
+verify_jwt = false
+
 [functions.submit-street-vote]
 verify_jwt = false
 

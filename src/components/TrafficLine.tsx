@@ -145,6 +145,7 @@ export const TrafficLine = ({ street, direction, width = "100%", onSpeedUpdate, 
   const [durationMinutes, setDurationMinutes] = useState<number>(0);
   const [distanceKm, setDistanceKm] = useState<string>("");
   const [avgSpeed, setAvgSpeed] = useState<string>("");
+  const [animatedSpeed, setAnimatedSpeed] = useState<number>(0);
   const shareRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -292,6 +293,22 @@ export const TrafficLine = ({ street, direction, width = "100%", onSpeedUpdate, 
     console.log(`[TrafficLine] UI render state -> loading=${isLoading}, level=${level}, color=${barColor}`);
   }, [isLoading, level]);
 
+  // Animate needle with subtle random movement
+  useEffect(() => {
+    const baseSpeed = avgSpeed ? parseFloat(avgSpeed) : 0;
+    setAnimatedSpeed(baseSpeed);
+
+    const interval = setInterval(() => {
+      const baseSpeed = avgSpeed ? parseFloat(avgSpeed) : 0;
+      // Random variation of +/- 1-2 km/h
+      const variation = (Math.random() * 2 - 1) * 2;
+      const newSpeed = Math.max(0, Math.min(50, baseSpeed + variation));
+      setAnimatedSpeed(newSpeed);
+    }, 1500); // Update every 1.5 seconds for smooth animation
+
+    return () => clearInterval(interval);
+  }, [avgSpeed]);
+
   // Calculate needle angle based on speed (0-50 km/h)
   const calculateNeedleAngle = (speed: number) => {
     const maxSpeed = 50;
@@ -303,7 +320,7 @@ export const TrafficLine = ({ street, direction, width = "100%", onSpeedUpdate, 
   };
 
   const currentSpeed = avgSpeed ? parseFloat(avgSpeed) : 0;
-  const needleAngle = calculateNeedleAngle(currentSpeed);
+  const needleAngle = calculateNeedleAngle(animatedSpeed);
 
   const handleShare = async () => {
     if (!shareRef.current) return;
@@ -415,7 +432,7 @@ export const TrafficLine = ({ street, direction, width = "100%", onSpeedUpdate, 
       </div>
       
       {/* Speedometer Gauge */}
-      <div ref={shareRef} className="relative flex flex-col items-center mt-6 p-6 pb-8 bg-white rounded-lg">
+      <div ref={shareRef} className="relative flex flex-col items-center mt-2 p-6 pb-8 bg-white rounded-lg">
         {/* Street Name at Top - hidden in UI, visible in export */}
         <h2 className="text-2xl font-bold text-gray-900 opacity-0 h-0 mb-4">{street}</h2>
         
@@ -512,7 +529,7 @@ export const TrafficLine = ({ street, direction, width = "100%", onSpeedUpdate, 
             strokeWidth="4"
             strokeLinecap="round"
             transform={`rotate(${needleAngle} 150 150) translate(2, 2)`}
-            style={{ transition: 'transform 0.5s ease' }}
+            style={{ transition: 'transform 1s ease-in-out' }}
           />
           
           {/* Needle */}
@@ -525,7 +542,7 @@ export const TrafficLine = ({ street, direction, width = "100%", onSpeedUpdate, 
             strokeWidth="4"
             strokeLinecap="round"
             transform={`rotate(${needleAngle} 150 150)`}
-            style={{ transition: 'transform 0.5s ease' }}
+            style={{ transition: 'transform 1s ease-in-out' }}
           />
           
           

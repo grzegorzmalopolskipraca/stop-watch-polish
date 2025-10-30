@@ -1534,19 +1534,13 @@ const Index = () => {
         </section>
 
         {/* Weekly Timeline */}
-        <section className="bg-card rounded-lg p-5 border border-border">
-          <WeeklyTimeline reports={weeklyReports} />
-        </section>
+        <WeeklyTimeline reports={weeklyReports} />
 
         {/* Weather Forecast */}
-        <section className="bg-card rounded-lg p-5 border border-border">
-          <WeatherForecast street={selectedStreet} />
-        </section>
+        <WeatherForecast street={selectedStreet} />
 
         {/* Green Wave */}
-        <section className="bg-card rounded-lg p-5 border border-border">
-          <GreenWave reports={weeklyReports} />
-        </section>
+        <GreenWave reports={weeklyReports} />
 
         {/* Commute Optimizer */}
         <section className="bg-card rounded-lg p-5 border border-border">

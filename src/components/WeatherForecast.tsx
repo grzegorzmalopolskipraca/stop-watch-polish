@@ -136,7 +136,7 @@ export const WeatherForecast = ({ street }: Props) => {
             <p className="text-sm text-muted-foreground">
               Najlepsze 20 minut by nie zmoknąć w ciągu najbliższych 2 godzin
             </p>
-            <Umbrella className="w-5 h-5 text-muted-foreground" />
+            <Umbrella className="w-20 h-20 text-muted-foreground" />
           </div>
         </div>
         <div className="space-y-2">
@@ -164,7 +164,7 @@ export const WeatherForecast = ({ street }: Props) => {
             <p className="text-sm text-muted-foreground">
               Najlepsze 20 minut by nie zmoknąć w ciągu najbliższych 2 godzin
             </p>
-            <Umbrella className="w-5 h-5 text-muted-foreground" />
+            <Umbrella className="w-20 h-20 text-muted-foreground" />
           </div>
         </div>
         <p className="text-sm text-muted-foreground">
@@ -189,7 +189,7 @@ export const WeatherForecast = ({ street }: Props) => {
           <p className="text-sm text-muted-foreground">
             Najlepsze 20 minut by nie zmoknąć w ciągu najbliższych 2 godzin
           </p>
-          <Umbrella className="w-5 h-5 text-muted-foreground" />
+          <Umbrella className="w-20 h-20 text-muted-foreground" />
         </div>
       </div>
       <div className="space-y-2">

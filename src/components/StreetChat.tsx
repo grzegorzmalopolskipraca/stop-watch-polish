@@ -6,7 +6,7 @@ import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { pl } from "date-fns/locale";
-import { Bell, BellOff } from "lucide-react";
+import { Bell, BellOff, MessageCircle } from "lucide-react";
 import { subscribeToWonderPush, unsubscribeFromWonderPush, isWonderPushSubscribed } from "@/utils/wonderpush";
 
 interface Message {
@@ -172,15 +172,15 @@ export const StreetChat = ({ street }: StreetChatProps) => {
 
   return (
     <div className="space-y-4">
-      <div className="bg-card rounded-lg border-2 border-primary/20 shadow-lg">
-        <div className="bg-gradient-to-r from-primary/10 via-primary/5 to-primary/10 p-6 text-sm space-y-3">
+      <div className="bg-card rounded-lg border-2 border-green-500/20 shadow-lg">
+        <div className="bg-gradient-to-r from-green-500/10 via-green-400/5 to-green-500/10 p-6 text-sm space-y-3">
           <div className="flex items-center gap-3">
-            <span className="text-3xl">💬</span>
-            <h4 className="text-xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+            <MessageCircle className="w-8 h-8 text-green-600 animate-pulse" />
+            <h4 className="text-xl font-bold bg-gradient-to-r from-green-600 to-green-500 bg-clip-text text-transparent">
               Czat / cb radio - {street}
             </h4>
           </div>
-          <p className="text-muted-foreground leading-relaxed pl-12">
+          <p className="text-muted-foreground leading-relaxed pl-11">
             Ten chat służy do komunikacji między sąsiadami. Jeśli stoisz na
             przystanku i czekasz na autobus, możesz napisać dokąd jedziesz, a ktoś
             jadący samochodem może Cię zabrać, zmniejszając korki.

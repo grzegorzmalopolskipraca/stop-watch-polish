@@ -22,7 +22,7 @@ const COLORS = {
   neutral: "bg-muted",
 };
 
-const DAY_NAMES = ["Pon", "Wt", "Śr", "Cz", "Pt", "So", "Nd"];
+
 
 // Generate time slots in 30-minute intervals
 const generateTimeSlots = (startHour: number, endHour: number) => {
@@ -50,6 +50,10 @@ export const CommuteOptimizer = ({ reports }: CommuteOptimizerProps) => {
     const [depHour, depMin] = departureTime.split(':').map(Number);
     const [retHour, retMin] = returnTime.split(':').map(Number);
 
+    // Round to 30-minute blocks
+    const depBlockMin = depMin < 30 ? 0 : 30;
+    const retBlockMin = retMin < 30 ? 0 : 30;
+
     // Calculate weekly grid for each direction (same as WeeklyTimeline)
     const toCenterReports = reports.filter(r => r.direction === "to_center");
     const fromCenterReports = reports.filter(r => r.direction === "from_center");
@@ -57,24 +61,25 @@ export const CommuteOptimizer = ({ reports }: CommuteOptimizerProps) => {
     const toCenterGrid = calculateWeeklyTrafficBlocks(toCenterReports);
     const fromCenterGrid = calculateWeeklyTrafficBlocks(fromCenterReports);
 
-    // Get status for departure and return times by looking up in the grid
-    const departureData = getStatusForTimeFromGrid(toCenterGrid, depHour, depMin);
-    const returnData = getStatusForTimeFromGrid(fromCenterGrid, retHour, retMin);
-
-    // Build week data for all 7 days (Monday to Sunday)
-    const weekData = [];
-    for (let dayIndex = 0; dayIndex < 7; dayIndex++) {
-      const depInfo = departureData[dayIndex];
-      const retInfo = returnData[dayIndex];
+    // Build week data in chronological order (same as WeeklyTimeline)
+    const weekData = toCenterGrid.map((dayData, index) => {
+      // Find the matching departure block
+      const depBlock = dayData.blocks.find(
+        b => b.hour === depHour && b.minute === depBlockMin
+      );
       
-      // Always add the day, even if no data (will show as neutral)
-      weekData.push({
-        day: DAY_NAMES[dayIndex],
-        date: depInfo?.date || retInfo?.date || new Date(),
-        departureStatus: depInfo?.status || "neutral",
-        returnStatus: retInfo?.status || "neutral",
-      });
-    }
+      // Find the matching return block from the same day
+      const returnDayData = fromCenterGrid[index];
+      const retBlock = returnDayData?.blocks.find(
+        b => b.hour === retHour && b.minute === retBlockMin
+      );
+
+      return {
+        date: dayData.day,
+        departureStatus: depBlock?.status || "neutral",
+        returnStatus: retBlock?.status || "neutral",
+      };
+    });
 
     return weekData;
   }, [reports, departureTime, returnTime]);
@@ -132,10 +137,10 @@ export const CommuteOptimizer = ({ reports }: CommuteOptimizerProps) => {
       </div>
 
       <div className="space-y-2">
-        {weeklyCommuteData.map(({ day, date, departureStatus, returnStatus }) => (
-          <div key={day} className="flex items-center gap-2">
+        {weeklyCommuteData.map(({ date, departureStatus, returnStatus }, index) => (
+          <div key={index} className="flex items-center gap-2">
             <div className="w-8 text-xs font-medium text-muted-foreground">
-              {day}
+              {format(date, "EEE", { locale: pl })}
             </div>
             <div className="flex-1 flex gap-2">
               <div

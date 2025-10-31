@@ -85,7 +85,7 @@ export const RssTicker = () => {
         const texts: string[] = [];
         Object.entries(grouped).forEach(([street, incidents]) => {
           Object.entries(incidents).forEach(([incidentType, count]) => {
-            texts.push(`⚠️ Uwaga ${incidentType} na drodze ${street} Potwierdzone ${count}`);
+            texts.push(`⚠️ Uwaga ${incidentType} na drodze ${street} liczba potwierdzeń zdarzenia ${count}`);
           });
         });
         

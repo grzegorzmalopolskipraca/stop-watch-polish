@@ -10,6 +10,7 @@ import Contact from "./pages/Contact";
 import NotFound from "./pages/NotFound";
 import Statystyki from "./pages/Statystyki";
 import Push from "./pages/Push";
+import Rss from "./pages/Rss";
 
 const queryClient = new QueryClient();
 
@@ -26,6 +27,7 @@ const App = () => (
           <Route path="/kontakt" element={<Contact />} />
           <Route path="/statystyki" element={<Statystyki />} />
           <Route path="/push" element={<Push />} />
+          <Route path="/rss" element={<Rss />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

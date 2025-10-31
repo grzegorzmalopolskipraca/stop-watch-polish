@@ -240,6 +240,10 @@ const Push = () => {
           <Link to="/statystyki" className="text-primary hover:underline">
             Statystyki
           </Link>
+          <span className="text-muted-foreground">•</span>
+          <Link to="/rss" className="text-primary hover:underline">
+            RSS
+          </Link>
         </footer>
       </div>
     </div>

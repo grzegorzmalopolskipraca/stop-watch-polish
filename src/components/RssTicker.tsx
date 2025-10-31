@@ -193,7 +193,7 @@ export const RssTicker = () => {
         <style dangerouslySetInnerHTML={{
           __html: `
             @keyframes scroll-left {
-              0% { transform: translateX(0); }
+              0% { transform: translateX(100%); }
               100% { transform: translateX(-50%); }
             }
             .animate-scroll-left {

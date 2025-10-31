@@ -189,7 +189,7 @@ export const RssTicker = () => {
 
   return (
     <div className="w-full bg-primary/10 overflow-hidden border-b border-border">
-      <div className="relative h-8 flex items-center overflow-hidden">
+      <div className="relative h-8 flex items-center">
         <style dangerouslySetInnerHTML={{
           __html: `
             @keyframes scroll-left {
@@ -204,7 +204,7 @@ export const RssTicker = () => {
             }
           `
         }} />
-        <div className="flex gap-32 animate-scroll-left whitespace-nowrap text-sm pl-[100%] px-4">
+        <div className="flex gap-32 animate-scroll-left whitespace-nowrap text-sm px-4">
           {duplicatedItems.map((item, index) => (
             <span key={`${item.id}-${index}`} className="text-foreground/80">
               {item.text}

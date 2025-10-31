@@ -251,6 +251,27 @@ export type Database = {
         }
         Relationships: []
       }
+      rss_ticker_settings: {
+        Row: {
+          created_at: string
+          id: string
+          speed: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          speed?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          speed?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       sms_subscriptions: {
         Row: {
           back_to_home_hour: string | null

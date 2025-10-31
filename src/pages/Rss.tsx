@@ -26,8 +26,40 @@ const Rss = () => {
   useEffect(() => {
     if (isAuthenticated) {
       fetchItems();
+      fetchTickerSpeed();
     }
   }, [isAuthenticated]);
+
+  const fetchTickerSpeed = async () => {
+    const { data } = await supabase
+      .from('rss_ticker_settings')
+      .select('speed')
+      .maybeSingle();
+    
+    if (data) {
+      setTickerSpeed(data.speed);
+    }
+  };
+
+  const updateTickerSpeed = async (newSpeed: number) => {
+    setTickerSpeed(newSpeed);
+    
+    const { data: existing } = await supabase
+      .from('rss_ticker_settings')
+      .select('id')
+      .maybeSingle();
+
+    if (existing) {
+      await supabase
+        .from('rss_ticker_settings')
+        .update({ speed: newSpeed })
+        .eq('id', existing.id);
+    } else {
+      await supabase
+        .from('rss_ticker_settings')
+        .insert([{ speed: newSpeed }]);
+    }
+  };
 
   const fetchItems = async () => {
     const { data, error } = await supabase
@@ -204,7 +236,7 @@ const Rss = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <RssTicker speed={tickerSpeed} />
+      <RssTicker />
       
       <div className="p-8">
         <div className="max-w-4xl mx-auto space-y-6">
@@ -213,7 +245,7 @@ const Rss = () => {
             <div className="flex items-center gap-2">
               <span className="text-sm text-muted-foreground">Speed:</span>
               <Button
-                onClick={() => setTickerSpeed(prev => Math.min(prev + 10, 120))}
+                onClick={() => updateTickerSpeed(Math.min(tickerSpeed + 10, 120))}
                 variant="outline"
                 size="icon"
               >
@@ -221,7 +253,7 @@ const Rss = () => {
               </Button>
               <span className="text-sm font-medium w-12 text-center">{tickerSpeed}s</span>
               <Button
-                onClick={() => setTickerSpeed(prev => Math.max(prev - 10, 20))}
+                onClick={() => updateTickerSpeed(Math.max(tickerSpeed - 10, 20))}
                 variant="outline"
                 size="icon"
               >

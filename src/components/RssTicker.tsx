@@ -7,12 +7,44 @@ interface RssItem {
   position: number;
 }
 
-interface RssTickerProps {
-  speed?: number;
-}
-
-export const RssTicker = ({ speed = 60 }: RssTickerProps) => {
+export const RssTicker = () => {
   const [items, setItems] = useState<RssItem[]>([]);
+  const [speed, setSpeed] = useState(60);
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      const { data } = await supabase
+        .from('rss_ticker_settings')
+        .select('speed')
+        .maybeSingle();
+      
+      if (data) {
+        setSpeed(data.speed);
+      }
+    };
+
+    fetchSettings();
+
+    // Subscribe to settings changes
+    const settingsChannel = supabase
+      .channel('rss_ticker_settings_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'rss_ticker_settings'
+        },
+        () => {
+          fetchSettings();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(settingsChannel);
+    };
+  }, []);
 
   useEffect(() => {
     const fetchItems = async () => {

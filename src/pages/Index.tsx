@@ -16,6 +16,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -113,6 +114,7 @@ const Index = () => {
   const [showDonationDialog, setShowDonationDialog] = useState(false);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [pendingIncident, setPendingIncident] = useState<{type: string; emoji: string} | null>(null);
+  const [incidentMessage, setIncidentMessage] = useState("");
   const [trafficTrend, setTrafficTrend] = useState<string | null>(null);
   const [incidentNotificationsEnabled, setIncidentNotificationsEnabled] = useState(false);
   const [latestSpeed, setLatestSpeed] = useState<number | null>(null);
@@ -1892,27 +1894,59 @@ const Index = () => {
       </Dialog>
 
       {/* Incident Confirmation Dialog */}
-      <AlertDialog open={!!pendingIncident} onOpenChange={(open) => !open && setPendingIncident(null)}>
+      <AlertDialog open={!!pendingIncident} onOpenChange={(open) => {
+        if (!open) {
+          setPendingIncident(null);
+          setIncidentMessage("");
+        }
+      }}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              Czy chcesz zgłosić zdarzenie?
+              Jak możesz opisz dokładniej to zdarzenie. Jak nie masz czasu, zostaw opis pusty i kliknij Wyślij
             </AlertDialogTitle>
-            <AlertDialogDescription>
-              Upewniam się, że nie kliknąłeś przypadkiem
-            </AlertDialogDescription>
           </AlertDialogHeader>
+          <div className="py-4">
+            <Textarea
+              value={incidentMessage}
+              onChange={(e) => setIncidentMessage(e.target.value)}
+              placeholder="Opis zdarzenia (opcjonalny)..."
+              className="resize-none"
+              rows={8}
+              maxLength={500}
+            />
+          </div>
           <AlertDialogFooter>
             <AlertDialogCancel>Anuluj</AlertDialogCancel>
             <AlertDialogAction
-              onClick={() => {
+              onClick={async () => {
                 if (pendingIncident) {
-                  submitIncidentReport(pendingIncident.type);
+                  await submitIncidentReport(pendingIncident.type);
+                  
+                  // If message is not empty, submit it to chat
+                  if (incidentMessage.trim()) {
+                    try {
+                      const userFingerprint = localStorage.getItem('userFingerprint') || 
+                        `user_${Math.random().toString(36).substring(2, 15)}_${Date.now()}`;
+                      
+                      await supabase.functions.invoke('submit-chat-message', {
+                        body: {
+                          street: selectedStreet,
+                          message: `🚨 ${pendingIncident.emoji} ${pendingIncident.type}: ${incidentMessage.trim()}`,
+                          userFingerprint,
+                        },
+                      });
+                    } catch (error) {
+                      console.error("Error submitting chat message:", error);
+                    }
+                  }
+                  
                   setPendingIncident(null);
+                  setIncidentMessage("");
                 }
               }}
             >
-              Zgłoś
+              Wyślij
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

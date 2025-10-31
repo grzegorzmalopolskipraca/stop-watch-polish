@@ -1205,8 +1205,7 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* RSS Ticker - DISABLED */}
-      {/* <RssTicker show={showRssTicker} /> */}
+      <RssTicker />
       
       {/* Sticky Header */}
       <header className="sticky top-0 z-10 bg-card border-b border-border shadow-sm">

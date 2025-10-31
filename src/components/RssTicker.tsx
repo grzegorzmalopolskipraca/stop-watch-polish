@@ -7,9 +7,17 @@ interface RssItem {
   position: number;
 }
 
+interface IncidentReport {
+  id: string;
+  street: string;
+  incident_type: string;
+  reported_at: string;
+}
+
 export const RssTicker = () => {
   const [items, setItems] = useState<RssItem[]>([]);
   const [speed, setSpeed] = useState(60);
+  const [incidentTexts, setIncidentTexts] = useState<string[]>([]);
 
   useEffect(() => {
     const fetchSettings = async () => {
@@ -43,6 +51,68 @@ export const RssTicker = () => {
 
     return () => {
       supabase.removeChannel(settingsChannel);
+    };
+  }, []);
+
+  useEffect(() => {
+    const fetchIncidents = async () => {
+      const twentyMinutesAgo = new Date(Date.now() - 20 * 60 * 1000).toISOString();
+      
+      const { data, error } = await supabase
+        .from('incident_reports')
+        .select('*')
+        .gte('reported_at', twentyMinutesAgo);
+      
+      if (error) {
+        console.error('Error fetching incident reports:', error);
+        return;
+      }
+      
+      if (data) {
+        // Group by street and incident_type
+        const grouped = data.reduce((acc: Record<string, Record<string, number>>, report: IncidentReport) => {
+          if (!acc[report.street]) {
+            acc[report.street] = {};
+          }
+          if (!acc[report.street][report.incident_type]) {
+            acc[report.street][report.incident_type] = 0;
+          }
+          acc[report.street][report.incident_type]++;
+          return acc;
+        }, {});
+        
+        // Generate incident texts
+        const texts: string[] = [];
+        Object.entries(grouped).forEach(([street, incidents]) => {
+          Object.entries(incidents).forEach(([incidentType, count]) => {
+            texts.push(`⚠️ Uwaga ${incidentType} na drodze ${street} Potwierdzone ${count}`);
+          });
+        });
+        
+        setIncidentTexts(texts);
+      }
+    };
+
+    fetchIncidents();
+
+    // Subscribe to realtime updates for incidents
+    const incidentsChannel = supabase
+      .channel('incident_reports_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'incident_reports'
+        },
+        () => {
+          fetchIncidents();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(incidentsChannel);
     };
   }, []);
 
@@ -86,10 +156,16 @@ export const RssTicker = () => {
     };
   }, []);
 
-  if (items.length === 0) return null;
+  // Combine incident texts with RSS items
+  const allItems = [
+    ...incidentTexts.map((text, index) => ({ id: `incident-${index}`, text, position: -1 })),
+    ...items
+  ];
+
+  if (allItems.length === 0) return null;
 
   // Duplicate items to create seamless loop
-  const duplicatedItems = [...items, ...items];
+  const duplicatedItems = [...allItems, ...allItems];
 
   return (
     <div className="w-full bg-primary/10 overflow-hidden border-b border-border">

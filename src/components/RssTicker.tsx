@@ -76,7 +76,7 @@ export const RssTicker = ({ speed = 60 }: RssTickerProps) => {
             }
           `
         }} />
-        <div className="flex gap-12 animate-scroll-left whitespace-nowrap text-sm px-4">
+        <div className="flex gap-32 animate-scroll-left whitespace-nowrap text-sm px-4">
           {duplicatedItems.map((item, index) => (
             <span key={`${item.id}-${index}`} className="text-foreground/80">
               {item.text}

@@ -54,43 +54,63 @@ export const RssTicker = () => {
     };
   }, []);
 
+  const getIncidentTimeWindow = (incidentType: string): number => {
+    const timeWindows: Record<string, number> = {
+      'Blokada': 1,      // 1 hour
+      'Wypadek': 1,      // 1 hour
+      'Objazd': 6,       // 6 hours
+      'Roboty': 24,      // 24 hours
+      'Ślisko': 3,       // 3 hours
+      'Dziury': 48,      // 48 hours
+      'Zwierze': 1,      // 1 hour
+      'Awaria': 1,       // 1 hour
+    };
+    return timeWindows[incidentType] || 1;
+  };
+
   useEffect(() => {
     const fetchIncidents = async () => {
-      const twentyMinutesAgo = new Date(Date.now() - 20 * 60 * 1000).toISOString();
-      
-      const { data, error } = await supabase
-        .from('incident_reports')
-        .select('*')
-        .gte('reported_at', twentyMinutesAgo);
-      
-      if (error) {
-        console.error('Error fetching incident reports:', error);
-        return;
+      const incidentTypes = ['Blokada', 'Wypadek', 'Objazd', 'Roboty', 'Ślisko', 'Dziury', 'Zwierze', 'Awaria'];
+      const allReports: IncidentReport[] = [];
+
+      // Fetch incidents for each type with its specific time window
+      for (const incidentType of incidentTypes) {
+        const hoursAgo = getIncidentTimeWindow(incidentType);
+        const timeAgo = new Date();
+        timeAgo.setHours(timeAgo.getHours() - hoursAgo);
+
+        const { data, error } = await supabase
+          .from('incident_reports')
+          .select('*')
+          .eq('incident_type', incidentType)
+          .gte('reported_at', timeAgo.toISOString());
+        
+        if (!error && data) {
+          allReports.push(...data);
+        }
       }
       
-      if (data) {
-        // Group by street and incident_type
-        const grouped = data.reduce((acc: Record<string, Record<string, number>>, report: IncidentReport) => {
-          if (!acc[report.street]) {
-            acc[report.street] = {};
-          }
-          if (!acc[report.street][report.incident_type]) {
-            acc[report.street][report.incident_type] = 0;
-          }
-          acc[report.street][report.incident_type]++;
-          return acc;
-        }, {});
-        
-        // Generate incident texts
-        const texts: string[] = [];
-        Object.entries(grouped).forEach(([street, incidents]) => {
-          Object.entries(incidents).forEach(([incidentType, count]) => {
-            texts.push(`       ⚠️ Uwaga ${incidentType} na drodze ${street} liczba potwierdzeń zdarzenia ${count}       `);
-          });
+      // Group by street and incident_type
+      const grouped = allReports.reduce((acc: Record<string, Record<string, number>>, report: IncidentReport) => {
+        if (!acc[report.street]) {
+          acc[report.street] = {};
+        }
+        if (!acc[report.street][report.incident_type]) {
+          acc[report.street][report.incident_type] = 0;
+        }
+        acc[report.street][report.incident_type]++;
+        return acc;
+      }, {});
+      
+      // Generate incident texts
+      const texts: string[] = [];
+      Object.entries(grouped).forEach(([street, incidents]) => {
+        Object.entries(incidents).forEach(([incidentType, count]) => {
+          texts.push(`       ⚠️ Uwaga ${incidentType} na drodze ${street} liczba potwierdzeń zdarzenia ${count}       `);
         });
-        
-        setIncidentTexts(texts);
-      }
+      });
+      
+      setIncidentTexts(texts);
     };
 
     fetchIncidents();

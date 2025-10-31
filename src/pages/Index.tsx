@@ -873,24 +873,43 @@ const Index = () => {
     }
   };
 
+  const getIncidentTimeWindow = (incidentType: string): number => {
+    const timeWindows: Record<string, number> = {
+      'Blokada': 1,      // 1 hour
+      'Wypadek': 1,      // 1 hour
+      'Objazd': 6,       // 6 hours
+      'Roboty': 24,      // 24 hours
+      'Ślisko': 3,       // 3 hours
+      'Dziury': 48,      // 48 hours
+      'Zwierze': 1,      // 1 hour
+      'Awaria': 1,       // 1 hour
+    };
+    return timeWindows[incidentType] || 1;
+  };
+
   const fetchIncidentCounts = async () => {
     try {
-      const twentyMinutesAgo = new Date();
-      twentyMinutesAgo.setMinutes(twentyMinutesAgo.getMinutes() - 20);
+      const incidentTypes = ['Blokada', 'Wypadek', 'Objazd', 'Roboty', 'Ślisko', 'Dziury', 'Zwierze', 'Awaria'];
+      const counts: Record<string, number> = {};
 
-      const { data, error } = await supabase
-        .from("incident_reports")
-        .select("incident_type")
-        .eq("street", selectedStreet)
-        .eq("direction", direction)
-        .gte("reported_at", twentyMinutesAgo.toISOString());
+      // Fetch counts for each incident type with its specific time window
+      for (const incidentType of incidentTypes) {
+        const hoursAgo = getIncidentTimeWindow(incidentType);
+        const timeAgo = new Date();
+        timeAgo.setHours(timeAgo.getHours() - hoursAgo);
 
-      if (error) throw error;
+        const { data, error } = await supabase
+          .from("incident_reports")
+          .select("id")
+          .eq("street", selectedStreet)
+          .eq("direction", direction)
+          .eq("incident_type", incidentType)
+          .gte("reported_at", timeAgo.toISOString());
 
-      const counts = (data || []).reduce((acc, r) => {
-        acc[r.incident_type] = (acc[r.incident_type] || 0) + 1;
-        return acc;
-      }, {} as Record<string, number>);
+        if (!error && data) {
+          counts[incidentType] = data.length;
+        }
+      }
 
       setIncidentCounts(counts);
     } catch (error) {

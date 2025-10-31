@@ -7,7 +7,11 @@ interface RssItem {
   position: number;
 }
 
-export const RssTicker = () => {
+interface RssTickerProps {
+  speed?: number;
+}
+
+export const RssTicker = ({ speed = 60 }: RssTickerProps) => {
   const [items, setItems] = useState<RssItem[]>([]);
 
   useEffect(() => {
@@ -65,7 +69,7 @@ export const RssTicker = () => {
               100% { transform: translateX(-50%); }
             }
             .animate-scroll-left {
-              animation: scroll-left 40s linear infinite;
+              animation: scroll-left ${speed}s linear infinite;
             }
             .animate-scroll-left:hover {
               animation-play-state: paused;

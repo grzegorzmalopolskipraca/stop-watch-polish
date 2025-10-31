@@ -4,7 +4,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Trash2, Edit2, ChevronUp, ChevronDown, Plus } from "lucide-react";
+import { Trash2, Edit2, ChevronUp, ChevronDown, Plus, Minus } from "lucide-react";
+import { RssTicker } from "@/components/RssTicker";
 
 interface RssItem {
   id: string;
@@ -19,6 +20,7 @@ const Rss = () => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editText, setEditText] = useState("");
   const [newItemText, setNewItemText] = useState("");
+  const [tickerSpeed, setTickerSpeed] = useState(60);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -201,9 +203,32 @@ const Rss = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background p-8">
-      <div className="max-w-4xl mx-auto space-y-6">
-        <h1 className="text-3xl font-bold">RSS Ticker Management</h1>
+    <div className="min-h-screen bg-background">
+      <RssTicker speed={tickerSpeed} />
+      
+      <div className="p-8">
+        <div className="max-w-4xl mx-auto space-y-6">
+          <div className="flex items-center justify-between">
+            <h1 className="text-3xl font-bold">RSS Ticker Management</h1>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">Speed:</span>
+              <Button
+                onClick={() => setTickerSpeed(prev => Math.min(prev + 10, 120))}
+                variant="outline"
+                size="icon"
+              >
+                <Minus className="h-4 w-4" />
+              </Button>
+              <span className="text-sm font-medium w-12 text-center">{tickerSpeed}s</span>
+              <Button
+                onClick={() => setTickerSpeed(prev => Math.max(prev - 10, 20))}
+                variant="outline"
+                size="icon"
+              >
+                <Plus className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
         
         <div className="space-y-4">
           <div className="flex gap-2">
@@ -302,6 +327,7 @@ const Rss = () => {
               No items yet. Add your first item above.
             </p>
           )}
+          </div>
         </div>
       </div>
     </div>

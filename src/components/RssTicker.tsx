@@ -193,8 +193,8 @@ export const RssTicker = () => {
         <style dangerouslySetInnerHTML={{
           __html: `
             @keyframes scroll-left {
-              0% { transform: translateX(100%); }
-              100% { transform: translateX(-100%); }
+              0% { transform: translateX(0); }
+              100% { transform: translateX(-50%); }
             }
             .animate-scroll-left {
               animation: scroll-left ${speed}s linear infinite;
@@ -204,7 +204,7 @@ export const RssTicker = () => {
             }
           `
         }} />
-        <div className="flex gap-32 animate-scroll-left whitespace-nowrap text-sm">
+        <div className="flex gap-32 animate-scroll-left whitespace-nowrap text-sm pl-[100%] px-4">
           {duplicatedItems.map((item, index) => (
             <span key={`${item.id}-${index}`} className="text-foreground/80">
               {item.text}

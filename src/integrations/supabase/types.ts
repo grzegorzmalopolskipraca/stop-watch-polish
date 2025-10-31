@@ -227,6 +227,30 @@ export type Database = {
         }
         Relationships: []
       }
+      rss_items: {
+        Row: {
+          created_at: string
+          id: string
+          position: number
+          text: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          position?: number
+          text: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          position?: number
+          text?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       sms_subscriptions: {
         Row: {
           back_to_home_hour: string | null

@@ -40,6 +40,8 @@ export async function subscribeToOneSignal(street: string): Promise<boolean> {
     console.log("=== ONESIGNAL SUBSCRIPTION START ===");
     console.log("Street:", street);
     console.log("Timestamp:", new Date().toISOString());
+    console.log("Current URL:", window.location.href);
+    console.log("User Agent:", navigator.userAgent);
     
     // Step 1: Check if browser supports notifications
     console.log("Step 1: Checking browser notification support...");
@@ -60,24 +62,43 @@ export async function subscribeToOneSignal(street: string): Promise<boolean> {
 
     // Step 3: Request notification permission
     console.log("Step 3: Requesting notification permission...");
+    console.log("Current Notification.permission:", Notification.permission);
+    console.log("OneSignal object methods:", Object.keys(window.OneSignal));
+    console.log("OneSignal.Notifications methods:", window.OneSignal.Notifications ? Object.keys(window.OneSignal.Notifications) : "NOT AVAILABLE");
+    
     const permission = await window.OneSignal.Notifications.requestPermission();
-    console.log("Permission result:", permission);
+    console.log("Permission request result:", permission);
+    console.log("Permission type:", typeof permission);
     
     if (!permission) {
+      console.error("❌ Permission denied or failed");
       throw new Error("Notification permission denied");
     }
     console.log("✅ Permission granted");
 
     // Step 4: Subscribe to push notifications
     console.log("Step 4: Subscribing to push notifications...");
+    console.log("OneSignal.User available:", !!window.OneSignal.User);
+    console.log("OneSignal.User.PushSubscription available:", !!window.OneSignal.User?.PushSubscription);
+    
     await window.OneSignal.User.PushSubscription.optIn();
     console.log("✅ Subscribed to push notifications");
+    
+    // Verify subscription
+    const subscriptionState = window.OneSignal.User.PushSubscription.optedIn;
+    console.log("Subscription state after optIn:", subscriptionState);
 
     // Step 5: Add street tag (using unique tag per street for multiple subscriptions)
     console.log("Step 5: Adding street tag...");
     const tagKey = `street_${street.replace(/\s+/g, '_')}`;
+    console.log("Tag key to add:", tagKey);
+    
     await window.OneSignal.User.addTag(tagKey, "true");
     console.log("✅ Street tag added:", tagKey);
+    
+    // Verify tag was added
+    const tags = await window.OneSignal.User.getTags();
+    console.log("All tags after adding:", tags);
 
     // Step 6: Save to local storage
     console.log("Step 6: Saving subscription status...");

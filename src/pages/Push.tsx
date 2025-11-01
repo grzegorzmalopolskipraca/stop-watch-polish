@@ -5,6 +5,7 @@ import { Bell, BellOff, Send, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { subscribeToOneSignal, unsubscribeFromOneSignal, isOneSignalSubscribed } from "@/utils/onesignal";
 import { supabase } from "@/integrations/supabase/client";
+import { ConsoleViewer } from "@/components/ConsoleViewer";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -230,6 +231,11 @@ const Push = () => {
             <li>Kliknij "Wyślij testowe powiadomienie" aby przetestować</li>
             <li>Powiadomienie powinno pojawić się na tym urządzeniu</li>
           </ol>
+        </div>
+
+        {/* Console Viewer */}
+        <div className="mt-6">
+          <ConsoleViewer />
         </div>
 
         <footer className="flex flex-wrap justify-center gap-4 mt-8 pt-6 border-t border-border text-sm">

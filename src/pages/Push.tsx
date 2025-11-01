@@ -33,16 +33,48 @@ const Push = () => {
       console.log("[Push Page] Current notification permission:", Notification.permission);
     }
 
-    // Service Worker diagnostics
+    // Service Worker diagnostics + cleanup of legacy SWs
     if ("serviceWorker" in navigator) {
       console.log("[Push Page] ServiceWorker supported by this browser");
       navigator.serviceWorker
         .getRegistrations()
-        .then((regs) => {
+        .then(async (regs) => {
           console.log(
             "[Push Page] Existing SW registrations:",
-            regs.map((r) => ({ scope: r.scope }))
+            regs.map((r) => ({
+              scope: r.scope,
+              script:
+                r.active?.scriptURL ||
+                r.installing?.scriptURL ||
+                r.waiting?.scriptURL ||
+                "<unknown>",
+            }))
           );
+
+          // Unregister any legacy/non-OneSignal workers (e.g. old sw.js)
+          let didUnregister = false;
+          for (const r of regs) {
+            const script =
+              r.active?.scriptURL || r.installing?.scriptURL || r.waiting?.scriptURL || "";
+            const isOneSignal = /OneSignalSDKWorker\.js|OneSignalSDKUpdaterWorker\.js/.test(script);
+            const isLegacy = /\/sw\.js$|wonderpush|workbox|vite-pwa/i.test(script);
+            if (!isOneSignal && isLegacy) {
+              console.warn("[Push Page] Unregistering legacy Service Worker:", { scope: r.scope, script });
+              try {
+                const ok = await r.unregister();
+                console.log("[Push Page] Unregister result:", ok);
+                didUnregister = ok || didUnregister;
+              } catch (e) {
+                console.warn("[Push Page] Unregister failed", e);
+              }
+            }
+          }
+
+          // If we removed an old SW, reload once so OneSignal can take over
+          if (didUnregister) {
+            console.log("[Push Page] Reloading to allow OneSignal to register its worker...");
+            window.location.reload();
+          }
         })
         .catch((e) => console.warn("[Push Page] getRegistrations() failed", e));
     } else {

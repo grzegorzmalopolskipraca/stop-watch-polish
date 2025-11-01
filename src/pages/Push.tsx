@@ -211,12 +211,12 @@ const Push = () => {
             {isPushEnabled ? (
               <>
                 <Bell className="w-6 h-6 mr-2" />
-                Push włączone - kliknij aby wyłączyć
+                Zapisany na powiadomienia - kliknij aby wypisać
               </>
             ) : (
               <>
                 <BellOff className="w-6 h-6 mr-2" />
-                Push wyłączone - kliknij aby włączyć
+                Nie subskrybujesz - kliknij aby zapisać
               </>
             )}
           </Button>
@@ -229,7 +229,7 @@ const Push = () => {
             variant="secondary"
           >
             <Send className="w-6 h-6 mr-2" />
-            Wyślij testowe powiadomienie
+            Wyślij testową wiadomość push
           </Button>
 
           {!isPushEnabled && (

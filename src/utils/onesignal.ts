@@ -3,7 +3,33 @@
 declare global {
   interface Window {
     OneSignal?: any;
+    OneSignalDeferred?: any[];
   }
+}
+
+/**
+ * Wait for OneSignal to be fully initialized
+ */
+async function waitForOneSignal(timeoutMs: number = 5000): Promise<boolean> {
+  console.log("Waiting for OneSignal initialization...");
+  
+  const startTime = Date.now();
+  
+  return new Promise((resolve) => {
+    const checkInterval = setInterval(() => {
+      const elapsed = Date.now() - startTime;
+      
+      if (window.OneSignal && typeof window.OneSignal.init === 'function') {
+        console.log(`✅ OneSignal initialized after ${elapsed}ms`);
+        clearInterval(checkInterval);
+        resolve(true);
+      } else if (elapsed >= timeoutMs) {
+        console.error(`❌ OneSignal initialization timeout after ${elapsed}ms`);
+        clearInterval(checkInterval);
+        resolve(false);
+      }
+    }, 100); // Check every 100ms
+  });
 }
 
 /**
@@ -24,14 +50,13 @@ export async function subscribeToOneSignal(street: string): Promise<boolean> {
     }
     console.log("✅ Browser supports notifications");
 
-    // Step 2: Check if OneSignal SDK is loaded
-    console.log("Step 2: Checking OneSignal SDK availability...");
-    if (!window.OneSignal) {
-      const error = "❌ OneSignal SDK not loaded";
-      console.error(error);
-      throw new Error("OneSignal SDK not loaded. Please refresh the page.");
+    // Step 2: Wait for OneSignal SDK to be ready (5 second timeout)
+    console.log("Step 2: Waiting for OneSignal SDK (5s timeout)...");
+    const isReady = await waitForOneSignal(5000);
+    if (!isReady) {
+      throw new Error("OneSignal SDK nie załadował się na czas. Odśwież stronę i spróbuj ponownie.");
     }
-    console.log("✅ OneSignal SDK loaded");
+    console.log("✅ OneSignal SDK ready");
 
     // Step 3: Request notification permission
     console.log("Step 3: Requesting notification permission...");

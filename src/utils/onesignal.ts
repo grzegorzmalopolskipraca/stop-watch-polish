@@ -48,10 +48,11 @@ export async function subscribeToOneSignal(street: string): Promise<boolean> {
     await window.OneSignal.User.PushSubscription.optIn();
     console.log("✅ Subscribed to push notifications");
 
-    // Step 5: Add street tag
+    // Step 5: Add street tag (using unique tag per street for multiple subscriptions)
     console.log("Step 5: Adding street tag...");
-    await window.OneSignal.User.addTag("street", street);
-    console.log("✅ Street tag added:", street);
+    const tagKey = `street_${street.replace(/\s+/g, '_')}`;
+    await window.OneSignal.User.addTag(tagKey, "true");
+    console.log("✅ Street tag added:", tagKey);
 
     // Step 6: Save to local storage
     console.log("Step 6: Saving subscription status...");
@@ -73,23 +74,27 @@ export async function subscribeToOneSignal(street: string): Promise<boolean> {
  */
 export async function unsubscribeFromOneSignal(street: string): Promise<boolean> {
   try {
+    console.log("=== ONESIGNAL UNSUBSCRIBE START ===");
+    console.log("Street:", street);
+    
     if (!window.OneSignal) {
       console.error("OneSignal not initialized");
       return false;
     }
 
-    // Remove street tag
-    await window.OneSignal.User.removeTag("street");
-    
-    // Opt out of push notifications
-    await window.OneSignal.User.PushSubscription.optOut();
+    // Remove street-specific tag
+    const tagKey = `street_${street.replace(/\s+/g, '_')}`;
+    await window.OneSignal.User.removeTag(tagKey);
+    console.log("✅ Street tag removed:", tagKey);
     
     // Clear local subscription status
     localStorage.removeItem(`onesignal_subscribed_${street}`);
+    console.log("✅ Local storage cleared");
     
-    console.log("Unsubscribed from OneSignal for street:", street);
+    console.log("=== ONESIGNAL UNSUBSCRIBE COMPLETED ===");
     return true;
   } catch (error) {
+    console.error("=== ONESIGNAL UNSUBSCRIBE FAILED ===");
     console.error("Error unsubscribing from OneSignal:", error);
     return false;
   }

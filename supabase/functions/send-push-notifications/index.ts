@@ -29,6 +29,10 @@ serve(async (req) => {
 
     console.log("Sending notification:", { title, body });
 
+    // Create tag key matching the subscription format
+    const tagKey = `street_${street.replace(/\s+/g, '_')}`;
+    console.log("Using tag key:", tagKey);
+
     // Send notification to OneSignal
     const response = await fetch("https://onesignal.com/api/v1/notifications", {
       method: "POST",
@@ -41,7 +45,7 @@ serve(async (req) => {
         headings: { en: title },
         contents: { en: body },
         filters: [
-          { field: "tag", key: "street", relation: "=", value: street }
+          { field: "tag", key: tagKey, relation: "=", value: "true" }
         ],
       }),
     });

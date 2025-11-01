@@ -15,6 +15,12 @@ export default defineConfig(({ mode }) => ({
     mode === "development" && componentTagger(),
     VitePWA({
       registerType: "autoUpdate",
+      strategies: "injectManifest",
+      injectManifest: {
+        injectionPoint: undefined,
+      },
+      srcDir: "public",
+      filename: "OneSignalSDKWorker.js", // Use OneSignal's worker as the PWA worker
       includeAssets: ["favicon.ico"],
       manifest: {
         name: "Czy ulica stoi?",
@@ -34,21 +40,6 @@ export default defineConfig(({ mode }) => ({
             src: "/icon-512.png",
             sizes: "512x512",
             type: "image/png",
-          },
-        ],
-      },
-      workbox: {
-        runtimeCaching: [
-          {
-            urlPattern: /^https:\/\/talqitzvchxggkqnnmbf\.supabase\.co\/.*/i,
-            handler: "NetworkFirst",
-            options: {
-              cacheName: "supabase-cache",
-              expiration: {
-                maxEntries: 10,
-                maxAgeSeconds: 60 * 60 * 24, // 24 hours
-              },
-            },
           },
         ],
       },

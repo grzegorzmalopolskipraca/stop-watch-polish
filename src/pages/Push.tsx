@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Bell, BellOff, Send, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
-import { subscribeToWonderPush, unsubscribeFromWonderPush, isWonderPushSubscribed } from "@/utils/wonderpush";
+import { subscribeToOneSignal, unsubscribeFromOneSignal, isOneSignalSubscribed } from "@/utils/onesignal";
 import { supabase } from "@/integrations/supabase/client";
 import {
   AlertDialog,
@@ -25,7 +25,7 @@ const Push = () => {
   useEffect(() => {
     console.log("[Push Page] Component mounted");
     console.log("[Push Page] Test street:", testStreet);
-    console.log("[Push Page] WonderPush global object:", window.WonderPush);
+    console.log("[Push Page] OneSignal global object:", window.OneSignal);
     console.log("[Push Page] Notification API available:", "Notification" in window);
     
     if ("Notification" in window) {
@@ -33,7 +33,7 @@ const Push = () => {
     }
     
     // Check initial push status
-    const isSubscribed = isWonderPushSubscribed(testStreet);
+    const isSubscribed = isOneSignalSubscribed(testStreet);
     console.log("[Push Page] Initial subscription status:", isSubscribed);
     setIsPushEnabled(isSubscribed);
   }, []);
@@ -46,7 +46,7 @@ const Push = () => {
       if (isPushEnabled) {
         // Disable push
         console.log("[Push Page] Attempting to unsubscribe from:", testStreet);
-        const success = await unsubscribeFromWonderPush(testStreet);
+        const success = await unsubscribeFromOneSignal(testStreet);
         console.log("[Push Page] Unsubscribe result:", success);
         
         if (success) {
@@ -63,7 +63,7 @@ const Push = () => {
         console.log("[Push Page] Check console for detailed subscription logs");
         
         try {
-          const success = await subscribeToWonderPush(testStreet);
+          const success = await subscribeToOneSignal(testStreet);
           console.log("[Push Page] Subscribe result:", success);
           
           if (success) {
@@ -163,7 +163,7 @@ const Push = () => {
               </div>
               
               <p className="text-xs text-muted-foreground">
-                Powiadomienia push wymagają zgody przeglądarki. Bez tego WonderPush nie może działać.
+                Powiadomienia push wymagają zgody przeglądarki. Bez tego OneSignal nie może działać.
               </p>
             </AlertDialogDescription>
           </AlertDialogHeader>

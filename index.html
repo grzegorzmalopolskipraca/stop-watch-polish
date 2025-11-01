@@ -41,16 +41,15 @@
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
     
-    <!-- WonderPush SDK -->
+    <!-- OneSignal push notification SDK -->
+    <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
     <script>
-      window.WonderPushSettings = {
-        webKey: "b1b00811e3e7e5e31e8a82419f0bfc7e76e9bf56ab110a5f0c7105fdaf53182e",
-        notificationDefaultUrl: "https://ejedzie.pl"
-      };
-      (function(W,o,n,d,e,r,P,u,s,h){
-        if(W[P])return;u=W[P]=function(){u._.push(arguments)};u._=[];
-        s=o.createElement(n);s.async=1;s.src=d;h=o.getElementsByTagName(n)[0];h.parentNode.insertBefore(s,h);
-      })(window,document,'script','https://cdn.by.wonderpush.com/sdk/1.1/wonderpush-loader.min.js','WonderPush');
+      window.OneSignalDeferred = window.OneSignalDeferred || [];
+      OneSignalDeferred.push(async function(OneSignal) {
+        await OneSignal.init({
+          appId: "16ce973c-c7b3-42ff-b7b4-fe48be517186",
+        });
+      });
     </script>
   </body>
 </html>

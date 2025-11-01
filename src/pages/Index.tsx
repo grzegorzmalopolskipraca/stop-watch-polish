@@ -45,7 +45,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format, startOfDay } from "date-fns";
 import { pl } from "date-fns/locale";
 import { ArrowUp, ArrowDown, Bell, BellOff, ThumbsUp, Coffee, Pizza, Download, Share2, Printer, Users, Baby } from "lucide-react";
-import { subscribeToWonderPush, unsubscribeFromWonderPush, isWonderPushSubscribed } from "@/utils/wonderpush";
+import { subscribeToOneSignal, unsubscribeFromOneSignal, isOneSignalSubscribed } from "@/utils/onesignal";
 
 const STREETS = [
   "Borowska",
@@ -574,7 +574,7 @@ const Index = () => {
     console.log(`[StreetChange] Street or direction changed: ${selectedStreet} (${direction})`);
     localStorage.setItem('selectedStreet', selectedStreet);
     // Load incident notification preference when street changes
-    setIncidentNotificationsEnabled(isWonderPushSubscribed(`incidents_${selectedStreet}`));
+    setIncidentNotificationsEnabled(isOneSignalSubscribed(`incidents_${selectedStreet}`));
   }, [selectedStreet, direction]);
 
   // Capture the install prompt event
@@ -1127,7 +1127,7 @@ const Index = () => {
 
     if (incidentNotificationsEnabled) {
       // Unsubscribe
-      const success = await unsubscribeFromWonderPush(`incidents_${selectedStreet}`);
+      const success = await unsubscribeFromOneSignal(`incidents_${selectedStreet}`);
       if (success) {
         setIncidentNotificationsEnabled(false);
         toast.success("Powiadomienia o zdarzeniach wyłączone");
@@ -1136,7 +1136,7 @@ const Index = () => {
       }
     } else {
       // Subscribe
-      const success = await subscribeToWonderPush(`incidents_${selectedStreet}`);
+      const success = await subscribeToOneSignal(`incidents_${selectedStreet}`);
       if (success) {
         setIncidentNotificationsEnabled(true);
         toast.success("Powiadomienia o zdarzeniach włączone");

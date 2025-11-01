@@ -176,26 +176,23 @@ export type Database = {
       push_subscriptions: {
         Row: {
           created_at: string
-          endpoint: string
           id: string
+          player_id: string
           street: string
-          subscription: Json
           updated_at: string
         }
         Insert: {
           created_at?: string
-          endpoint: string
           id?: string
+          player_id: string
           street: string
-          subscription: Json
           updated_at?: string
         }
         Update: {
           created_at?: string
-          endpoint?: string
           id?: string
+          player_id?: string
           street?: string
-          subscription?: Json
           updated_at?: string
         }
         Relationships: []

@@ -1,44 +1,12 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.76.1';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const WONDERPUSH_ACCESS_TOKEN = Deno.env.get("WONDERPUSH_ACCESS_TOKEN") || "";
-const WONDERPUSH_API_URL = "https://management-api.wonderpush.com/v1/deliveries";
-
-// IP-based rate limiting: max 5 notification triggers per IP per minute
-async function checkIPRateLimit(supabase: any, clientIP: string): Promise<boolean> {
-  const oneMinuteAgo = new Date(Date.now() - 60 * 1000).toISOString();
-  
-  const { data, error } = await supabase
-    .from('rate_limits')
-    .select('*')
-    .eq('identifier', `ip_${clientIP}`)
-    .eq('action_type', 'push_notification_ip')
-    .gte('last_action_at', oneMinuteAgo);
-
-  if (error) {
-    console.error('IP rate limit check error:', error);
-    return true; // Fail open
-  }
-
-  if (data && data.length >= 5) {
-    return false; // IP rate limit exceeded
-  }
-
-  // Record this IP request
-  await supabase.from('rate_limits').insert({
-    identifier: `ip_${clientIP}`,
-    action_type: 'push_notification_ip',
-    action_count: 1,
-    last_action_at: new Date().toISOString(),
-  });
-
-  return true;
-}
+const ONESIGNAL_APP_ID = "16ce973c-c7b3-42ff-b7b4-fe48be517186";
+const ONESIGNAL_REST_API_KEY = Deno.env.get("ONESIGNAL_REST_API_KEY");
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -46,83 +14,52 @@ serve(async (req) => {
   }
 
   try {
-    // Get client IP for rate limiting
-    const clientIP = req.headers.get('x-forwarded-for')?.split(',')[0].trim() || 
-                     req.headers.get('x-real-ip') || 
-                     'unknown';
+    console.log("Sending push notification via OneSignal");
     
-    console.log(`Push notification request from IP: ${clientIP}`);
+    const { street, message, isIncident } = await req.json();
+    console.log("Request params:", { street, isIncident });
 
-    // Initialize Supabase client for rate limiting
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
-
-    // Check IP-based rate limit
-    const allowed = await checkIPRateLimit(supabase, clientIP);
-    if (!allowed) {
-      console.log(`Push notification rate limit exceeded for IP: ${clientIP}`);
-      return new Response(
-        JSON.stringify({ error: 'Zbyt wiele prób wysłania powiadomień. Spróbuj ponownie za minutę.' }),
-        { 
-          status: 429, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        }
-      );
+    if (!ONESIGNAL_REST_API_KEY) {
+      throw new Error("OneSignal REST API key not configured");
     }
 
-    const { street, message } = await req.json();
+    // Construct notification title and body
+    const title = isIncident ? `🚨 Zdarzenie na ${street}` : `💬 Nowa wiadomość na ${street}`;
+    const body = message || (isIncident ? "Zgłoszono zdarzenie na Twojej ulicy" : "Nowa wiadomość w czacie");
 
-    console.log(`Sending WonderPush notification for street: ${street}`);
+    console.log("Sending notification:", { title, body });
 
-    // Determine if this is an incident notification or chat notification
-    const isIncident = street.startsWith('incidents_');
-    const actualStreet = isIncident ? street.replace('incidents_', '') : street;
-    const title = isIncident 
-      ? `Zdarzenie drogowe - ${actualStreet}`
-      : `Nowa wiadomość na czacie - ${actualStreet}`;
-
-    // Send notification via WonderPush REST API
-    const response = await fetch(WONDERPUSH_API_URL, {
+    // Send notification to OneSignal
+    const response = await fetch("https://onesignal.com/api/v1/notifications", {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${WONDERPUSH_ACCESS_TOKEN}`,
         "Content-Type": "application/json",
-        "X-WonderPush-Authorization": `Bearer ${WONDERPUSH_ACCESS_TOKEN}`,
+        "Authorization": `Basic ${ONESIGNAL_REST_API_KEY}`,
       },
       body: JSON.stringify({
-        notification: {
-          alert: {
-            text: message,
-            title: title,
-          },
-        },
-        targetTags: [`street_${street}`],
+        app_id: ONESIGNAL_APP_ID,
+        headings: { en: title },
+        contents: { en: body },
+        filters: [
+          { field: "tag", key: "street", relation: "=", value: street }
+        ],
       }),
     });
 
+    const responseData = await response.json();
+    console.log("OneSignal response:", responseData);
+
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error("WonderPush API error:", response.status, errorText);
-      throw new Error(`WonderPush API error: ${response.status} ${errorText}`);
+      throw new Error(`OneSignal API error: ${JSON.stringify(responseData)}`);
     }
 
-    const data = await response.json();
-    console.log("WonderPush notification sent successfully:", data);
-
-    return new Response(
-      JSON.stringify({ 
-        success: true,
-        data,
-      }),
-      {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
-    );
+    return new Response(JSON.stringify({ success: true, data: responseData }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   } catch (error) {
-    console.error("Error in send-push-notifications:", error);
-    return new Response(JSON.stringify({ error: "Wystąpił błąd podczas wysyłania powiadomień" }), {
+    console.error("Error sending push notification:", error);
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    return new Response(JSON.stringify({ error: errorMessage }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

@@ -43,6 +43,41 @@
     
     <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
     <script>
+      // Proactive cleanup of legacy/non-OneSignal service workers (sw.js, wonderpush, vite-pwa)
+      (function () {
+        if (!('serviceWorker' in navigator)) return;
+        console.log('[SW Cleanup] Checking existing service workers...');
+        navigator.serviceWorker.getRegistrations().then(async (regs) => {
+          console.log('[SW Cleanup] Registrations:', regs.map(r => ({
+            scope: r.scope,
+            script: (r.active?.scriptURL || r.installing?.scriptURL || r.waiting?.scriptURL || '<unknown>')
+          })));
+          let removed = false;
+          for (const r of regs) {
+            const script = r.active?.scriptURL || r.installing?.scriptURL || r.waiting?.scriptURL || '';
+            const isOneSignal = /OneSignalSDKWorker\.js|OneSignalSDKUpdaterWorker\.js/.test(script);
+            const isLegacy = /\/sw\.js$|wonderpush|workbox|vite-pwa/i.test(script);
+            if (!isOneSignal && isLegacy) {
+              console.warn('[SW Cleanup] Unregistering legacy worker:', { scope: r.scope, script });
+              try { await r.unregister(); removed = true; }
+              catch (e) { console.warn('[SW Cleanup] Unregister failed', e); }
+            }
+          }
+          if (removed && !sessionStorage.getItem('swCleanupReloaded')) {
+            console.log('[SW Cleanup] Reloading page to allow OneSignal worker to take control...');
+            sessionStorage.setItem('swCleanupReloaded', '1');
+            location.reload();
+          }
+        }).catch(e => console.warn('[SW Cleanup] getRegistrations failed', e));
+      })();
+
+      // Optional: explicitly register OneSignal worker to ensure correct scope
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/OneSignalSDKWorker.js').then(reg => {
+          console.log('[OneSignal SW] Registered:', { scope: reg.scope });
+        }).catch(err => console.warn('[OneSignal SW] Registration failed:', err));
+      }
+
       window.OneSignalDeferred = window.OneSignalDeferred || [];
       OneSignalDeferred.push(async function(OneSignal) {
         try {
@@ -57,7 +92,7 @@
           if ('serviceWorker' in navigator) {
             try {
               const regs = await navigator.serviceWorker.getRegistrations();
-              console.log('[OneSignal] existing service workers:', regs.map(r => ({ scope: r.scope })));
+              console.log('[OneSignal] existing service workers:', regs.map(r => ({ scope: r.scope, script: (r.active?.scriptURL || r.installing?.scriptURL || r.waiting?.scriptURL || '<unknown>') })));
             } catch (e) {
               console.warn('[OneSignal] unable to list service workers', e);
             }

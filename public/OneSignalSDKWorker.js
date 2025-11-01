@@ -38,6 +38,14 @@ self.addEventListener('notificationclick', (event) => {
   });
 });
 
+self.addEventListener('notificationclose', (event) => {
+  console.log('[OneSignalSDKWorker] Notification closed:', {
+    timestamp: new Date().toISOString(),
+    title: event.notification?.title,
+    tag: event.notification?.tag
+  });
+});
+
 self.addEventListener('pushsubscriptionchange', (event) => {
   console.log('[OneSignalSDKWorker] Push subscription changed:', event);
 });

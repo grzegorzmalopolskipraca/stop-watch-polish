@@ -26,13 +26,29 @@ const Push = () => {
   useEffect(() => {
     console.log("[Push Page] Component mounted");
     console.log("[Push Page] Test street:", testStreet);
-    console.log("[Push Page] OneSignal global object:", window.OneSignal);
+    console.log("[Push Page] OneSignal global object:", (window as any).OneSignal);
     console.log("[Push Page] Notification API available:", "Notification" in window);
-    
+
     if ("Notification" in window) {
       console.log("[Push Page] Current notification permission:", Notification.permission);
     }
-    
+
+    // Service Worker diagnostics
+    if ("serviceWorker" in navigator) {
+      console.log("[Push Page] ServiceWorker supported by this browser");
+      navigator.serviceWorker
+        .getRegistrations()
+        .then((regs) => {
+          console.log(
+            "[Push Page] Existing SW registrations:",
+            regs.map((r) => ({ scope: r.scope }))
+          );
+        })
+        .catch((e) => console.warn("[Push Page] getRegistrations() failed", e));
+    } else {
+      console.warn("[Push Page] ServiceWorker NOT supported");
+    }
+
     // Check initial push status
     const isSubscribed = isOneSignalSubscribed(testStreet);
     console.log("[Push Page] Initial subscription status:", isSubscribed);

@@ -41,14 +41,30 @@
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
     
-    <!-- OneSignal push notification SDK -->
     <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
     <script>
       window.OneSignalDeferred = window.OneSignalDeferred || [];
       OneSignalDeferred.push(async function(OneSignal) {
-        await OneSignal.init({
-          appId: "16ce973c-c7b3-42ff-b7b4-fe48be517186",
-        });
+        try {
+          if (OneSignal?.Debug?.setLogLevel) {
+            OneSignal.Debug.setLogLevel('trace');
+          }
+          console.log('[OneSignal] init starting', { origin: location.origin });
+          const result = await OneSignal.init({
+            appId: "16ce973c-c7b3-42ff-b7b4-fe48be517186",
+          });
+          console.log('[OneSignal] init success', result);
+          if ('serviceWorker' in navigator) {
+            try {
+              const regs = await navigator.serviceWorker.getRegistrations();
+              console.log('[OneSignal] existing service workers:', regs.map(r => ({ scope: r.scope })));
+            } catch (e) {
+              console.warn('[OneSignal] unable to list service workers', e);
+            }
+          }
+        } catch (e) {
+          console.error('[OneSignal] init error', e);
+        }
       });
     </script>
   </body>

@@ -188,25 +188,27 @@ serve(async (req) => {
     console.log('[get-weather-forecast] Will show slots until:', twoHoursLater.toISOString());
     
     const filteredSlots = allSlots.filter(slot => {
-      const [hours, minutes] = slot.timeFrom.split(':').map(Number);
-      const slotTime = new Date(now);
-      slotTime.setHours(hours, minutes, 0, 0);
+      // Parse the END time of the slot (timeTo)
+      const [hoursTo, minutesTo] = slot.timeTo.split(':').map(Number);
+      const slotEndTime = new Date(now);
+      slotEndTime.setHours(hoursTo, minutesTo, 0, 0);
       
-      // Handle day boundary
-      if (hours < now.getHours() || (hours === now.getHours() && minutes < now.getMinutes())) {
-        slotTime.setDate(slotTime.getDate() + 1);
+      // Handle day boundary for end time
+      if (hoursTo < now.getHours() || (hoursTo === now.getHours() && minutesTo <= now.getMinutes())) {
+        slotEndTime.setDate(slotEndTime.getDate() + 1);
       }
       
-      const isFuture = slotTime >= now && slotTime < twoHoursLater;
-      console.log(`[get-weather-forecast] Slot ${slot.timeFrom}-${slot.timeTo}: ${slotTime.toISOString()} - ${isFuture ? 'INCLUDED' : 'EXCLUDED'}`);
+      // Include slot if its END time is in the future (allows current partially-elapsed slots)
+      const isFuture = slotEndTime > now;
+      console.log(`[get-weather-forecast] Slot ${slot.timeFrom}-${slot.timeTo}: ends at ${slotEndTime.toISOString()} - ${isFuture ? 'INCLUDED' : 'EXCLUDED'}`);
       
       return isFuture;
     });
     
     console.log(`[get-weather-forecast] Filtered ${filteredSlots.length} future slots from ${allSlots.length} total slots`);
     
-    // Ensure we always return exactly 6 slots (even if some extend slightly beyond 2 hours)
-    const finalSlots = filteredSlots.length >= 6 ? filteredSlots.slice(0, 6) : (filteredSlots.length > 0 ? filteredSlots : allSlots.slice(0, 6));
+    // Always return exactly 6 slots for 2 hours coverage (even if some have partially elapsed)
+    const finalSlots = filteredSlots.slice(0, 6);
 
     // Sort by best weather conditions (lowest rain probability, then lowest rainfall)
     const sortedSlots = [...finalSlots].sort((a, b) => {

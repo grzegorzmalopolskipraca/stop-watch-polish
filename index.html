@@ -85,13 +85,13 @@
           
           console.log('[OneSignal] init success', result);
           
-          // Safe debug logging via SDK events (doesn't override service worker)
-          OneSignal.on('notificationDisplay', (event) => {
-            console.log('[OneSignal] Notification displayed:', event);
+          // Safe debug logging via SDK events (v16 API)
+          OneSignal.Notifications.addEventListener('click', (event) => {
+            console.log('[OneSignal] Notification clicked:', event);
           });
           
-          OneSignal.on('notificationClick', (event) => {
-            console.log('[OneSignal] Notification clicked:', event);
+          OneSignal.Notifications.addEventListener('foregroundWillDisplay', (event) => {
+            console.log('[OneSignal] Notification will display:', event);
           });
           
           if ('serviceWorker' in navigator) {

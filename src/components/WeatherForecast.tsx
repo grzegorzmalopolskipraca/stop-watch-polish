@@ -108,7 +108,7 @@ export const WeatherForecast = ({ street }: Props) => {
         const latitude = (coords.start.lat + coords.end.lat) / 2;
         const longitude = (coords.start.lng + coords.end.lng) / 2;
 
-        console.log(`[WeatherForecast] Fetching weather for ${street}:`, { latitude, longitude });
+        console.log(`[WeatherForecast] Fetching weather for ${street} at ${new Date().toISOString()}`);
 
         const { data, error: invokeError } = await supabase.functions.invoke('get-weather-forecast', {
           body: { latitude, longitude, street }
@@ -150,6 +150,14 @@ export const WeatherForecast = ({ street }: Props) => {
     };
 
     fetchWeather();
+    
+    // Auto-refresh every 2 minutes to keep forecast current
+    const intervalId = setInterval(() => {
+      console.log('[WeatherForecast] Auto-refreshing weather data');
+      fetchWeather();
+    }, 2 * 60 * 1000); // 2 minutes
+
+    return () => clearInterval(intervalId);
   }, [street]);
 
   if (isLoading) {

@@ -19,7 +19,7 @@ interface WeatherSlot {
   rainfallMillis: number;
 }
 
-const CACHE_DURATION_MS = 5 * 60 * 1000; // 5 minutes - reduced for more accurate real-time data
+const CACHE_DURATION_MS = 2 * 60 * 1000; // 2 minutes - keep forecast fresh and current
 
 function interpolateWeatherData(hour1: any, hour2: any, intervalMinutes: number): WeatherSlot[] {
   const slots: WeatherSlot[] = [];

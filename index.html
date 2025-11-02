@@ -71,13 +71,6 @@
         }).catch(e => console.warn('[SW Cleanup] getRegistrations failed', e));
       })();
 
-      // Optional: explicitly register OneSignal worker to ensure correct scope
-      if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('/OneSignalSDKWorker.js').then(reg => {
-          console.log('[OneSignal SW] Registered:', { scope: reg.scope });
-        }).catch(err => console.warn('[OneSignal SW] Registration failed:', err));
-      }
-
       window.OneSignalDeferred = window.OneSignalDeferred || [];
       OneSignalDeferred.push(async function(OneSignal) {
         try {

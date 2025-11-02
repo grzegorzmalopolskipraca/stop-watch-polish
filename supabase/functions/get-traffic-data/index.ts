@@ -11,6 +11,14 @@ interface TrafficRequest {
   destination: { lat: number; lng: number };
 }
 
+// Cache duration: 90 seconds (less than the 2-minute polling interval)
+const CACHE_DURATION_MS = 90 * 1000;
+
+// Create a cache key from route coordinates
+function createCacheKey(origin: { lat: number; lng: number }, destination: { lat: number; lng: number }): string {
+  return `route_${origin.lat.toFixed(6)}_${origin.lng.toFixed(6)}_to_${destination.lat.toFixed(6)}_${destination.lng.toFixed(6)}`;
+}
+
 // IP-based rate limiting: max 10 requests per IP per minute
 async function checkIPRateLimit(supabase: any, clientIP: string): Promise<boolean> {
   const oneMinuteAgo = new Date(Date.now() - 60 * 1000).toISOString();
@@ -79,6 +87,35 @@ serve(async (req) => {
     
     console.log('[get-traffic-data] Request body:', { origin, destination });
     
+    // Check route-based cache first
+    const cacheKey = createCacheKey(origin, destination);
+    const { data: cachedData, error: cacheError } = await supabase
+      .from('traffic_cache')
+      .select('traffic_data, cached_at')
+      .eq('route_key', cacheKey)
+      .single();
+    
+    if (!cacheError && cachedData) {
+      const cachedAt = new Date(cachedData.cached_at).getTime();
+      const now = Date.now();
+      const cacheAge = (now - cachedAt) / 1000; // in seconds
+      
+      if ((now - cachedAt) < CACHE_DURATION_MS) {
+        console.log(`[get-traffic-data] Cache HIT for route (age: ${cacheAge.toFixed(0)}s)`);
+        return new Response(
+          JSON.stringify(cachedData.traffic_data),
+          { 
+            status: 200, 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          }
+        );
+      } else {
+        console.log(`[get-traffic-data] Cache EXPIRED for route (age: ${cacheAge.toFixed(0)}s)`);
+      }
+    } else {
+      console.log(`[get-traffic-data] Cache MISS for route`);
+    }
+    
     const apiKey = Deno.env.get('GOOGLE_MAPS_API_KEY');
     if (!apiKey) {
       console.error('[get-traffic-data] Google Maps API key not configured');
@@ -129,6 +166,35 @@ serve(async (req) => {
       console.warn('[get-traffic-data] No routes returned by Google.');
     }
     console.log('[get-traffic-data] Function total time:', `${Date.now() - funcStart}ms`);
+
+    // Cache the response
+    const { error: upsertError } = await supabase
+      .from('traffic_cache')
+      .upsert({
+        route_key: cacheKey,
+        origin_lat: origin.lat,
+        origin_lng: origin.lng,
+        destination_lat: destination.lat,
+        destination_lng: destination.lng,
+        traffic_data: data,
+        cached_at: new Date().toISOString(),
+      }, {
+        onConflict: 'route_key'
+      });
+    
+    if (upsertError) {
+      console.error('[get-traffic-data] Cache upsert error:', upsertError);
+      // Don't fail the request if caching fails
+    } else {
+      console.log('[get-traffic-data] Response cached successfully');
+    }
+
+    // Clean old cache entries (older than 5 minutes)
+    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+    await supabase
+      .from('traffic_cache')
+      .delete()
+      .lt('cached_at', fiveMinutesAgo);
 
     return new Response(
       JSON.stringify(data),

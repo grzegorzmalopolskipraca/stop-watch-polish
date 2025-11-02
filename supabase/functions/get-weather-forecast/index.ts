@@ -122,16 +122,22 @@ serve(async (req) => {
     }
 
     const data = await response.json();
-    console.log('[get-weather-forecast] Weather API response received');
+    console.log('[get-weather-forecast] ===== RAW WEATHER API RESPONSE =====');
+    console.log('[get-weather-forecast] Full response structure:', JSON.stringify(data, null, 2));
     
     if (!data.forecastHours || !Array.isArray(data.forecastHours)) {
       console.error('[get-weather-forecast] No forecast hours in response');
       throw new Error('No forecast data available');
     }
 
+    console.log('[get-weather-forecast] Total forecast hours received:', data.forecastHours.length);
+
     // Get current time and filter for next 3 hours to ensure we have enough data
     const currentTime = new Date();
     const threeHoursLater = new Date(currentTime.getTime() + 3 * 60 * 60 * 1000);
+    
+    console.log('[get-weather-forecast] Current time:', currentTime.toISOString());
+    console.log('[get-weather-forecast] Filtering for next 3 hours until:', threeHoursLater.toISOString());
     
     const relevantHours = data.forecastHours.filter((hour: any) => {
       const hourTime = new Date(hour.interval.startTime);
@@ -139,6 +145,19 @@ serve(async (req) => {
     }).slice(0, 4); // Get up to 4 hours for better interpolation
 
     console.log('[get-weather-forecast] Found', relevantHours.length, 'relevant hours');
+    
+    // Log detailed precipitation data for each relevant hour
+    relevantHours.forEach((hour: any, idx: number) => {
+      console.log(`[get-weather-forecast] Hour ${idx + 1}:`, {
+        time: hour.interval.startTime,
+        precipitation_mm: hour.precipitation?.value || 0,
+        precipitation_prob_percent: (hour.precipitationProbability || 0) * 100,
+        temperature_c: hour.temperature?.value || 'N/A',
+        humidity_percent: hour.humidity || 'N/A',
+        raw_precipitation_object: JSON.stringify(hour.precipitation || {}),
+        raw_precipitation_prob: hour.precipitationProbability
+      });
+    });
 
     if (relevantHours.length < 2) {
       console.error('[get-weather-forecast] Not enough forecast data');
@@ -180,7 +199,26 @@ serve(async (req) => {
       return a.rainfallMillis - b.rainfallMillis;
     });
 
+    console.log('[get-weather-forecast] ===== FINAL PROCESSED SLOTS =====');
     console.log('[get-weather-forecast] Generated', sortedSlots.length, 'slots for 2 hours');
+    sortedSlots.forEach((slot, idx) => {
+      console.log(`[get-weather-forecast] Slot ${idx + 1}:`, {
+        time: `${slot.timeFrom} - ${slot.timeTo}`,
+        rain_percent: slot.rainPercent,
+        rainfall_mm: slot.rainfallMillis
+      });
+    });
+    
+    // Add metadata to response
+    const responseWithMeta = {
+      slots: sortedSlots,
+      meta: {
+        location: { latitude, longitude, street },
+        generatedAt: new Date().toISOString(),
+        source: 'Google Weather API',
+        dataFreshness: 'live'
+      }
+    };
 
     // Cache the results in database
     if (street) {
@@ -190,7 +228,7 @@ serve(async (req) => {
           street,
           latitude,
           longitude,
-          weather_data: sortedSlots,
+          weather_data: responseWithMeta,
           cached_at: new Date().toISOString(),
         }, {
           onConflict: 'street'
@@ -211,7 +249,7 @@ serve(async (req) => {
       .lt('cached_at', oneHourAgo);
 
     return new Response(
-      JSON.stringify(sortedSlots),
+      JSON.stringify(responseWithMeta),
       { 
         status: 200, 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 

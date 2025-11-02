@@ -9,6 +9,16 @@ interface WeatherSlot {
   rainfallMillis: number;
 }
 
+interface WeatherResponse {
+  slots: WeatherSlot[];
+  meta: {
+    location: { latitude: number; longitude: number; street?: string };
+    generatedAt: string;
+    source: string;
+    dataFreshness: string;
+  };
+}
+
 interface StreetCoordinates {
   start: { lat: number; lng: number };
   end: { lat: number; lng: number };
@@ -76,16 +86,20 @@ interface Props {
 
 export const WeatherForecast = ({ street }: Props) => {
   const [weatherSlots, setWeatherSlots] = useState<WeatherSlot[]>([]);
+  const [weatherMeta, setWeatherMeta] = useState<WeatherResponse['meta'] | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const fetchWeather = async () => {
       setIsLoading(true);
+      setError(null);
       
       try {
         const coords = STREET_COORDINATES[street];
         if (!coords) {
           console.warn(`[WeatherForecast] No coordinates found for street: ${street}`);
+          setError(`Brak współrzędnych dla ulicy: ${street}`);
           setIsLoading(false);
           return;
         }
@@ -96,22 +110,40 @@ export const WeatherForecast = ({ street }: Props) => {
 
         console.log(`[WeatherForecast] Fetching weather for ${street}:`, { latitude, longitude });
 
-        const { data, error } = await supabase.functions.invoke('get-weather-forecast', {
+        const { data, error: invokeError } = await supabase.functions.invoke('get-weather-forecast', {
           body: { latitude, longitude, street }
         });
 
-        if (error) {
-          console.error('[WeatherForecast] Error fetching weather:', error);
+        if (invokeError) {
+          console.error('[WeatherForecast] Error fetching weather:', invokeError);
+          setError(`Błąd pobierania danych: ${invokeError.message}`);
           setIsLoading(false);
           return;
         }
 
-        if (data && Array.isArray(data)) {
-          console.log(`[WeatherForecast] Received ${data.length} weather slots`);
-          setWeatherSlots(data);
+        console.log('[WeatherForecast] Raw response:', data);
+
+        // Handle both old format (array) and new format (object with slots and meta)
+        if (data) {
+          if (Array.isArray(data)) {
+            // Old format - backward compatibility
+            console.log(`[WeatherForecast] Received ${data.length} weather slots (legacy format)`);
+            setWeatherSlots(data);
+            setWeatherMeta(null);
+          } else if (data.slots && Array.isArray(data.slots)) {
+            // New format with metadata
+            console.log(`[WeatherForecast] Received ${data.slots.length} weather slots with metadata`);
+            console.log('[WeatherForecast] Metadata:', data.meta);
+            setWeatherSlots(data.slots);
+            setWeatherMeta(data.meta);
+          } else {
+            console.error('[WeatherForecast] Unexpected data format:', data);
+            setError('Nieprawidłowy format danych pogodowych');
+          }
         }
       } catch (error) {
         console.error('[WeatherForecast] Error:', error);
+        setError(`Błąd: ${error instanceof Error ? error.message : 'Nieznany błąd'}`);
       } finally {
         setIsLoading(false);
       }
@@ -150,7 +182,7 @@ export const WeatherForecast = ({ street }: Props) => {
     );
   }
 
-  if (weatherSlots.length === 0) {
+  if (error || weatherSlots.length === 0) {
     return (
       <div className="space-y-4 p-6 rounded-xl bg-gradient-to-br from-blue-50/50 via-white to-blue-50/30 dark:from-blue-950/20 dark:via-background dark:to-blue-900/10 border border-blue-200/50 dark:border-blue-800/30 shadow-lg">
         <div className="flex items-start gap-4">
@@ -171,9 +203,14 @@ export const WeatherForecast = ({ street }: Props) => {
             </p>
           </div>
         </div>
-        <p className="text-sm text-muted-foreground text-center py-4">
-          Brak danych pogodowych
-        </p>
+        <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+          <p className="text-sm text-yellow-800 dark:text-yellow-200">
+            {error || 'Brak danych pogodowych'}
+          </p>
+          <p className="text-xs text-yellow-700 dark:text-yellow-300 mt-2">
+            Sprawdź logi konsoli przeglądarki i edge function 'get-weather-forecast' aby zdiagnozować problem.
+          </p>
+        </div>
       </div>
     );
   }
@@ -198,6 +235,17 @@ export const WeatherForecast = ({ street }: Props) => {
           </p>
         </div>
       </div>
+      
+      {weatherMeta && (
+        <div className="text-xs text-muted-foreground bg-blue-50/50 dark:bg-blue-950/30 rounded p-2 border border-blue-200/30 dark:border-blue-800/30">
+          <div className="flex flex-wrap gap-x-3 gap-y-1">
+            <span>📍 Lokalizacja: {weatherMeta.location.latitude.toFixed(4)}, {weatherMeta.location.longitude.toFixed(4)}</span>
+            <span>🕐 Wygenerowano: {new Date(weatherMeta.generatedAt).toLocaleTimeString('pl-PL')}</span>
+            <span>📡 Źródło: {weatherMeta.source}</span>
+          </div>
+        </div>
+      )}
+      
       <div className="space-y-2">
         {weatherSlots.map((slot, index) => {
           // Find minimum rainfall

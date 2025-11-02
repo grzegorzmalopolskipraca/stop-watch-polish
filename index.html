@@ -74,14 +74,24 @@
       window.OneSignalDeferred = window.OneSignalDeferred || [];
       OneSignalDeferred.push(async function(OneSignal) {
         try {
-          if (OneSignal?.Debug?.setLogLevel) {
-            OneSignal.Debug.setLogLevel('trace');
-          }
+          OneSignal.Debug.setLogLevel('trace');
           console.log('[OneSignal] init starting', { origin: location.origin });
+          
           const result = await OneSignal.init({
             appId: "16ce973c-c7b3-42ff-b7b4-fe48be517186",
           });
+          
           console.log('[OneSignal] init success', result);
+          
+          // Safe debug logging via SDK events (doesn't override service worker)
+          OneSignal.on('notificationDisplay', (event) => {
+            console.log('[OneSignal] Notification displayed:', event);
+          });
+          
+          OneSignal.on('notificationClick', (event) => {
+            console.log('[OneSignal] Notification clicked:', event);
+          });
+          
           if ('serviceWorker' in navigator) {
             try {
               const regs = await navigator.serviceWorker.getRegistrations();

@@ -20,7 +20,7 @@ export default defineConfig(({ mode }) => ({
         injectionPoint: undefined,
       },
       srcDir: "public",
-      filename: "OneSignalSDKWorker.js", // Use OneSignal's worker as the PWA worker
+      filename: "vite-sw.js", // Separate from OneSignal workers to avoid conflicts
       includeAssets: ["favicon.ico"],
       manifest: {
         name: "Czy ulica stoi?",

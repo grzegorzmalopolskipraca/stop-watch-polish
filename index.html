@@ -79,6 +79,8 @@
           
           const result = await OneSignal.init({
             appId: "16ce973c-c7b3-42ff-b7b4-fe48be517186",
+            serviceWorkerPath: "/OneSignalSDKWorker.js",
+            serviceWorkerUpdaterPath: "/OneSignalSDKUpdaterWorker.js",
           });
           
           console.log('[OneSignal] init success', result);

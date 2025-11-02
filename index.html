@@ -92,6 +92,8 @@
           
           OneSignal.Notifications.addEventListener('foregroundWillDisplay', (event) => {
             console.log('[OneSignal] Notification will display:', event);
+            // CRITICAL: Display notification even when browser is open (foreground)
+            event.notification.display();
           });
           
           if ('serviceWorker' in navigator) {

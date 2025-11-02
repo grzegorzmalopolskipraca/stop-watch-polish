@@ -21,9 +21,8 @@ export interface DayData {
  */
 export const calculateWeeklyTrafficBlocks = (reports: Report[]): DayData[] => {
   const now = new Date();
-  // Start from yesterday to get last 7 days
-  const yesterday = subDays(now, 1);
-  const weekStart = subDays(yesterday, 6);
+  // Start from 6 days ago to get last 7 days including today
+  const weekStart = subDays(now, 6);
   
   const grid: DayData[] = [];
   

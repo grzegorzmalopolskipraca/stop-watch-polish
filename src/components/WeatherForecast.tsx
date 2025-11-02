@@ -125,21 +125,46 @@ export const WeatherForecast = ({ street }: Props) => {
 
         // Handle both old format (array) and new format (object with slots and meta)
         if (data) {
+          let slots: WeatherSlot[] = [];
+          
           if (Array.isArray(data)) {
             // Old format - backward compatibility
             console.log(`[WeatherForecast] Received ${data.length} weather slots (legacy format)`);
-            setWeatherSlots(data);
+            slots = data;
             setWeatherMeta(null);
           } else if (data.slots && Array.isArray(data.slots)) {
             // New format with metadata
             console.log(`[WeatherForecast] Received ${data.slots.length} weather slots with metadata`);
             console.log('[WeatherForecast] Metadata:', data.meta);
-            setWeatherSlots(data.slots);
+            slots = data.slots;
             setWeatherMeta(data.meta);
           } else {
             console.error('[WeatherForecast] Unexpected data format:', data);
             setError('Nieprawidłowy format danych pogodowych');
+            return;
           }
+
+          // Client-side filtering: only show slots whose END time is in the future
+          const now = new Date();
+          const filteredSlots = slots.filter(slot => {
+            const [hoursTo, minutesTo] = slot.timeTo.split(':').map(Number);
+            const slotEndTime = new Date(now);
+            slotEndTime.setHours(hoursTo, minutesTo, 0, 0);
+            
+            // Handle day boundary for end time
+            if (hoursTo < now.getHours() || (hoursTo === now.getHours() && minutesTo <= now.getMinutes())) {
+              slotEndTime.setDate(slotEndTime.getDate() + 1);
+            }
+            
+            const isFuture = slotEndTime > now;
+            console.log(`[WeatherForecast] Client filter - Slot ${slot.timeFrom}-${slot.timeTo}: ends at ${slotEndTime.toISOString()}, now: ${now.toISOString()} - ${isFuture ? 'INCLUDED' : 'EXCLUDED'}`);
+            return isFuture;
+          });
+
+          console.log(`[WeatherForecast] Filtered to ${filteredSlots.length} future slots from ${slots.length} total slots`);
+          
+          // Take first 6 slots for 2 hours coverage
+          setWeatherSlots(filteredSlots.slice(0, 6));
         }
       } catch (error) {
         console.error('[WeatherForecast] Error:', error);

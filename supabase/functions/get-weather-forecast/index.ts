@@ -140,17 +140,17 @@ serve(async (req) => {
 
     console.log('[get-weather-forecast] Total forecast hours received:', data.forecastHours.length);
 
-    // Get current time and filter for next 3 hours to ensure we have enough data
+    // Get current time and filter for next 4 hours to ensure enough slots after client filtering
     const currentTime = new Date();
-    const threeHoursLater = new Date(currentTime.getTime() + 3 * 60 * 60 * 1000);
+    const fourHoursLater = new Date(currentTime.getTime() + 4 * 60 * 60 * 1000);
     
     console.log('[get-weather-forecast] Current time:', currentTime.toISOString());
-    console.log('[get-weather-forecast] Filtering for next 3 hours until:', threeHoursLater.toISOString());
+    console.log('[get-weather-forecast] Filtering for next 4 hours until:', fourHoursLater.toISOString());
     
     const relevantHours = data.forecastHours.filter((hour: any) => {
       const hourTime = new Date(hour.interval.startTime);
-      return hourTime >= currentTime && hourTime <= threeHoursLater;
-    }).slice(0, 4); // Get up to 4 hours for better interpolation
+      return hourTime >= currentTime && hourTime <= fourHoursLater;
+    }).slice(0, 5); // Get up to 5 hours for better interpolation (creates 12 slots)
 
     console.log('[get-weather-forecast] Found', relevantHours.length, 'relevant hours');
     
@@ -207,8 +207,8 @@ serve(async (req) => {
     
     console.log(`[get-weather-forecast] Filtered ${filteredSlots.length} future slots from ${allSlots.length} total slots`);
     
-    // Always return exactly 6 slots for 2 hours coverage (even if some have partially elapsed)
-    const finalSlots = filteredSlots.slice(0, 6);
+    // Always return at least 6 slots for 2 hours coverage, up to 12 slots for 4 hours
+    const finalSlots = filteredSlots.slice(0, 12);
 
     // Sort by best weather conditions (lowest rain probability, then lowest rainfall)
     const sortedSlots = [...finalSlots].sort((a, b) => {

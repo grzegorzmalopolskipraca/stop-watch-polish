@@ -64,43 +64,31 @@ serve(async (req) => {
     
     console.log(`Traffic data request from IP: ${clientIP}`);
 
-    // Initialize Supabase client for rate limiting
+    // Initialize Supabase client
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Check IP-based rate limit
-    const allowed = await checkIPRateLimit(supabase, clientIP);
-    if (!allowed) {
-      console.log(`Rate limit exceeded for IP: ${clientIP}`);
-      return new Response(
-        JSON.stringify({ error: 'Too many requests. Please try again later.' }),
-        { 
-          status: 429, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        }
-      );
-    }
-
+    // Parse request body
     const { origin, destination }: TrafficRequest = await req.json();
-    
+
     console.log('[get-traffic-data] Request body:', { origin, destination });
-    
-    // Check route-based cache first
+
+    // Check route-based cache first (serve without touching rate limits)
     const cacheKey = createCacheKey(origin, destination);
     const { data: cachedData, error: cacheError } = await supabase
       .from('traffic_cache')
       .select('traffic_data, cached_at')
       .eq('route_key', cacheKey)
       .single();
-    
+
     if (!cacheError && cachedData) {
       const cachedAt = new Date(cachedData.cached_at).getTime();
-      const now = Date.now();
-      const cacheAge = (now - cachedAt) / 1000; // in seconds
-      
-      if ((now - cachedAt) < CACHE_DURATION_MS) {
+      const nowTs = Date.now();
+      const cacheAge = (nowTs - cachedAt) / 1000; // in seconds
+
+      if ((nowTs - cachedAt) < CACHE_DURATION_MS) {
         console.log(`[get-traffic-data] Cache HIT for route (age: ${cacheAge.toFixed(0)}s)`);
         return new Response(
           JSON.stringify(cachedData.traffic_data),
@@ -113,7 +101,20 @@ serve(async (req) => {
         console.log(`[get-traffic-data] Cache EXPIRED for route (age: ${cacheAge.toFixed(0)}s)`);
       }
     } else {
-      console.log(`[get-traffic-data] Cache MISS for route`);
+      console.log('[get-traffic-data] Cache MISS for route');
+    }
+
+    // Enforce rate limit only for cache misses/refreshes
+    const allowed = await checkIPRateLimit(supabase, clientIP);
+    if (!allowed) {
+      console.log(`Rate limit exceeded for IP: ${clientIP}`);
+      return new Response(
+        JSON.stringify({ error: 'Too many requests. Please try again later.' }),
+        { 
+          status: 429, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
     }
     
     const apiKey = Deno.env.get('GOOGLE_MAPS_API_KEY');
@@ -189,12 +190,12 @@ serve(async (req) => {
       console.log('[get-traffic-data] Response cached successfully');
     }
 
-    // Clean old cache entries (older than 5 minutes)
-    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+    // Clean old cache entries (older than cache duration)
+    const cacheExpiryCutoff = new Date(Date.now() - CACHE_DURATION_MS).toISOString();
     await supabase
       .from('traffic_cache')
       .delete()
-      .lt('cached_at', fiveMinutesAgo);
+      .lt('cached_at', cacheExpiryCutoff);
 
     return new Response(
       JSON.stringify(data),

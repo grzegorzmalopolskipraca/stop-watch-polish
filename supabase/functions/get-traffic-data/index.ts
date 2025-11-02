@@ -11,8 +11,8 @@ interface TrafficRequest {
   destination: { lat: number; lng: number };
 }
 
-// Cache duration: 90 seconds (less than the 2-minute polling interval)
-const CACHE_DURATION_MS = 90 * 1000;
+// Cache duration: 15 minutes - reduces API calls significantly
+const CACHE_DURATION_MS = 15 * 60 * 1000;
 
 // Create a cache key from route coordinates
 function createCacheKey(origin: { lat: number; lng: number }, destination: { lat: number; lng: number }): string {

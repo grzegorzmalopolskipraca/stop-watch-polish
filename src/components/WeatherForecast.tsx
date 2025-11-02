@@ -146,25 +146,46 @@ export const WeatherForecast = ({ street }: Props) => {
 
           // Client-side filtering: only show slots whose END time is in the future
           const now = new Date();
-          const filteredSlots = slots.filter(slot => {
-            const [hoursTo, minutesTo] = slot.timeTo.split(':').map(Number);
-            const slotEndTime = new Date(now);
-            slotEndTime.setHours(hoursTo, minutesTo, 0, 0);
+          const nowH = now.getHours();
+          const nowM = now.getMinutes();
+
+          type SlotWithDates = WeatherSlot & { _start: Date; _end: Date };
+
+          const withDates: SlotWithDates[] = slots.map((slot) => {
+            const [hTo, mTo] = slot.timeTo.split(':').map(Number);
+            const [hFrom, mFrom] = slot.timeFrom.split(':').map(Number);
+            const end = new Date(now);
+            end.setHours(hTo, mTo, 0, 0);
+            const start = new Date(now);
+            start.setHours(hFrom, mFrom, 0, 0);
+
+            // Compute delta in minutes between slot end and now
+            const deltaEnd = (hTo - nowH) * 60 + (mTo - nowM);
+            const deltaStart = (hFrom - nowH) * 60 + (mFrom - nowM);
             
-            // Handle day boundary for end time
-            if (hoursTo < now.getHours() || (hoursTo === now.getHours() && minutesTo <= now.getMinutes())) {
-              slotEndTime.setDate(slotEndTime.getDate() + 1);
+            // Handle midnight crossover ONLY when now is late night and slot is after midnight
+            const isLateNight = nowH >= 21 || nowH <= 3;
+            if (deltaEnd < -5 && isLateNight && hTo <= 3) {
+              end.setDate(end.getDate() + 1);
             }
-            
-            const isFuture = slotEndTime > now;
-            console.log(`[WeatherForecast] Client filter - Slot ${slot.timeFrom}-${slot.timeTo}: ends at ${slotEndTime.toISOString()}, now: ${now.toISOString()} - ${isFuture ? 'INCLUDED' : 'EXCLUDED'}`);
-            return isFuture;
+            if (deltaStart < -5 && isLateNight && hFrom <= 3) {
+              start.setDate(start.getDate() + 1);
+            }
+
+            return { ...slot, _start: start, _end: end };
           });
 
-          console.log(`[WeatherForecast] Filtered to ${filteredSlots.length} future slots from ${slots.length} total slots`);
+          // Keep only slots that end in the future and start within the next 2 hours
+          const twoHoursLater = new Date(now.getTime() + 2 * 60 * 60 * 1000);
+          const futureSlots = withDates.filter(s => s._end > now && s._start < twoHoursLater);
+
+          // Sort chronologically by start time
+          futureSlots.sort((a, b) => a._start.getTime() - b._start.getTime());
+
+          console.log(`[WeatherForecast] Filtered to ${futureSlots.length} future slots (chronological)`);
           
           // Take first 6 slots for 2 hours coverage
-          setWeatherSlots(filteredSlots.slice(0, 6));
+          setWeatherSlots(futureSlots.slice(0, 6));
         }
       } catch (error) {
         console.error('[WeatherForecast] Error:', error);

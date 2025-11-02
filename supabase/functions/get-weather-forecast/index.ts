@@ -19,15 +19,21 @@ interface WeatherSlot {
   rainfallMillis: number;
 }
 
-const CACHE_DURATION_MS = 10 * 60 * 1000; // 10 minutes
+const CACHE_DURATION_MS = 5 * 60 * 1000; // 5 minutes - reduced for more accurate real-time data
 
 function interpolateWeatherData(hour1: any, hour2: any, intervalMinutes: number): WeatherSlot[] {
   const slots: WeatherSlot[] = [];
   
-  const rain1 = hour1.precipitation?.value || 0;
-  const rain2 = hour2.precipitation?.value || 0;
-  const prob1 = hour1.precipitationProbability || 0;
-  const prob2 = hour2.precipitationProbability || 0;
+  // Parse precipitation data correctly from Google Weather API structure
+  const rain1 = hour1.precipitation?.qpf?.quantity || 0;
+  const rain2 = hour2.precipitation?.qpf?.quantity || 0;
+  const prob1 = (hour1.precipitation?.probability?.percent || 0) / 100; // Convert percent to 0-1 range
+  const prob2 = (hour2.precipitation?.probability?.percent || 0) / 100;
+  
+  console.log(`[get-weather-forecast] Interpolating between hours:`, {
+    hour1: { rain: rain1, prob: prob1 * 100 },
+    hour2: { rain: rain2, prob: prob2 * 100 }
+  });
   
   const time1 = new Date(hour1.interval.startTime);
   const time2 = new Date(hour2.interval.startTime);
@@ -82,17 +88,19 @@ serve(async (req) => {
       if (!cacheError && cachedData) {
         const cachedAt = new Date(cachedData.cached_at).getTime();
         const now = Date.now();
+        const cacheAgeMinutes = Math.floor((now - cachedAt) / 1000 / 60);
+        
+        console.log(`[get-weather-forecast] Cache found - Age: ${cacheAgeMinutes} minutes, Limit: ${CACHE_DURATION_MS / 1000 / 60} minutes`);
         
         if ((now - cachedAt) < CACHE_DURATION_MS) {
-          console.log('[get-weather-forecast] Returning cached data from database');
-          return new Response(
-            JSON.stringify(cachedData.weather_data),
-            { 
-              status: 200, 
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-            }
-          );
+          console.log('[get-weather-forecast] Cache is fresh, but will fetch new data for accuracy');
+          console.log('[get-weather-forecast] Cached data timestamp:', cachedData.cached_at);
+          // Don't return cached data - always fetch fresh for accuracy
+        } else {
+          console.log('[get-weather-forecast] Cache is stale, fetching fresh data');
         }
+      } else {
+        console.log('[get-weather-forecast] No cache found or cache error:', cacheError?.message);
       }
     }
     
@@ -150,12 +158,12 @@ serve(async (req) => {
     relevantHours.forEach((hour: any, idx: number) => {
       console.log(`[get-weather-forecast] Hour ${idx + 1}:`, {
         time: hour.interval.startTime,
-        precipitation_mm: hour.precipitation?.value || 0,
-        precipitation_prob_percent: (hour.precipitationProbability || 0) * 100,
-        temperature_c: hour.temperature?.value || 'N/A',
+        precipitation_mm: hour.precipitation?.qpf?.quantity || 0,
+        precipitation_prob_percent: hour.precipitation?.probability?.percent || 0,
+        temperature_c: hour.temperature?.degrees || 'N/A',
         humidity_percent: hour.humidity || 'N/A',
         raw_precipitation_object: JSON.stringify(hour.precipitation || {}),
-        raw_precipitation_prob: hour.precipitationProbability
+        weather_condition: hour.weatherCondition?.type || 'N/A'
       });
     });
 
@@ -172,24 +180,33 @@ serve(async (req) => {
       allSlots.push(...slots);
     }
 
-    // Filter slots to only those within the next 2 hours from now
-    const twoHoursLater = new Date(currentTime.getTime() + 2 * 60 * 60 * 1000);
+    // Filter slots to only those within the next 2 hours from NOW (current execution time)
+    const now = new Date(); // Get fresh current time
+    const twoHoursLater = new Date(now.getTime() + 2 * 60 * 60 * 1000);
+    
+    console.log('[get-weather-forecast] Current time for filtering:', now.toISOString());
+    console.log('[get-weather-forecast] Will show slots until:', twoHoursLater.toISOString());
     
     const filteredSlots = allSlots.filter(slot => {
       const [hours, minutes] = slot.timeFrom.split(':').map(Number);
-      const slotTime = new Date(currentTime);
+      const slotTime = new Date(now);
       slotTime.setHours(hours, minutes, 0, 0);
       
       // Handle day boundary
-      if (hours < currentTime.getHours()) {
+      if (hours < now.getHours() || (hours === now.getHours() && minutes < now.getMinutes())) {
         slotTime.setDate(slotTime.getDate() + 1);
       }
       
-      return slotTime >= currentTime && slotTime < twoHoursLater;
+      const isFuture = slotTime >= now && slotTime < twoHoursLater;
+      console.log(`[get-weather-forecast] Slot ${slot.timeFrom}-${slot.timeTo}: ${slotTime.toISOString()} - ${isFuture ? 'INCLUDED' : 'EXCLUDED'}`);
+      
+      return isFuture;
     });
     
+    console.log(`[get-weather-forecast] Filtered ${filteredSlots.length} future slots from ${allSlots.length} total slots`);
+    
     // Ensure we always return exactly 6 slots (even if some extend slightly beyond 2 hours)
-    const finalSlots = filteredSlots.length >= 6 ? filteredSlots.slice(0, 6) : allSlots.slice(0, 6);
+    const finalSlots = filteredSlots.length >= 6 ? filteredSlots.slice(0, 6) : (filteredSlots.length > 0 ? filteredSlots : allSlots.slice(0, 6));
 
     // Sort by best weather conditions (lowest rain probability, then lowest rainfall)
     const sortedSlots = [...finalSlots].sort((a, b) => {

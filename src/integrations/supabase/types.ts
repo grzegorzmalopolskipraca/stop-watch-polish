@@ -380,6 +380,42 @@ export type Database = {
         }
         Relationships: []
       }
+      traffic_cache: {
+        Row: {
+          cached_at: string
+          created_at: string
+          destination_lat: number
+          destination_lng: number
+          id: string
+          origin_lat: number
+          origin_lng: number
+          route_key: string
+          traffic_data: Json
+        }
+        Insert: {
+          cached_at?: string
+          created_at?: string
+          destination_lat: number
+          destination_lng: number
+          id?: string
+          origin_lat: number
+          origin_lng: number
+          route_key: string
+          traffic_data: Json
+        }
+        Update: {
+          cached_at?: string
+          created_at?: string
+          destination_lat?: number
+          destination_lng?: number
+          id?: string
+          origin_lat?: number
+          origin_lng?: number
+          route_key?: string
+          traffic_data?: Json
+        }
+        Relationships: []
+      }
       traffic_reports: {
         Row: {
           created_at: string

@@ -176,11 +176,22 @@ export const RssTicker = () => {
     };
   }, []);
 
-  // Combine incident texts with RSS items
-  const allItems = [
-    ...incidentTexts.map((text, index) => ({ id: `incident-${index}`, text, position: -1 })),
-    ...items
-  ];
+  // Interleave incident texts between RSS items
+  const allItems: RssItem[] = [];
+  if (incidentTexts.length > 0) {
+    items.forEach((item, index) => {
+      allItems.push(item);
+      // Add incident between each RSS item, cycling through incidents
+      const incidentIndex = index % incidentTexts.length;
+      allItems.push({ 
+        id: `incident-${index}`, 
+        text: incidentTexts[incidentIndex], 
+        position: -1 
+      });
+    });
+  } else {
+    allItems.push(...items);
+  }
 
   if (allItems.length === 0) return null;
 

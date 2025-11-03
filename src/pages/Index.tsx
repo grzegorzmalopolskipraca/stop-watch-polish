@@ -1016,16 +1016,31 @@ const Index = () => {
       const key = `${selectedStreet}_${direction}`;
       const today = format(new Date(), 'yyyy-MM-dd');
       
-      const currentMin = todayMinSpeed[key];
-      const currentMax = todayMaxSpeed[key];
-      
-      const newMin = !currentMin || speed < currentMin ? speed : currentMin;
-      const newMax = !currentMax || speed > currentMax ? speed : currentMax;
-      
-      // Only update if values changed
-      if (newMin !== currentMin || newMax !== currentMax) {
-        try {
-          const { error } = await supabase
+      try {
+        // First, fetch current database values for this street+direction+date
+        const { data: existingData, error: fetchError } = await supabase
+          .from("daily_speed_stats")
+          .select("min_speed, max_speed")
+          .eq("street", selectedStreet)
+          .eq("direction", direction)
+          .eq("speed_date", today)
+          .maybeSingle();
+
+        if (fetchError) {
+          console.error("Error fetching existing speed stats:", fetchError);
+          return;
+        }
+
+        // Determine new min/max based on database values (not local state)
+        const dbMin = existingData?.min_speed;
+        const dbMax = existingData?.max_speed;
+        
+        const newMin = !dbMin || speed < dbMin ? speed : dbMin;
+        const newMax = !dbMax || speed > dbMax ? speed : dbMax;
+        
+        // Only update if values changed from database values
+        if (newMin !== dbMin || newMax !== dbMax) {
+          const { error: upsertError } = await supabase
             .from("daily_speed_stats")
             .upsert({
               street: selectedStreet,
@@ -1037,16 +1052,19 @@ const Index = () => {
               onConflict: 'street,direction,speed_date'
             });
 
-          if (error) {
-            console.error("Error updating speed stats:", error);
+          if (upsertError) {
+            console.error("Error updating speed stats:", upsertError);
           } else {
+            console.log(`[AutoSpeed] Updated DB: min=${newMin}, max=${newMax} (was: min=${dbMin}, max=${dbMax})`);
             // Update local state after successful database update
             setTodayMinSpeed(prev => ({ ...prev, [key]: newMin }));
             setTodayMaxSpeed(prev => ({ ...prev, [key]: newMax }));
           }
-        } catch (error) {
-          console.error("Error saving speed stats:", error);
+        } else {
+          console.log(`[AutoSpeed] No update needed: speed=${speed}, current min=${dbMin}, max=${dbMax}`);
         }
+      } catch (error) {
+        console.error("Error in speed update:", error);
       }
     }
   };

@@ -67,6 +67,8 @@ const Statystyki = () => {
 
   // New state for date-filtered street/hour chart
   const [selectedHourChartDate, setSelectedHourChartDate] = useState<Date>(new Date());
+  const [selectedHourChartStreet, setSelectedHourChartStreet] = useState<string>("all");
+  const [selectedHourChartDirection, setSelectedHourChartDirection] = useState<string>("both");
   const [trafficByStreetAndHourFiltered, setTrafficByStreetAndHourFiltered] = useState<any[]>([]);
 
   useEffect(() => {
@@ -82,7 +84,7 @@ const Statystyki = () => {
 
   useEffect(() => {
     fetchTrafficByStreetAndHourFiltered();
-  }, [selectedHourChartDate]);
+  }, [selectedHourChartDate, selectedHourChartStreet, selectedHourChartDirection]);
 
   const fetchAllStatistics = async () => {
     // 1. Daily visits over time (last 30 days)
@@ -649,23 +651,44 @@ const Statystyki = () => {
     const endOfDay = new Date(selectedHourChartDate);
     endOfDay.setHours(23, 59, 59, 999);
 
-    const { data: trafficByHourStreetData } = await supabase
+    // Build query with filters
+    let query = supabase
       .from("traffic_reports")
-      .select("street, status, reported_at")
+      .select("street, status, reported_at, direction")
       .gte("reported_at", startOfDay.toISOString())
       .lte("reported_at", endOfDay.toISOString());
 
-    if (trafficByHourStreetData) {
-      // Get top 5 streets by traffic reports for this specific date
-      const streetCounts: Record<string, number> = {};
-      trafficByHourStreetData.forEach((t) => {
-        streetCounts[t.street] = (streetCounts[t.street] || 0) + 1;
-      });
+    // Filter by street if not "all"
+    if (selectedHourChartStreet !== "all") {
+      query = query.eq("street", selectedHourChartStreet);
+    }
 
-      const topStreetsList = Object.entries(streetCounts)
-        .sort(([, a], [, b]) => b - a)
-        .slice(0, 5)
-        .map(([street]) => street);
+    // Filter by direction if not "both"
+    if (selectedHourChartDirection !== "both") {
+      query = query.eq("direction", selectedHourChartDirection);
+    }
+
+    const { data: trafficByHourStreetData } = await query;
+
+    if (trafficByHourStreetData && trafficByHourStreetData.length > 0) {
+      // Determine which streets to display
+      let streetsToDisplay: string[];
+
+      if (selectedHourChartStreet === "all") {
+        // Get top 5 streets by traffic reports for this specific date
+        const streetCounts: Record<string, number> = {};
+        trafficByHourStreetData.forEach((t) => {
+          streetCounts[t.street] = (streetCounts[t.street] || 0) + 1;
+        });
+
+        streetsToDisplay = Object.entries(streetCounts)
+          .sort(([, a], [, b]) => b - a)
+          .slice(0, 5)
+          .map(([street]) => street);
+      } else {
+        // Show only selected street
+        streetsToDisplay = [selectedHourChartStreet];
+      }
 
       // Calculate average traffic score by hour for each street
       // jedzie = 1 (best), toczy_sie = 2 (medium), stoi = 3 (worst)
@@ -678,7 +701,7 @@ const Statystyki = () => {
       const streetHourData: Record<number, Record<string, { total: number; count: number }>> = {};
 
       trafficByHourStreetData.forEach((t) => {
-        if (topStreetsList.includes(t.street)) {
+        if (streetsToDisplay.includes(t.street)) {
           const hour = getHours(parseISO(t.reported_at));
           if (!streetHourData[hour]) streetHourData[hour] = {};
           if (!streetHourData[hour][t.street]) streetHourData[hour][t.street] = { total: 0, count: 0 };
@@ -690,7 +713,7 @@ const Statystyki = () => {
 
       const hourlyData = Array.from({ length: 24 }, (_, hour) => {
         const dataPoint: any = { hour: `${hour}:00` };
-        topStreetsList.forEach((street) => {
+        streetsToDisplay.forEach((street) => {
           if (streetHourData[hour]?.[street]) {
             dataPoint[street] = parseFloat((streetHourData[hour][street].total / streetHourData[hour][street].count).toFixed(2));
           } else {
@@ -700,7 +723,7 @@ const Statystyki = () => {
         return dataPoint;
       });
 
-      console.log(`[Hour Chart Filtered] Fetched data for ${format(selectedHourChartDate, 'yyyy-MM-dd')} - ${topStreetsList.length} streets`);
+      console.log(`[Hour Chart Filtered] Date: ${format(selectedHourChartDate, 'yyyy-MM-dd')}, Street: ${selectedHourChartStreet}, Direction: ${selectedHourChartDirection}, Streets: ${streetsToDisplay.length}`);
       setTrafficByStreetAndHourFiltered(hourlyData);
     } else {
       setTrafficByStreetAndHourFiltered([]);
@@ -1143,30 +1166,68 @@ const Statystyki = () => {
               <CardDescription>Średni poziom natężenia ruchu w ciągu wybranego dnia (1=płynny, 2=wolny, 3=zator)</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="mb-6">
-                <label className="text-sm font-medium mb-2 block">Wybierz datę</label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className={cn(
-                        "w-full sm:w-[280px] justify-start text-left font-normal",
-                        !selectedHourChartDate && "text-muted-foreground"
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {selectedHourChartDate ? format(selectedHourChartDate, "PPP", { locale: pl }) : <span>Wybierz datę</span>}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <Calendar
-                      mode="single"
-                      selected={selectedHourChartDate}
-                      onSelect={(date) => date && setSelectedHourChartDate(date)}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
+              <div className="flex flex-col gap-4 mb-6">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  {/* Date Picker */}
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">Data</label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className={cn(
+                            "w-full justify-start text-left font-normal",
+                            !selectedHourChartDate && "text-muted-foreground"
+                          )}
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {selectedHourChartDate ? format(selectedHourChartDate, "PPP", { locale: pl }) : <span>Wybierz datę</span>}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0">
+                        <Calendar
+                          mode="single"
+                          selected={selectedHourChartDate}
+                          onSelect={(date) => date && setSelectedHourChartDate(date)}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+
+                  {/* Street Selector */}
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">Ulica</label>
+                    <Select value={selectedHourChartStreet} onValueChange={setSelectedHourChartStreet}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Wybierz ulicę" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Wszystkie (top 5)</SelectItem>
+                        {STREETS.map((street) => (
+                          <SelectItem key={street} value={street}>
+                            {street}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Direction Selector */}
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">Kierunek</label>
+                    <Select value={selectedHourChartDirection} onValueChange={setSelectedHourChartDirection}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Wybierz kierunek" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="both">Oba kierunki</SelectItem>
+                        <SelectItem value="to_center">Do centrum</SelectItem>
+                        <SelectItem value="from_center">Z centrum</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
               </div>
 
               <ResponsiveContainer width="100%" height={400}>

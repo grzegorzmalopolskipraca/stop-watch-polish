@@ -117,6 +117,7 @@ const Index = () => {
   const [incidentMessage, setIncidentMessage] = useState("");
   const [trafficTrend, setTrafficTrend] = useState<string | null>(null);
   const [incidentNotificationsEnabled, setIncidentNotificationsEnabled] = useState(false);
+  const [statusNotificationsEnabled, setStatusNotificationsEnabled] = useState(false);
   const [latestSpeed, setLatestSpeed] = useState<number | null>(null);
   const [todayMinSpeed, setTodayMinSpeed] = useState<Record<string, number>>({});
   const [todayMaxSpeed, setTodayMaxSpeed] = useState<Record<string, number>>({});
@@ -970,6 +971,10 @@ const Index = () => {
   };
 
   useEffect(() => {
+    // Check subscription status when street changes
+    setIncidentNotificationsEnabled(isOneSignalSubscribed(`incidents_${selectedStreet}`));
+    setStatusNotificationsEnabled(isOneSignalSubscribed(`street_${selectedStreet.toLowerCase()}_status`));
+    
     fetchReports(selectedStreet, direction);
     fetchVisitorStats();
     fetchIncidentCounts();
@@ -1158,6 +1163,35 @@ const Index = () => {
       if (success) {
         setIncidentNotificationsEnabled(true);
         toast.success("Powiadomienia o zdarzeniach włączone");
+      } else {
+        toast.error("Nie udało się włączyć powiadomień. Sprawdź ustawienia przeglądarki.");
+      }
+    }
+  };
+
+  const handleStatusNotifications = async () => {
+    if (!("Notification" in window)) {
+      toast.error("Twoja przeglądarka nie obsługuje powiadomień");
+      return;
+    }
+
+    const tag = `street_${selectedStreet.toLowerCase()}_status`;
+
+    if (statusNotificationsEnabled) {
+      // Unsubscribe
+      const success = await unsubscribeFromOneSignal(tag);
+      if (success) {
+        setStatusNotificationsEnabled(false);
+        toast.success("Powiadomienia o statusie wyłączone");
+      } else {
+        toast.error("Błąd podczas wyłączania powiadomień");
+      }
+    } else {
+      // Subscribe
+      const success = await subscribeToOneSignal(tag);
+      if (success) {
+        setStatusNotificationsEnabled(true);
+        toast.success("Powiadomienia o statusie włączone");
       } else {
         toast.error("Nie udało się włączyć powiadomień. Sprawdź ustawienia przeglądarki.");
       }
@@ -1366,6 +1400,26 @@ const Index = () => {
               </p>
             </>
           )}
+          <div className="mt-4 pt-4 border-t border-border">
+            <Button
+              onClick={handleStatusNotifications}
+              variant={statusNotificationsEnabled ? "default" : "outline"}
+              size="sm"
+              className="w-full"
+            >
+              {statusNotificationsEnabled ? (
+                <>
+                  <Bell className="mr-2 h-4 w-4" />
+                  Powiadomienia włączone
+                </>
+              ) : (
+                <>
+                  <BellOff className="mr-2 h-4 w-4" />
+                  Włącz powiadomienia o statusie
+                </>
+              )}
+            </Button>
+          </div>
         </section>
 
         {/* Report Buttons */}
@@ -1533,12 +1587,28 @@ const Index = () => {
 
         {/* Incident Reports */}
         <section className="bg-card rounded-lg p-5 border-2 border-destructive shadow-lg shadow-destructive/20 space-y-4">
-          <h3 className="text-lg font-semibold text-center">
-            Zgłoś zdarzenie na drodze
-          </h3>
-          <p className="text-sm text-muted-foreground text-center">
-            Licznik pokazuje ile osób potwierdziło zgłoszenie
-          </p>
+          <div className="flex items-center justify-between">
+            <div className="flex-1">
+              <h3 className="text-lg font-semibold text-center">
+                Zgłoś zdarzenie na drodze
+              </h3>
+              <p className="text-sm text-muted-foreground text-center">
+                Licznik pokazuje ile osób potwierdziło zgłoszenie
+              </p>
+            </div>
+            <Button
+              onClick={handleIncidentNotifications}
+              variant={incidentNotificationsEnabled ? "default" : "outline"}
+              size="sm"
+              className="ml-2 shrink-0"
+            >
+              {incidentNotificationsEnabled ? (
+                <Bell className="h-4 w-4" />
+              ) : (
+                <BellOff className="h-4 w-4" />
+              )}
+            </Button>
+          </div>
           <div className="grid grid-cols-4 gap-2">
             {[
               { type: "Blokada", emoji: "🚧" },

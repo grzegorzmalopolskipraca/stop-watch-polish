@@ -1,11 +1,16 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Calendar as CalendarIcon } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, AreaChart, Area } from "recharts";
+import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, AreaChart, Area, ScatterChart, Scatter } from "recharts";
 import { format, parseISO, getHours, getDay } from "date-fns";
 import { pl } from "date-fns/locale";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import { cn } from "@/lib/utils";
 
 const COLORS = ['#8b5cf6', '#06b6d4', '#10b981', '#f59e0b', '#ef4444', '#ec4899', '#6366f1', '#14b8a6', '#f97316', '#84cc16'];
 const GRADIENT_COLORS = [
@@ -36,9 +41,23 @@ const Statystyki = () => {
   const [trafficByStreetAndHour, setTrafficByStreetAndHour] = useState<any[]>([]);
   const [trafficByStreetAndDay, setTrafficByStreetAndDay] = useState<any[]>([]);
 
+  // New state for traffic status scatter chart
+  const [availableStreets, setAvailableStreets] = useState<string[]>([]);
+  const [selectedStreet, setSelectedStreet] = useState<string>("");
+  const [selectedDirection, setSelectedDirection] = useState<string>("to_center");
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [trafficStatusScatterData, setTrafficStatusScatterData] = useState<any[]>([]);
+
   useEffect(() => {
     fetchAllStatistics();
+    fetchAvailableStreets();
   }, []);
+
+  useEffect(() => {
+    if (selectedStreet) {
+      fetchTrafficStatusScatterData();
+    }
+  }, [selectedStreet, selectedDirection, selectedDate]);
 
   const fetchAllStatistics = async () => {
     // 1. Daily visits over time (last 30 days)
@@ -531,6 +550,64 @@ const Statystyki = () => {
     }
   };
 
+  const fetchAvailableStreets = async () => {
+    const { data: streetsData } = await supabase
+      .from("traffic_reports")
+      .select("street");
+
+    if (streetsData) {
+      const uniqueStreets = Array.from(new Set(streetsData.map(s => s.street))).sort();
+      setAvailableStreets(uniqueStreets);
+      if (uniqueStreets.length > 0 && !selectedStreet) {
+        setSelectedStreet(uniqueStreets[0]);
+      }
+    }
+  };
+
+  const fetchTrafficStatusScatterData = async () => {
+    if (!selectedStreet || !selectedDate) return;
+
+    const startOfDay = new Date(selectedDate);
+    startOfDay.setHours(0, 0, 0, 0);
+
+    const endOfDay = new Date(selectedDate);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    const { data: trafficData } = await supabase
+      .from("traffic_reports")
+      .select("status, reported_at, direction")
+      .eq("street", selectedStreet)
+      .eq("direction", selectedDirection)
+      .gte("reported_at", startOfDay.toISOString())
+      .lte("reported_at", endOfDay.toISOString());
+
+    if (trafficData) {
+      // Map status to Y values: smooth=1 (jedzie), slow=0 (toczy_sie), congested=-1 (stoi)
+      const statusToY: Record<string, number> = {
+        smooth: 1,      // jedzie
+        slow: 0,        // toczy_sie
+        congested: -1   // stoi
+      };
+
+      const scatterData = trafficData.map(t => {
+        const hour = getHours(parseISO(t.reported_at));
+        const minutes = parseISO(t.reported_at).getMinutes();
+        const hourDecimal = hour + (minutes / 60); // Convert to decimal hour for better positioning
+
+        return {
+          hour: hourDecimal,
+          status: statusToY[t.status] ?? 0,
+          statusLabel: t.status === 'smooth' ? 'Jedzie' : t.status === 'slow' ? 'Toczy się' : 'Stoi',
+          time: format(parseISO(t.reported_at), "HH:mm", { locale: pl })
+        };
+      });
+
+      setTrafficStatusScatterData(scatterData);
+    } else {
+      setTrafficStatusScatterData([]);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -977,15 +1054,139 @@ const Statystyki = () => {
                   {trafficByStreetAndDay.length > 0 && Object.keys(trafficByStreetAndDay[0])
                     .filter(key => key !== 'day')
                     .map((street, index) => (
-                      <Bar 
-                        key={street} 
-                        dataKey={street} 
-                        fill={COLORS[index % COLORS.length]} 
+                      <Bar
+                        key={street}
+                        dataKey={street}
+                        fill={COLORS[index % COLORS.length]}
                         radius={[8, 8, 0, 0]}
                       />
                     ))}
                 </BarChart>
               </ResponsiveContainer>
+            </CardContent>
+          </Card>
+
+          {/* 18. Traffic Status by Hour - Scatter Chart */}
+          <Card className="lg:col-span-2 bg-gradient-to-br from-emerald-500/5 to-teal-500/5 border-emerald-200 dark:border-emerald-800">
+            <CardHeader>
+              <CardTitle className="text-emerald-700 dark:text-emerald-400">Status ruchu według godziny - wybrana ulica</CardTitle>
+              <CardDescription>Punkty pokazują status ruchu w ciągu dnia (1=jedzie, 0=toczy się, -1=stoi)</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-col sm:flex-row gap-4 mb-6">
+                {/* Street Selector */}
+                <div className="flex-1">
+                  <label className="text-sm font-medium mb-2 block">Ulica</label>
+                  <Select value={selectedStreet} onValueChange={setSelectedStreet}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Wybierz ulicę" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableStreets.map((street) => (
+                        <SelectItem key={street} value={street}>
+                          {street}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Direction Selector */}
+                <div className="flex-1">
+                  <label className="text-sm font-medium mb-2 block">Kierunek</label>
+                  <Select value={selectedDirection} onValueChange={setSelectedDirection}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Wybierz kierunek" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="to_center">Do centrum</SelectItem>
+                      <SelectItem value="from_center">Z centrum</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Date Picker */}
+                <div className="flex-1">
+                  <label className="text-sm font-medium mb-2 block">Data</label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "w-full justify-start text-left font-normal",
+                          !selectedDate && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {selectedDate ? format(selectedDate, "PPP", { locale: pl }) : <span>Wybierz datę</span>}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0">
+                      <Calendar
+                        mode="single"
+                        selected={selectedDate}
+                        onSelect={(date) => date && setSelectedDate(date)}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+              </div>
+
+              <ResponsiveContainer width="100%" height={400}>
+                <ScatterChart>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                  <XAxis
+                    type="number"
+                    dataKey="hour"
+                    name="Godzina"
+                    domain={[0, 24]}
+                    ticks={[0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]}
+                    fontSize={12}
+                    label={{ value: 'Godzina', position: 'insideBottom', offset: -5, fontSize: 12 }}
+                  />
+                  <YAxis
+                    type="number"
+                    dataKey="status"
+                    name="Status"
+                    domain={[-1.5, 1.5]}
+                    ticks={[-1, 0, 1]}
+                    fontSize={12}
+                    tickFormatter={(value) => {
+                      if (value === 1) return 'Jedzie';
+                      if (value === 0) return 'Toczy się';
+                      if (value === -1) return 'Stoi';
+                      return '';
+                    }}
+                    label={{ value: 'Status ruchu', angle: -90, position: 'insideLeft', fontSize: 12 }}
+                  />
+                  <Tooltip
+                    cursor={{ strokeDasharray: '3 3' }}
+                    content={({ active, payload }) => {
+                      if (active && payload && payload.length) {
+                        return (
+                          <div className="bg-background border border-border rounded p-2 shadow-lg">
+                            <p className="text-sm font-semibold">{payload[0].payload.statusLabel}</p>
+                            <p className="text-xs text-muted-foreground">Godzina: {payload[0].payload.time}</p>
+                          </div>
+                        );
+                      }
+                      return null;
+                    }}
+                  />
+                  <Scatter
+                    data={trafficStatusScatterData}
+                    fill="#10b981"
+                    shape="circle"
+                  />
+                </ScatterChart>
+              </ResponsiveContainer>
+
+              {trafficStatusScatterData.length === 0 && (
+                <div className="text-center text-muted-foreground py-8">
+                  Brak danych dla wybranej ulicy, kierunku i daty
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>

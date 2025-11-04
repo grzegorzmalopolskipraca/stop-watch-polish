@@ -16,6 +16,12 @@ const Push = () => {
   const [externalId, setExternalId] = useState<string | null>(null);
   const [pushMessage, setPushMessage] = useState("To jest testowe powiadomienie push!");
   const [isSending, setIsSending] = useState(false);
+  const [receivedNotifications, setReceivedNotifications] = useState<Array<{
+    timestamp: Date;
+    title: string;
+    body: string;
+    data?: any;
+  }>>([]);
 
   useEffect(() => {
     console.log("🚀 [COMPONENT] Component mounted - Initializing OneSignal");
@@ -95,6 +101,56 @@ const Push = () => {
             setPushToken(event.current.token);
           });
 
+          // Add notification event listeners
+          OneSignal.Notifications.addEventListener("foregroundWillDisplay", (event: any) => {
+            console.log("🔔 [NOTIFICATION] Notification will display:", event);
+            const notifData = {
+              title: event.notification?.title || "No title",
+              body: event.notification?.body || "No body",
+              data: event.notification?.data,
+              url: event.notification?.launchURL
+            };
+            console.log("📄 [NOTIFICATION] Notification data:", notifData);
+            
+            // Add to received notifications list
+            setReceivedNotifications(prev => [{
+              timestamp: new Date(),
+              title: notifData.title,
+              body: notifData.body,
+              data: notifData.data
+            }, ...prev.slice(0, 9)]); // Keep last 10
+            
+            // Show toast
+            toast.success(`📬 Otrzymano: ${notifData.title}`, { 
+              description: notifData.body,
+              duration: 5000 
+            });
+          });
+
+          OneSignal.Notifications.addEventListener("click", (event: any) => {
+            console.log("👆 [NOTIFICATION] Notification clicked:", event);
+            console.log("📄 [NOTIFICATION] Click data:", {
+              title: event.notification?.title,
+              body: event.notification?.body,
+              data: event.notification?.data,
+              url: event.notification?.launchURL
+            });
+            toast.success("Kliknięto powiadomienie: " + event.notification?.title);
+          });
+
+          OneSignal.Notifications.addEventListener("dismiss", (event: any) => {
+            console.log("❌ [NOTIFICATION] Notification dismissed:", event);
+          });
+
+          OneSignal.Notifications.addEventListener("permissionChange", (permission: boolean) => {
+            console.log("🔐 [NOTIFICATION] Permission changed:", permission);
+            if (permission) {
+              toast.success("Uprawnienia do powiadomień przyznane!");
+            } else {
+              toast.warning("Uprawnienia do powiadomień odrzucone");
+            }
+          });
+
           console.log("✅ [COMPONENT] Component initialization complete");
         } catch (innerError) {
           console.error("❌ [COMPONENT] Error in OneSignal callback:", innerError);
@@ -141,20 +197,31 @@ const Push = () => {
             platform: navigator.platform
           });
 
+          // Update local state immediately
+          setIsSubscribed(true);
+          setUserId(newId);
+          setPushToken(newToken);
+
           // Add tags to help identify test device subscriptions
           // IMPORTANT: We add "street_test_device" to match what the backend sends to
-          await OneSignal.User.addTag("test_device", "true");
-          await OneSignal.User.addTag("street_test_device", "true"); // This matches the backend filter
-          await OneSignal.User.addTag("registered_from", window.location.pathname);
-          console.log("[REGISTER] Tags added for identification:", {
+          const tags = {
             test_device: "true",
             street_test_device: "true",
-            registered_from: window.location.pathname
-          });
+            registered_from: window.location.pathname,
+            device_type: navigator.platform,
+            browser: navigator.userAgent.includes('Android') ? 'Android Chrome' : 'Desktop Chrome'
+          };
+          
+          await OneSignal.User.addTags(tags);
+          console.log("[REGISTER] Tags added for identification:", tags);
+
+          // Verify tags were added
+          const verifyTags = await OneSignal.User.getTags();
+          console.log("[REGISTER] Tags verification:", verifyTags);
 
           console.log("✅ [REGISTER] Successfully registered for push notifications");
 
-          toast.success("Powiadomienia push włączone!");
+          toast.success("Powiadomienia push włączone! ID: " + (newId || "pending..."));
         } catch (innerError) {
           console.error("❌ [REGISTER] Inner registration error:", innerError);
           throw innerError;
@@ -339,7 +406,6 @@ const Push = () => {
           badge: "/icon-192.png",
           tag: "test-notification",
           requireInteraction: false,
-          vibrate: [200, 100, 200],
           data: { test: true, url: window.location.href }
         });
 
@@ -588,6 +654,36 @@ const Push = () => {
             </ul>
           </div>
         </div>
+
+        {/* Received Notifications History */}
+        {receivedNotifications.length > 0 && (
+          <div className="space-y-4 p-6 bg-card rounded-lg border">
+            <h2 className="text-lg font-semibold">Odebrane powiadomienia ({receivedNotifications.length})</h2>
+            <div className="space-y-2 max-h-96 overflow-y-auto">
+              {receivedNotifications.map((notif, index) => (
+                <div key={index} className="p-3 bg-muted rounded-lg border">
+                  <div className="flex justify-between items-start mb-1">
+                    <p className="font-medium">{notif.title}</p>
+                    <span className="text-xs text-muted-foreground">
+                      {notif.timestamp.toLocaleTimeString()}
+                    </span>
+                  </div>
+                  <p className="text-sm text-muted-foreground">{notif.body}</p>
+                  {notif.data && (
+                    <details className="mt-2">
+                      <summary className="text-xs cursor-pointer text-muted-foreground">
+                        Dane (kliknij aby rozwinąć)
+                      </summary>
+                      <pre className="text-xs mt-1 p-2 bg-background rounded overflow-x-auto">
+                        {JSON.stringify(notif.data, null, 2)}
+                      </pre>
+                    </details>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Console Viewer */}
         <div className="mt-6">

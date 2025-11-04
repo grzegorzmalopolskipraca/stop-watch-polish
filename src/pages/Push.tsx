@@ -238,12 +238,17 @@ const Push = () => {
             browser: navigator.userAgent.includes('Android') ? 'Android Chrome' : 'Desktop Chrome'
           };
           
-          await OneSignal.User.addTags(tags);
-          console.log("[REGISTER] Tags added for identification:", tags);
+          try {
+            await OneSignal.User.addTags(tags);
+            console.log("[REGISTER] Tags added for identification:", tags);
 
-          // Verify tags were added
-          const verifyTags = await OneSignal.User.getTags();
-          console.log("[REGISTER] Tags verification:", verifyTags);
+            // Verify tags were added
+            const verifyTags = await OneSignal.User.getTags();
+            console.log("[REGISTER] Tags verification:", verifyTags);
+          } catch (tagError) {
+            console.warn("⚠️ [REGISTER] Tag operation failed (non-critical):", tagError);
+            // Don't throw - tags are not critical for basic functionality
+          }
 
           console.log("✅ [REGISTER] Successfully registered for push notifications");
 
@@ -353,13 +358,21 @@ const Push = () => {
 
           // Check if required tag is missing and add it
           if (optedIn && !tags.street_test_device) {
-            console.log("⚠️ [CHECK-STATUS] Missing street_test_device tag, adding it now...");
-            await OneSignal.User.addTag("street_test_device", "true");
-            console.log("✅ [CHECK-STATUS] Added missing street_test_device tag");
-            toast.success(
-              `Status: Subscribed ✅\nBrakujący tag został dodany!\nID: ${id || 'None'}`,
-              { duration: 5000 }
-            );
+            try {
+              console.log("⚠️ [CHECK-STATUS] Missing street_test_device tag, adding it now...");
+              await OneSignal.User.addTag("street_test_device", "true");
+              console.log("✅ [CHECK-STATUS] Added missing street_test_device tag");
+              toast.success(
+                `Status: Subscribed ✅\nBrakujący tag został dodany!\nID: ${id || 'None'}`,
+                { duration: 5000 }
+              );
+            } catch (tagError) {
+              console.warn("⚠️ [CHECK-STATUS] Failed to add missing tag:", tagError);
+              toast.warning(
+                `Status: Subscribed ✅ (tag add failed)\nID: ${id || 'None'}`,
+                { duration: 5000 }
+              );
+            }
           } else {
             const statusMessage = optedIn
               ? `Status: Subscribed ✅\nPermission: ${permission}\nID: ${id || 'None'}\nCheck console for details`

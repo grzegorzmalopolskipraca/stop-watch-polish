@@ -73,6 +73,8 @@
 
       window.OneSignalDeferred = window.OneSignalDeferred || [];
       OneSignalDeferred.push(async function(OneSignal) {
+        console.log('[OneSignal] Starting initialization...');
+        
         await OneSignal.init({
           appId: "16ce973c-c7b3-42ff-b7b4-fe48be517186",
           serviceWorkerPath: "/OneSignalSDKWorker.js",
@@ -80,13 +82,43 @@
           allowLocalhostAsSecureOrigin: true,
         });
         
-        console.log('[OneSignal] Initialized successfully');
+        console.log('[OneSignal] ✅ Initialized successfully');
         
-        // Display notifications in foreground
+        // Log subscription status
+        const isPushSupported = await OneSignal.Notifications.isPushSupported();
+        console.log('[OneSignal] Push supported:', isPushSupported);
+        
+        const permission = await OneSignal.Notifications.permissionNative;
+        console.log('[OneSignal] Current permission:', permission);
+        
+        // Display notifications in foreground (v16 API)
         OneSignal.Notifications.addEventListener('foregroundWillDisplay', (event) => {
+          console.log('[OneSignal] 🔔 Notification received in foreground:', {
+            title: event.notification.title,
+            body: event.notification.body,
+            additionalData: event.notification.additionalData
+          });
+          
           event.preventDefault();
-          event.notification.display();
+          console.log('[OneSignal] Calling getNotification().display()...');
+          
+          // Correct v16 API - use getNotification()
+          event.getNotification().display();
+          
+          console.log('[OneSignal] ✅ Notification display() called');
         });
+        
+        // Log when notification is clicked
+        OneSignal.Notifications.addEventListener('click', (event) => {
+          console.log('[OneSignal] 👆 Notification clicked:', event.notification);
+        });
+        
+        // Log permission changes
+        OneSignal.Notifications.addEventListener('permissionChange', (granted) => {
+          console.log('[OneSignal] Permission changed to:', granted ? 'granted' : 'denied');
+        });
+        
+        console.log('[OneSignal] All event listeners registered');
       });
     </script>
   </body>

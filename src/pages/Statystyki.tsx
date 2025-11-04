@@ -137,9 +137,9 @@ const Statystyki = () => {
       });
       
       const statusLabels: Record<string, string> = {
-        smooth: "Płynny",
-        slow: "Wolny",
-        congested: "Zator",
+        jedzie: "Jedzie",
+        toczy_sie: "Toczy się",
+        stoi: "Stoi",
       };
 
       setTrafficByStatus(
@@ -477,11 +477,11 @@ const Statystyki = () => {
         .map(([street]) => street);
       
       // Calculate average traffic score by hour for each street
-      // smooth = 1, slow = 2, congested = 3
+      // jedzie = 1 (best), toczy_sie = 2 (medium), stoi = 3 (worst)
       const statusScore: Record<string, number> = {
-        smooth: 1,
-        slow: 2,
-        congested: 3,
+        jedzie: 1,
+        toczy_sie: 2,
+        stoi: 3,
       };
       
       const streetHourData: Record<number, Record<string, { total: number; count: number }>> = {};
@@ -530,10 +530,11 @@ const Statystyki = () => {
         .map(([street]) => street);
       
       // Calculate average traffic score by day of week for each street
+      // jedzie = 1 (best), toczy_sie = 2 (medium), stoi = 3 (worst)
       const statusScore: Record<string, number> = {
-        smooth: 1,
-        slow: 2,
-        congested: 3,
+        jedzie: 1,
+        toczy_sie: 2,
+        stoi: 3,
       };
       
       const streetDayData: Record<number, Record<string, { total: number; count: number }>> = {};
@@ -594,11 +595,18 @@ const Statystyki = () => {
       .lte("reported_at", endOfDay.toISOString());
 
     if (trafficData) {
-      // Map status to Y values: smooth=1 (jedzie), slow=0 (toczy_sie), congested=-1 (stoi)
+      // Map database status values to Y coordinates
+      // Database values: "stoi", "toczy_sie", "jedzie"
       const statusToY: Record<string, number> = {
-        smooth: 1,      // jedzie
-        slow: 0,        // toczy_sie
-        congested: -1   // stoi
+        jedzie: 1,       // Top of chart
+        toczy_sie: 0,    // Middle of chart
+        stoi: -1         // Bottom of chart
+      };
+
+      const statusToLabel: Record<string, string> = {
+        jedzie: 'Jedzie',
+        toczy_sie: 'Toczy się',
+        stoi: 'Stoi'
       };
 
       const scatterData = trafficData.map(t => {
@@ -609,10 +617,14 @@ const Statystyki = () => {
         return {
           hour: hourDecimal,
           status: statusToY[t.status] ?? 0,
-          statusLabel: t.status === 'smooth' ? 'Jedzie' : t.status === 'slow' ? 'Toczy się' : 'Stoi',
-          time: format(parseISO(t.reported_at), "HH:mm", { locale: pl })
+          statusLabel: statusToLabel[t.status] || 'Nieznany',
+          time: format(parseISO(t.reported_at), "HH:mm", { locale: pl }),
+          rawStatus: t.status // For debugging
         };
       });
+
+      console.log(`[Traffic Status Chart] Fetched ${scatterData.length} data points for ${selectedStreet} on ${format(selectedDate, 'yyyy-MM-dd')}`);
+      console.log('[Traffic Status Chart] Sample data:', scatterData.slice(0, 3));
 
       setTrafficStatusScatterData(scatterData);
     } else {

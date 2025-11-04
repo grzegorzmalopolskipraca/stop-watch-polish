@@ -757,8 +757,9 @@ const Push = () => {
         console.log("[PING-SW] ================================================================");
         console.log("");
 
+        const typedResponse = response as { scope?: string; timestamp?: string };
         toast.success(
-          `Service Worker odpowiada! ✅\nScope: ${response.scope}\nCzas: ${response.timestamp}`,
+          `Service Worker odpowiada! ✅\nScope: ${typedResponse.scope}\nCzas: ${typedResponse.timestamp}`,
           { duration: 5000 }
         );
       } catch (error) {
@@ -820,16 +821,11 @@ const Push = () => {
         badge: "/icon-192.png",
         tag: "sw-push-test-" + Date.now(),
         requireInteraction: false,
-        vibrate: [200, 100, 200],
         data: {
           test: true,
           timestamp: new Date().toISOString(),
           type: "service-worker-test"
-        },
-        actions: [
-          { action: 'open', title: 'Otwórz' },
-          { action: 'close', title: 'Zamknij' }
-        ]
+        }
       });
 
       console.log("✅ [TEST-SW-PUSH] Notification shown via service worker");

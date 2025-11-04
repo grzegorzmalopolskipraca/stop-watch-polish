@@ -1347,10 +1347,21 @@ const Index = () => {
 
         {/* Current Status */}
         <section
-          className={`rounded-lg p-6 text-center transition-colors ${
+          className={`relative rounded-lg p-6 text-center transition-colors ${
             statusConfig ? statusConfig.color : "bg-muted"
           }`}
         >
+          {statusNotificationsEnabled && (
+            <Button
+              onClick={handleStatusNotifications}
+              variant="default"
+              size="icon"
+              className="absolute top-3 right-3 h-8 w-8"
+            >
+              <Bell className="h-4 w-4" />
+            </Button>
+          )}
+          
           {isLoading ? (
             <p className="text-lg font-semibold">Ładowanie...</p>
           ) : statusConfig ? (
@@ -1400,26 +1411,20 @@ const Index = () => {
               </p>
             </>
           )}
-          <div className="mt-4 pt-4 border-t border-border">
-            <Button
-              onClick={handleStatusNotifications}
-              variant={statusNotificationsEnabled ? "default" : "outline"}
-              size="sm"
-              className="w-full"
-            >
-              {statusNotificationsEnabled ? (
-                <>
-                  <Bell className="mr-2 h-4 w-4" />
-                  Powiadomienia włączone
-                </>
-              ) : (
-                <>
-                  <BellOff className="mr-2 h-4 w-4" />
-                  Włącz powiadomienia o statusie
-                </>
-              )}
-            </Button>
-          </div>
+          
+          {!statusNotificationsEnabled && (
+            <div className="mt-4 pt-4 border-t border-border">
+              <Button
+                onClick={handleStatusNotifications}
+                variant="outline"
+                size="sm"
+                className="w-full"
+              >
+                <BellOff className="mr-2 h-4 w-4" />
+                Włącz ważne powiadomienia o korkach
+              </Button>
+            </div>
+          )}
         </section>
 
         {/* Report Buttons */}

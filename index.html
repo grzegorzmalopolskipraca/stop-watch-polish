@@ -41,6 +41,8 @@
     <script>
       window.OneSignalDeferred = window.OneSignalDeferred || [];
       OneSignalDeferred.push(async function(OneSignal) {
+        console.log('[OneSignal-Init] Starting initialization...');
+
         await OneSignal.init({
           appId: "16ce973c-c7b3-42ff-b7b4-fe48be517186",
           serviceWorkerParam: { scope: '/' },
@@ -53,16 +55,55 @@
           allowLocalhostAsSecureOrigin: true,
         });
 
-        // Add listener for foreground notifications
+        console.log('[OneSignal-Init] Init complete, setting up event listeners...');
+
+        // Add listener for when notification will display in foreground
         OneSignal.Notifications.addEventListener('foregroundWillDisplay', (event) => {
-          console.log('[OneSignal] Foreground notification received:', event);
-          // Allow the notification to display even when page is in focus
+          console.log('🔔 [OneSignal-Notification] foregroundWillDisplay event triggered!');
+          console.log('[OneSignal-Notification] Event object:', event);
+          console.log('[OneSignal-Notification] Notification data:', {
+            title: event.notification?.title,
+            body: event.notification?.body,
+            data: event.notification?.data,
+            icon: event.notification?.icon
+          });
+
+          // Prevent default to manually control display
+          event.preventDefault();
+
+          // Manually display the notification
+          console.log('[OneSignal-Notification] Calling event.notification.display()...');
           event.notification.display();
+          console.log('✅ [OneSignal-Notification] Display called successfully');
+        });
+
+        // Add listener for when notification is displayed
+        OneSignal.Notifications.addEventListener('displayed', (event) => {
+          console.log('✅ [OneSignal-Notification] Notification DISPLAYED event!');
+          console.log('[OneSignal-Notification] Displayed notification:', event);
+        });
+
+        // Add listener for when notification is clicked
+        OneSignal.Notifications.addEventListener('click', (event) => {
+          console.log('👆 [OneSignal-Notification] Notification CLICKED!');
+          console.log('[OneSignal-Notification] Click event:', event);
+        });
+
+        // Add listener for when notification is dismissed
+        OneSignal.Notifications.addEventListener('dismiss', (event) => {
+          console.log('❌ [OneSignal-Notification] Notification DISMISSED');
+          console.log('[OneSignal-Notification] Dismiss event:', event);
+        });
+
+        // Add listener for permission changes
+        OneSignal.Notifications.addEventListener('permissionChange', (event) => {
+          console.log('🔐 [OneSignal-Permission] Permission changed!');
+          console.log('[OneSignal-Permission] New permission:', event);
         });
 
         // Log subscription changes for debugging
         OneSignal.User.PushSubscription.addEventListener('change', (event) => {
-          console.log('[OneSignal] Subscription changed:', {
+          console.log('🔄 [OneSignal-Subscription] Subscription changed:', {
             previous: event.previous,
             current: event.current,
             optedIn: event.current.optedIn,
@@ -71,7 +112,16 @@
           });
         });
 
-        console.log('[OneSignal] Initialized successfully');
+        // Log current subscription status
+        const currentStatus = {
+          permission: OneSignal.Notifications.permissionNative,
+          optedIn: OneSignal.User.PushSubscription.optedIn,
+          id: OneSignal.User.PushSubscription.id,
+          isPushSupported: OneSignal.Notifications.isPushSupported()
+        };
+        console.log('[OneSignal-Init] Current status:', currentStatus);
+
+        console.log('✅ [OneSignal-Init] Initialized successfully with all event listeners');
       });
     </script>
   </head>

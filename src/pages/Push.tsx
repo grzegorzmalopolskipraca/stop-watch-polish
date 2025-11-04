@@ -207,6 +207,30 @@ const Push = () => {
     try {
       console.log("🔍 [CHECK-STATUS] Checking subscription status...");
 
+      // Check service worker registration
+      if ('serviceWorker' in navigator) {
+        const registration = await navigator.serviceWorker.getRegistration();
+        console.log("📋 [CHECK-STATUS] Service Worker registration:", {
+          found: !!registration,
+          scope: registration?.scope,
+          active: !!registration?.active,
+          installing: !!registration?.installing,
+          waiting: !!registration?.waiting,
+          updateViaCache: registration?.updateViaCache
+        });
+
+        if (registration?.active) {
+          console.log("✅ [CHECK-STATUS] Active Service Worker state:", registration.active.state);
+          console.log("✅ [CHECK-STATUS] Active Service Worker URL:", registration.active.scriptURL);
+        }
+      } else {
+        console.warn("⚠️ [CHECK-STATUS] Service Workers not supported in this browser");
+      }
+
+      // Check notification permission at browser level
+      const browserPermission = await navigator.permissions.query({ name: 'notifications' });
+      console.log("🔐 [CHECK-STATUS] Browser notification permission:", browserPermission.state);
+
       if (!window.OneSignalDeferred) {
         throw new Error("OneSignal SDK not loaded");
       }
@@ -244,10 +268,11 @@ const Push = () => {
               { duration: 5000 }
             );
           } else {
-            toast.success(
-              `Status: ${optedIn ? 'Subscribed ✅' : 'Not Subscribed ❌'}\nID: ${id || 'None'}\nCheck console for details`,
-              { duration: 5000 }
-            );
+            const statusMessage = optedIn
+              ? `Status: Subscribed ✅\nPermission: ${permission}\nID: ${id || 'None'}\nCheck console for details`
+              : `Status: Not Subscribed ❌\nPermission: ${permission}\nID: ${id || 'None'}\n${permission === 'default' ? 'Click "Włącz powiadomienia" to subscribe' : 'Check console for details'}`;
+
+            toast.success(statusMessage, { duration: 6000 });
           }
         } catch (innerError) {
           console.error("❌ [CHECK-STATUS] Inner error:", innerError);
@@ -257,6 +282,75 @@ const Push = () => {
     } catch (error) {
       console.error("❌ [CHECK-STATUS] Error:", error);
       toast.error("Nie udało się sprawdzić statusu");
+    }
+  };
+
+  const handleTestBrowserNotification = async () => {
+    try {
+      console.log("🧪 [TEST-BROWSER] Testing browser notification directly...");
+
+      // Check if notifications are supported
+      if (!("Notification" in window)) {
+        toast.error("Ten browser nie wspiera powiadomień");
+        console.error("❌ [TEST-BROWSER] Notifications not supported");
+        return;
+      }
+
+      // Check current permission
+      console.log("[TEST-BROWSER] Current permission:", Notification.permission);
+
+      // Request permission if needed
+      if (Notification.permission === "default") {
+        console.log("[TEST-BROWSER] Requesting permission...");
+        const permission = await Notification.requestPermission();
+        console.log("[TEST-BROWSER] Permission result:", permission);
+
+        if (permission !== "granted") {
+          toast.error("Odmowa zezwolenia na powiadomienia");
+          return;
+        }
+      }
+
+      if (Notification.permission === "denied") {
+        toast.error("Powiadomienia są zablokowane w przeglądarce");
+        console.error("❌ [TEST-BROWSER] Permission denied");
+        return;
+      }
+
+      // Create a test notification directly
+      console.log("[TEST-BROWSER] Creating test notification...");
+      const notification = new Notification("🧪 Test powiadomienia", {
+        body: "To jest testowe powiadomienie bezpośrednio z przeglądarki",
+        icon: "/icon-192.png",
+        badge: "/icon-192.png",
+        tag: "test-notification",
+        requireInteraction: false,
+        data: { test: true }
+      });
+
+      notification.onclick = function() {
+        console.log("👆 [TEST-BROWSER] Notification clicked!");
+        window.focus();
+        notification.close();
+      };
+
+      notification.onshow = function() {
+        console.log("✅ [TEST-BROWSER] Notification shown!");
+      };
+
+      notification.onerror = function(error) {
+        console.error("❌ [TEST-BROWSER] Notification error:", error);
+      };
+
+      notification.onclose = function() {
+        console.log("❌ [TEST-BROWSER] Notification closed");
+      };
+
+      console.log("✅ [TEST-BROWSER] Test notification created successfully");
+      toast.success("Testowe powiadomienie wysłane!");
+    } catch (error) {
+      console.error("❌ [TEST-BROWSER] Error:", error);
+      toast.error("Błąd podczas testu powiadomienia");
     }
   };
 
@@ -380,13 +474,23 @@ const Push = () => {
             )}
 
             {isInitialized && (
-              <Button
-                onClick={handleCheckStatus}
-                variant="secondary"
-                className="w-full"
-              >
-                🔍 Sprawdź pełny status
-              </Button>
+              <>
+                <Button
+                  onClick={handleCheckStatus}
+                  variant="secondary"
+                  className="w-full"
+                >
+                  🔍 Sprawdź pełny status
+                </Button>
+
+                <Button
+                  onClick={handleTestBrowserNotification}
+                  variant="outline"
+                  className="w-full"
+                >
+                  🧪 Test powiadomienia przeglądarki
+                </Button>
+              </>
             )}
           </div>
         </div>
@@ -443,11 +547,13 @@ const Push = () => {
               💡 Wskazówki debugowania:
             </h3>
             <ul className="text-xs text-amber-800 dark:text-amber-200 space-y-1 list-disc list-inside">
+              <li><strong>NOWE:</strong> Użyj "🧪 Test powiadomienia przeglądarki" aby sprawdzić czy powiadomienia w ogóle działają (pomija OneSignal)</li>
               <li><strong>WAŻNE:</strong> Jeśli zasubskrybowałeś przed tą zmianą, kliknij "Sprawdź pełny status" aby automatycznie dodać brakujący tag "street_test_device"</li>
-              <li>Użyj "Sprawdź pełny status" aby zobaczyć wszystkie szczegóły subskrypcji i tagi</li>
-              <li>Sprawdź console przeglądarki (F12) aby zobaczyć dokładne logi</li>
+              <li>Użyj "Sprawdź pełny status" aby zobaczyć service worker, uprawnienia i wszystkie szczegóły subskrypcji</li>
+              <li>Sprawdź console przeglądarki (F12) aby zobaczyć dokładne logi z każdego etapu otrzymywania powiadomienia</li>
               <li>W OneSignal dashboard filtruj po tagu "test_device" = "true" lub "street_test_device" = "true"</li>
               <li>Na Androidzie upewnij się że Chrome ma włączone powiadomienia w ustawieniach systemu</li>
+              <li>Logi będą pokazywać czy powiadomienie zostało: otrzymane → wyświetlone → kliknięte</li>
             </ul>
           </div>
         </div>

@@ -15,6 +15,7 @@ const Push = () => {
   const [pushToken, setPushToken] = useState<string | null>(null);
   const [externalId, setExternalId] = useState<string | null>(null);
   const [pushMessage, setPushMessage] = useState("To jest testowe powiadomienie push!");
+  const [pushTag, setPushTag] = useState("test_device");
   const [isSending, setIsSending] = useState(false);
   const [receivedNotifications, setReceivedNotifications] = useState<Array<{
     timestamp: Date;
@@ -963,10 +964,12 @@ const Push = () => {
 
     try {
       const requestBody = {
-        street: "test_device",
+        street: pushTag,
         message: pushMessage,
       };
       console.log("[SEND-PUSH] Request body:", requestBody);
+      console.log("[SEND-PUSH] Tag being used:", pushTag);
+      console.log("[SEND-PUSH] This will send to users with tag: street_" + pushTag.replace(/\s+/g, '_') + " = true");
       console.log("[SEND-PUSH] Invoking Supabase function: send-push-notifications");
 
       const { data, error } = await supabase.functions.invoke("send-push-notifications", {
@@ -1153,7 +1156,21 @@ const Push = () => {
 
         <div className="space-y-4 p-6 bg-card rounded-lg border">
           <h2 className="text-lg font-semibold">Wyślij testowe powiadomienie</h2>
-          
+
+          <div className="space-y-2">
+            <Label htmlFor="pushTag">Tag (street_)</Label>
+            <Input
+              id="pushTag"
+              value={pushTag}
+              onChange={(e) => setPushTag(e.target.value)}
+              placeholder="test_device"
+              disabled={!isSubscribed}
+            />
+            <p className="text-xs text-muted-foreground">
+              Wyśle do użytkowników z tagiem: <span className="font-mono">street_{pushTag.replace(/\s+/g, '_')} = true</span>
+            </p>
+          </div>
+
           <div className="space-y-2">
             <Label htmlFor="pushMessage">Wiadomość</Label>
             <Input
@@ -1167,7 +1184,7 @@ const Push = () => {
 
           <Button
             onClick={handleSendPush}
-            disabled={!isSubscribed || isSending || !pushMessage.trim()}
+            disabled={!isSubscribed || isSending || !pushMessage.trim() || !pushTag.trim()}
             className="w-full"
           >
             <Send className="w-4 h-4 mr-2" />

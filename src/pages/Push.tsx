@@ -141,10 +141,16 @@ const Push = () => {
             platform: navigator.platform
           });
 
-          // Add a tag to help identify test device subscriptions
+          // Add tags to help identify test device subscriptions
+          // IMPORTANT: We add "street_test_device" to match what the backend sends to
           await OneSignal.User.addTag("test_device", "true");
+          await OneSignal.User.addTag("street_test_device", "true"); // This matches the backend filter
           await OneSignal.User.addTag("registered_from", window.location.pathname);
-          console.log("[REGISTER] Tags added for identification");
+          console.log("[REGISTER] Tags added for identification:", {
+            test_device: "true",
+            street_test_device: "true",
+            registered_from: window.location.pathname
+          });
 
           console.log("✅ [REGISTER] Successfully registered for push notifications");
 
@@ -228,10 +234,21 @@ const Push = () => {
 
           console.log("📊 [CHECK-STATUS] Full Status:", status);
 
-          toast.success(
-            `Status: ${optedIn ? 'Subscribed ✅' : 'Not Subscribed ❌'}\nID: ${id || 'None'}\nCheck console for details`,
-            { duration: 5000 }
-          );
+          // Check if required tag is missing and add it
+          if (optedIn && !tags.street_test_device) {
+            console.log("⚠️ [CHECK-STATUS] Missing street_test_device tag, adding it now...");
+            await OneSignal.User.addTag("street_test_device", "true");
+            console.log("✅ [CHECK-STATUS] Added missing street_test_device tag");
+            toast.success(
+              `Status: Subscribed ✅\nBrakujący tag został dodany!\nID: ${id || 'None'}`,
+              { duration: 5000 }
+            );
+          } else {
+            toast.success(
+              `Status: ${optedIn ? 'Subscribed ✅' : 'Not Subscribed ❌'}\nID: ${id || 'None'}\nCheck console for details`,
+              { duration: 5000 }
+            );
+          }
         } catch (innerError) {
           console.error("❌ [CHECK-STATUS] Inner error:", innerError);
           throw innerError;
@@ -416,7 +433,8 @@ const Push = () => {
               <li><strong>Android Chrome:</strong> Subskrypcje teraz działają. W dashboardzie OneSignal mogą się wyświetlać jako "Linux armv8l"</li>
               <li><strong>Wyświetlanie powiadomień:</strong> Dodano obsługę foreground notifications - powiadomienia będą się wyświetlać nawet gdy strona jest otwarta</li>
               <li><strong>Service Worker:</strong> Dodano handlery dla lepszej obsługi kliknięć w powiadomienia</li>
-              <li><strong>Debugging:</strong> Dodano tagi "test_device" aby łatwiej znaleźć subskrypcje w dashboardzie</li>
+              <li><strong>Debugging:</strong> Dodano tagi "test_device" i "street_test_device" dla testowania</li>
+              <li><strong>Tag matching:</strong> Naprawiono problem "All included players are not subscribed" - tag "street_test_device" jest teraz poprawnie dodawany</li>
             </ul>
           </div>
 
@@ -425,9 +443,10 @@ const Push = () => {
               💡 Wskazówki debugowania:
             </h3>
             <ul className="text-xs text-amber-800 dark:text-amber-200 space-y-1 list-disc list-inside">
-              <li>Użyj "Sprawdź pełny status" aby zobaczyć wszystkie szczegóły subskrypcji</li>
+              <li><strong>WAŻNE:</strong> Jeśli zasubskrybowałeś przed tą zmianą, kliknij "Sprawdź pełny status" aby automatycznie dodać brakujący tag "street_test_device"</li>
+              <li>Użyj "Sprawdź pełny status" aby zobaczyć wszystkie szczegóły subskrypcji i tagi</li>
               <li>Sprawdź console przeglądarki (F12) aby zobaczyć dokładne logi</li>
-              <li>W OneSignal dashboard filtruj po tagu "test_device" = "true"</li>
+              <li>W OneSignal dashboard filtruj po tagu "test_device" = "true" lub "street_test_device" = "true"</li>
               <li>Na Androidzie upewnij się że Chrome ma włączone powiadomienia w ustawieniach systemu</li>
             </ul>
           </div>

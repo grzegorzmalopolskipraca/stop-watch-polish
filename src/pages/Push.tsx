@@ -12,6 +12,8 @@ const Push = () => {
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
+  const [pushToken, setPushToken] = useState<string | null>(null);
+  const [externalId, setExternalId] = useState<string | null>(null);
   const [pushMessage, setPushMessage] = useState("To jest testowe powiadomienie push!");
   const [isSending, setIsSending] = useState(false);
 
@@ -57,16 +59,31 @@ const Push = () => {
           console.log("✅ [COMPONENT] User opted in:", optedIn);
           setIsSubscribed(optedIn);
 
-          // Get user ID if available
+          // Get user ID and token if available
           const id = OneSignal.User.PushSubscription.id;
-          console.log("🆔 [COMPONENT] User ID:", id);
+          const token = OneSignal.User.PushSubscription.token;
+          const extId = await OneSignal.User.getExternalId();
+
+          console.log("🆔 [COMPONENT] Subscription Details:", {
+            id,
+            token,
+            externalId: extId,
+            optedIn
+          });
+
           setUserId(id);
+          setPushToken(token);
+          setExternalId(extId);
 
           // Listen for subscription changes
           OneSignal.User.PushSubscription.addEventListener("change", (event: any) => {
-            console.log("🔄 [COMPONENT] Subscription changed:", event);
+            console.log("🔄 [COMPONENT] Subscription changed:", {
+              previous: event.previous,
+              current: event.current
+            });
             setIsSubscribed(event.current.optedIn);
             setUserId(event.current.id);
+            setPushToken(event.current.token);
           });
 
           console.log("✅ [COMPONENT] Component initialization complete");
@@ -95,15 +112,30 @@ const Push = () => {
           console.log("[REGISTER] Requesting notification permission...");
           const permission = await OneSignal.Notifications.requestPermission();
           console.log("[REGISTER] Permission result:", permission);
-          
+
           console.log("[REGISTER] Opting in to push notifications...");
           await OneSignal.User.PushSubscription.optIn();
-          
+
+          // Wait a bit for the subscription to be fully processed
+          await new Promise(resolve => setTimeout(resolve, 1000));
+
           const newId = OneSignal.User.PushSubscription.id;
-          console.log("[REGISTER] New User ID:", newId);
-          
+          const newToken = OneSignal.User.PushSubscription.token;
+
+          console.log("[REGISTER] Registration details:", {
+            id: newId,
+            token: newToken,
+            userAgent: navigator.userAgent,
+            platform: navigator.platform
+          });
+
+          // Add a tag to help identify test device subscriptions
+          await OneSignal.User.addTag("test_device", "true");
+          await OneSignal.User.addTag("registered_from", window.location.pathname);
+          console.log("[REGISTER] Tags added for identification");
+
           console.log("✅ [REGISTER] Successfully registered for push notifications");
-          
+
           toast.success("Powiadomienia push włączone!");
         } catch (innerError) {
           console.error("❌ [REGISTER] Inner registration error:", innerError);
@@ -140,6 +172,52 @@ const Push = () => {
     } catch (error) {
       console.error("❌ [UNREGISTER] Unregistration error:", error);
       toast.error(`Błąd wyrejestrowania: ${error instanceof Error ? error.message : 'Nieznany błąd'}`);
+    }
+  };
+
+  const handleCheckStatus = async () => {
+    try {
+      console.log("🔍 [CHECK-STATUS] Checking subscription status...");
+
+      if (!window.OneSignalDeferred) {
+        throw new Error("OneSignal SDK not loaded");
+      }
+
+      window.OneSignalDeferred.push(async (OneSignal: any) => {
+        try {
+          const isPushSupported = OneSignal.Notifications.isPushSupported();
+          const permission = OneSignal.Notifications.permissionNative;
+          const optedIn = OneSignal.User.PushSubscription.optedIn;
+          const id = OneSignal.User.PushSubscription.id;
+          const token = OneSignal.User.PushSubscription.token;
+          const tags = await OneSignal.User.getTags();
+
+          const status = {
+            isPushSupported,
+            permission,
+            optedIn,
+            id,
+            token: token ? token.substring(0, 50) + '...' : null,
+            tags,
+            userAgent: navigator.userAgent,
+            platform: navigator.platform,
+            url: window.location.href
+          };
+
+          console.log("📊 [CHECK-STATUS] Full Status:", status);
+
+          toast.success(
+            `Status: ${optedIn ? 'Subscribed ✅' : 'Not Subscribed ❌'}\nID: ${id || 'None'}\nCheck console for details`,
+            { duration: 5000 }
+          );
+        } catch (innerError) {
+          console.error("❌ [CHECK-STATUS] Inner error:", innerError);
+          throw innerError;
+        }
+      });
+    } catch (error) {
+      console.error("❌ [CHECK-STATUS] Error:", error);
+      toast.error("Nie udało się sprawdzić statusu");
     }
   };
 
@@ -212,9 +290,24 @@ const Push = () => {
               )}
             </div>
             {userId && (
-              <p className="text-xs text-muted-foreground">
-                User ID: {userId}
-              </p>
+              <div className="text-xs text-muted-foreground space-y-1 mt-2">
+                <p className="font-mono break-all">
+                  <strong>User ID:</strong> {userId}
+                </p>
+                {pushToken && (
+                  <p className="font-mono break-all">
+                    <strong>Token:</strong> {pushToken.substring(0, 50)}...
+                  </p>
+                )}
+                {externalId && (
+                  <p className="font-mono break-all">
+                    <strong>External ID:</strong> {externalId}
+                  </p>
+                )}
+                <p className="text-xs text-amber-600 mt-1">
+                  💡 Tip: Na Androidzie subskrypcja może pojawić się jako "Linux armv8l" w dashboardzie OneSignal
+                </p>
+              </div>
             )}
           </div>
 
@@ -236,6 +329,16 @@ const Push = () => {
               >
                 <Bell className="w-4 h-4 mr-2" />
                 Włącz powiadomienia
+              </Button>
+            )}
+
+            {isInitialized && (
+              <Button
+                onClick={handleCheckStatus}
+                variant="secondary"
+                className="w-full"
+              >
+                🔍 Sprawdź pełny status
               </Button>
             )}
           </div>
@@ -265,14 +368,39 @@ const Push = () => {
           </Button>
         </div>
 
-        <div className="p-4 bg-muted rounded-lg space-y-2">
+        <div className="p-4 bg-muted rounded-lg space-y-3">
           <h2 className="font-semibold text-foreground">Instrukcja:</h2>
           <ol className="text-sm text-muted-foreground space-y-1 list-decimal list-inside">
             <li>Kliknij "Włącz powiadomienia" i zezwól na powiadomienia w przeglądarce</li>
+            <li>Sprawdź User ID i token (pojawi się po subskrypcji)</li>
             <li>Wprowadź wiadomość testową</li>
             <li>Kliknij "Wyślij powiadomienie"</li>
-            <li>Powiadomienie powinno pojawić się na tym urządzeniu</li>
+            <li>Powiadomienie powinno pojawić się nawet gdy strona jest otwarta</li>
           </ol>
+
+          <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-200 dark:border-blue-800">
+            <h3 className="font-semibold text-sm text-blue-900 dark:text-blue-100 mb-2">
+              🔧 Naprawione problemy:
+            </h3>
+            <ul className="text-xs text-blue-800 dark:text-blue-200 space-y-1 list-disc list-inside">
+              <li><strong>Android Chrome:</strong> Subskrypcje teraz działają. W dashboardzie OneSignal mogą się wyświetlać jako "Linux armv8l"</li>
+              <li><strong>Wyświetlanie powiadomień:</strong> Dodano obsługę foreground notifications - powiadomienia będą się wyświetlać nawet gdy strona jest otwarta</li>
+              <li><strong>Service Worker:</strong> Dodano handlery dla lepszej obsługi kliknięć w powiadomienia</li>
+              <li><strong>Debugging:</strong> Dodano tagi "test_device" aby łatwiej znaleźć subskrypcje w dashboardzie</li>
+            </ul>
+          </div>
+
+          <div className="mt-3 p-3 bg-amber-50 dark:bg-amber-900/20 rounded border border-amber-200 dark:border-amber-800">
+            <h3 className="font-semibold text-sm text-amber-900 dark:text-amber-100 mb-2">
+              💡 Wskazówki debugowania:
+            </h3>
+            <ul className="text-xs text-amber-800 dark:text-amber-200 space-y-1 list-disc list-inside">
+              <li>Użyj "Sprawdź pełny status" aby zobaczyć wszystkie szczegóły subskrypcji</li>
+              <li>Sprawdź console przeglądarki (F12) aby zobaczyć dokładne logi</li>
+              <li>W OneSignal dashboard filtruj po tagu "test_device" = "true"</li>
+              <li>Na Androidzie upewnij się że Chrome ma włączone powiadomienia w ustawieniach systemu</li>
+            </ul>
+          </div>
         </div>
 
         {/* Console Viewer */}

@@ -43,7 +43,35 @@
       OneSignalDeferred.push(async function(OneSignal) {
         await OneSignal.init({
           appId: "16ce973c-c7b3-42ff-b7b4-fe48be517186",
+          serviceWorkerParam: { scope: '/' },
+          serviceWorkerPath: '/OneSignalSDKWorker.js',
+          // Allow notifications to display even when page is in focus
+          notifyButton: {
+            enable: false
+          },
+          // Show notifications even when page is focused (foreground)
+          allowLocalhostAsSecureOrigin: true,
         });
+
+        // Add listener for foreground notifications
+        OneSignal.Notifications.addEventListener('foregroundWillDisplay', (event) => {
+          console.log('[OneSignal] Foreground notification received:', event);
+          // Allow the notification to display even when page is in focus
+          event.notification.display();
+        });
+
+        // Log subscription changes for debugging
+        OneSignal.User.PushSubscription.addEventListener('change', (event) => {
+          console.log('[OneSignal] Subscription changed:', {
+            previous: event.previous,
+            current: event.current,
+            optedIn: event.current.optedIn,
+            id: event.current.id,
+            token: event.current.token
+          });
+        });
+
+        console.log('[OneSignal] Initialized successfully');
       });
     </script>
   </head>

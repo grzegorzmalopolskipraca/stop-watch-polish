@@ -65,6 +65,10 @@ const Statystyki = () => {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [trafficStatusScatterData, setTrafficStatusScatterData] = useState<any[]>([]);
 
+  // New state for date-filtered street/hour chart
+  const [selectedHourChartDate, setSelectedHourChartDate] = useState<Date>(new Date());
+  const [trafficByStreetAndHourFiltered, setTrafficByStreetAndHourFiltered] = useState<any[]>([]);
+
   useEffect(() => {
     fetchAllStatistics();
     fetchAvailableStreets();
@@ -75,6 +79,10 @@ const Statystyki = () => {
       fetchTrafficStatusScatterData();
     }
   }, [selectedStreet, selectedDirection, selectedDate]);
+
+  useEffect(() => {
+    fetchTrafficByStreetAndHourFiltered();
+  }, [selectedHourChartDate]);
 
   const fetchAllStatistics = async () => {
     // 1. Daily visits over time (last 30 days)
@@ -632,6 +640,73 @@ const Statystyki = () => {
     }
   };
 
+  const fetchTrafficByStreetAndHourFiltered = async () => {
+    if (!selectedHourChartDate) return;
+
+    const startOfDay = new Date(selectedHourChartDate);
+    startOfDay.setHours(0, 0, 0, 0);
+
+    const endOfDay = new Date(selectedHourChartDate);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    const { data: trafficByHourStreetData } = await supabase
+      .from("traffic_reports")
+      .select("street, status, reported_at")
+      .gte("reported_at", startOfDay.toISOString())
+      .lte("reported_at", endOfDay.toISOString());
+
+    if (trafficByHourStreetData) {
+      // Get top 5 streets by traffic reports for this specific date
+      const streetCounts: Record<string, number> = {};
+      trafficByHourStreetData.forEach((t) => {
+        streetCounts[t.street] = (streetCounts[t.street] || 0) + 1;
+      });
+
+      const topStreetsList = Object.entries(streetCounts)
+        .sort(([, a], [, b]) => b - a)
+        .slice(0, 5)
+        .map(([street]) => street);
+
+      // Calculate average traffic score by hour for each street
+      // jedzie = 1 (best), toczy_sie = 2 (medium), stoi = 3 (worst)
+      const statusScore: Record<string, number> = {
+        jedzie: 1,
+        toczy_sie: 2,
+        stoi: 3,
+      };
+
+      const streetHourData: Record<number, Record<string, { total: number; count: number }>> = {};
+
+      trafficByHourStreetData.forEach((t) => {
+        if (topStreetsList.includes(t.street)) {
+          const hour = getHours(parseISO(t.reported_at));
+          if (!streetHourData[hour]) streetHourData[hour] = {};
+          if (!streetHourData[hour][t.street]) streetHourData[hour][t.street] = { total: 0, count: 0 };
+
+          streetHourData[hour][t.street].total += statusScore[t.status] || 0;
+          streetHourData[hour][t.street].count += 1;
+        }
+      });
+
+      const hourlyData = Array.from({ length: 24 }, (_, hour) => {
+        const dataPoint: any = { hour: `${hour}:00` };
+        topStreetsList.forEach((street) => {
+          if (streetHourData[hour]?.[street]) {
+            dataPoint[street] = parseFloat((streetHourData[hour][street].total / streetHourData[hour][street].count).toFixed(2));
+          } else {
+            dataPoint[street] = null;
+          }
+        });
+        return dataPoint;
+      });
+
+      console.log(`[Hour Chart Filtered] Fetched data for ${format(selectedHourChartDate, 'yyyy-MM-dd')} - ${topStreetsList.length} streets`);
+      setTrafficByStreetAndHourFiltered(hourlyData);
+    } else {
+      setTrafficByStreetAndHourFiltered([]);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -1047,17 +1122,80 @@ const Statystyki = () => {
                   {trafficByStreetAndHour.length > 0 && Object.keys(trafficByStreetAndHour[0])
                     .filter(key => key !== 'hour')
                     .map((street, index) => (
-                      <Line 
-                        key={street} 
-                        type="monotone" 
-                        dataKey={street} 
-                        stroke={COLORS[index % COLORS.length]} 
+                      <Line
+                        key={street}
+                        type="monotone"
+                        dataKey={street}
+                        stroke={COLORS[index % COLORS.length]}
                         strokeWidth={2}
                         dot={{ r: 3 }}
                       />
                     ))}
                 </LineChart>
               </ResponsiveContainer>
+            </CardContent>
+          </Card>
+
+          {/* 16b. Traffic Status by Street and Hour - Date Filtered */}
+          <Card className="lg:col-span-2 bg-gradient-to-br from-amber-500/5 to-yellow-500/5 border-amber-200 dark:border-amber-800">
+            <CardHeader>
+              <CardTitle className="text-amber-700 dark:text-amber-400">Średni status ruchu według godzin - top 5 ulic (wybrana data)</CardTitle>
+              <CardDescription>Średni poziom natężenia ruchu w ciągu wybranego dnia (1=płynny, 2=wolny, 3=zator)</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="mb-6">
+                <label className="text-sm font-medium mb-2 block">Wybierz datę</label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full sm:w-[280px] justify-start text-left font-normal",
+                        !selectedHourChartDate && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {selectedHourChartDate ? format(selectedHourChartDate, "PPP", { locale: pl }) : <span>Wybierz datę</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <Calendar
+                      mode="single"
+                      selected={selectedHourChartDate}
+                      onSelect={(date) => date && setSelectedHourChartDate(date)}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              <ResponsiveContainer width="100%" height={400}>
+                <LineChart data={trafficByStreetAndHourFiltered}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                  <XAxis dataKey="hour" fontSize={10} angle={-45} textAnchor="end" height={80} />
+                  <YAxis fontSize={12} domain={[0, 3]} />
+                  <Tooltip />
+                  <Legend wrapperStyle={{ fontSize: '12px' }} />
+                  {trafficByStreetAndHourFiltered.length > 0 && Object.keys(trafficByStreetAndHourFiltered[0])
+                    .filter(key => key !== 'hour')
+                    .map((street, index) => (
+                      <Line
+                        key={street}
+                        type="monotone"
+                        dataKey={street}
+                        stroke={COLORS[index % COLORS.length]}
+                        strokeWidth={2}
+                        dot={{ r: 3 }}
+                      />
+                    ))}
+                </LineChart>
+              </ResponsiveContainer>
+
+              {trafficByStreetAndHourFiltered.length === 0 && (
+                <div className="text-center text-muted-foreground py-8">
+                  Brak danych dla wybranej daty
+                </div>
+              )}
             </CardContent>
           </Card>
 

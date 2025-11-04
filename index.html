@@ -52,19 +52,9 @@
             appId: "16ce973c-c7b3-42ff-b7b4-fe48be517186",
             allowLocalhostAsSecureOrigin: true,
           });
-          console.log("✅ [HEAD] OneSignal initialized successfully");
-          
-          // Log subscription status
-          const isPushSupported = OneSignal.Notifications.isPushSupported();
-          console.log("[HEAD] Push supported:", isPushSupported);
-          
-          const permission = OneSignal.Notifications.permissionNative;
-          console.log("[HEAD] Current permission:", permission);
-          
-          const optedIn = OneSignal.User.PushSubscription.optedIn;
-          console.log("[HEAD] User opted in:", optedIn);
+          console.log("[HEAD] OneSignal initialized successfully");
         } catch (error) {
-          console.error("❌ [HEAD] OneSignal initialization failed:", error);
+          console.error("[HEAD] OneSignal initialization failed:", error);
         }
       });
     </script>

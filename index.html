@@ -39,12 +39,132 @@
     <!-- OneSignal SDK -->
     <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
     <script>
+      console.log('[OneSignal] ==================== ONESIGNAL SDK INITIALIZING ====================');
+      console.log('[OneSignal] Timestamp:', new Date().toISOString());
+
       window.OneSignalDeferred = window.OneSignalDeferred || [];
       OneSignalDeferred.push(async function(OneSignal) {
-        await OneSignal.init({
-          appId: "16ce973c-c7b3-42ff-b7b4-fe48be517186",
-        });
+        console.log('[OneSignal] OneSignal callback executed - starting initialization...');
+
+        try {
+          await OneSignal.init({
+            appId: "16ce973c-c7b3-42ff-b7b4-fe48be517186",
+            serviceWorkerParam: { scope: '/' },
+            serviceWorkerPath: '/OneSignalSDKWorker.js',
+            notifyButton: { enable: false },
+            allowLocalhostAsSecureOrigin: true,
+          });
+
+          console.log('[OneSignal] ✅ OneSignal initialized successfully');
+          console.log('[OneSignal] App ID:', '16ce973c-c7b3-42ff-b7b4-fe48be517186');
+          console.log('[OneSignal] Service Worker Path:', '/OneSignalSDKWorker.js');
+
+          // CRITICAL: Add listener for foreground notifications
+          OneSignal.Notifications.addEventListener('foregroundWillDisplay', async (event) => {
+            console.log('');
+            console.log('🔔 [OneSignal-Notification] ==================== FOREGROUND NOTIFICATION ====================');
+            console.log('[OneSignal-Notification] Timestamp:', new Date().toISOString());
+            console.log('[OneSignal-Notification] foregroundWillDisplay event triggered!');
+            console.log('[OneSignal-Notification] Event:', event);
+            console.log('[OneSignal-Notification] Notification object:', event.notification);
+
+            if (event.notification) {
+              console.log('[OneSignal-Notification] Title:', event.notification.title);
+              console.log('[OneSignal-Notification] Body:', event.notification.body);
+              console.log('[OneSignal-Notification] Data:', event.notification.data);
+              console.log('[OneSignal-Notification] Launch URL:', event.notification.launchURL);
+            }
+
+            // Prevent default to manually control display
+            event.preventDefault();
+            console.log('[OneSignal-Notification] ⚠️ Default prevented - will display manually');
+
+            // Manually display the notification
+            try {
+              event.notification.display();
+              console.log('[OneSignal-Notification] ✅ Notification displayed manually');
+            } catch (displayError) {
+              console.error('[OneSignal-Notification] ❌ Error displaying notification:', displayError);
+            }
+
+            console.log('[OneSignal-Notification] ================================================================');
+            console.log('');
+          });
+
+          console.log('[OneSignal] ✅ foregroundWillDisplay event listener registered');
+
+          // Log subscription changes
+          OneSignal.User.PushSubscription.addEventListener('change', (event) => {
+            console.log('');
+            console.log('🔄 [OneSignal-Subscription] ==================== SUBSCRIPTION CHANGED ====================');
+            console.log('[OneSignal-Subscription] Timestamp:', new Date().toISOString());
+            console.log('[OneSignal-Subscription] Previous state:', event.previous);
+            console.log('[OneSignal-Subscription] Current state:', event.current);
+
+            if (event.current) {
+              console.log('[OneSignal-Subscription] Opted In:', event.current.optedIn);
+              console.log('[OneSignal-Subscription] ID:', event.current.id);
+              console.log('[OneSignal-Subscription] Token:', event.current.token ? event.current.token.substring(0, 50) + '...' : null);
+            }
+
+            console.log('[OneSignal-Subscription] ================================================================');
+            console.log('');
+          });
+
+          console.log('[OneSignal] ✅ Subscription change event listener registered');
+
+          // Log permission changes
+          OneSignal.Notifications.addEventListener('permissionChange', (permission) => {
+            console.log('');
+            console.log('🔐 [OneSignal-Permission] ==================== PERMISSION CHANGED ====================');
+            console.log('[OneSignal-Permission] Timestamp:', new Date().toISOString());
+            console.log('[OneSignal-Permission] New permission:', permission);
+            console.log('[OneSignal-Permission] Permission granted:', permission === true || permission === 'granted');
+            console.log('[OneSignal-Permission] ================================================================');
+            console.log('');
+          });
+
+          console.log('[OneSignal] ✅ Permission change event listener registered');
+
+          // Log notification clicks
+          OneSignal.Notifications.addEventListener('click', (event) => {
+            console.log('');
+            console.log('👆 [OneSignal-Click] ==================== NOTIFICATION CLICKED ====================');
+            console.log('[OneSignal-Click] Timestamp:', new Date().toISOString());
+            console.log('[OneSignal-Click] Notification:', event.notification);
+
+            if (event.notification) {
+              console.log('[OneSignal-Click] Title:', event.notification.title);
+              console.log('[OneSignal-Click] Body:', event.notification.body);
+              console.log('[OneSignal-Click] Data:', event.notification.data);
+              console.log('[OneSignal-Click] Launch URL:', event.notification.launchURL);
+            }
+
+            console.log('[OneSignal-Click] ================================================================');
+            console.log('');
+          });
+
+          console.log('[OneSignal] ✅ Notification click event listener registered');
+
+          console.log('[OneSignal] ==================== INITIALIZATION COMPLETE ====================');
+          console.log('[OneSignal] All event listeners registered successfully');
+          console.log('[OneSignal] - foregroundWillDisplay (with manual display)');
+          console.log('[OneSignal] - subscription change');
+          console.log('[OneSignal] - permission change');
+          console.log('[OneSignal] - notification click');
+          console.log('[OneSignal] ================================================================');
+
+        } catch (error) {
+          console.error('❌ [OneSignal] Initialization error:', error);
+          console.error('[OneSignal] Error details:', {
+            name: error.name,
+            message: error.message,
+            stack: error.stack
+          });
+        }
       });
+
+      console.log('[OneSignal] OneSignal initialization callback queued');
     </script>
   </head>
 

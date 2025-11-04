@@ -551,12 +551,16 @@ const Statystyki = () => {
   };
 
   const fetchAvailableStreets = async () => {
+    // Fetch ALL unique streets from traffic_reports table
     const { data: streetsData } = await supabase
       .from("traffic_reports")
-      .select("street");
+      .select("street")
+      .order("street", { ascending: true });
 
     if (streetsData) {
+      // Get all unique streets and sort alphabetically
       const uniqueStreets = Array.from(new Set(streetsData.map(s => s.street))).sort();
+      console.log(`Found ${uniqueStreets.length} unique streets in traffic_reports`);
       setAvailableStreets(uniqueStreets);
       if (uniqueStreets.length > 0 && !selectedStreet) {
         setSelectedStreet(uniqueStreets[0]);
@@ -1174,9 +1178,26 @@ const Statystyki = () => {
                       return null;
                     }}
                   />
+                  <Legend />
+                  {/* Green dots for status 1 (Jedzie) */}
                   <Scatter
-                    data={trafficStatusScatterData}
+                    name="Jedzie"
+                    data={trafficStatusScatterData.filter(d => d.status === 1)}
                     fill="#10b981"
+                    shape="circle"
+                  />
+                  {/* Yellow dots for status 0 (Toczy się) */}
+                  <Scatter
+                    name="Toczy się"
+                    data={trafficStatusScatterData.filter(d => d.status === 0)}
+                    fill="#f59e0b"
+                    shape="circle"
+                  />
+                  {/* Red dots for status -1 (Stoi) */}
+                  <Scatter
+                    name="Stoi"
+                    data={trafficStatusScatterData.filter(d => d.status === -1)}
+                    fill="#ef4444"
                     shape="circle"
                   />
                 </ScatterChart>

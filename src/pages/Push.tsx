@@ -102,7 +102,7 @@ const Push = () => {
           });
 
           // Add notification event listeners
-          OneSignal.Notifications.addEventListener("foregroundWillDisplay", (event: any) => {
+          OneSignal.Notifications.addEventListener("foregroundWillDisplay", async (event: any) => {
             console.log("🔔 [NOTIFICATION] Notification will display:", event);
             const notifData = {
               title: event.notification?.title || "No title",
@@ -119,6 +119,32 @@ const Push = () => {
               body: notifData.body,
               data: notifData.data
             }, ...prev.slice(0, 9)]); // Keep last 10
+            
+            // Prevent default to manually control display
+            event.preventDefault();
+            
+            // Manually display the notification using Service Worker (same as test button)
+            try {
+              if ('serviceWorker' in navigator) {
+                const registration = await navigator.serviceWorker.ready;
+                if (registration) {
+                  console.log("📱 [NOTIFICATION] Displaying via Service Worker...");
+                  await registration.showNotification(notifData.title, {
+                    body: notifData.body,
+                    icon: "/icon-192.png",
+                    badge: "/icon-192.png",
+                    tag: event.notification?.notificationId || "onesignal-notification",
+                    requireInteraction: false,
+                    data: notifData.data || {}
+                  });
+                  console.log("✅ [NOTIFICATION] Displayed successfully via Service Worker");
+                }
+              }
+            } catch (displayError) {
+              console.error("❌ [NOTIFICATION] Error displaying notification:", displayError);
+              // Fallback: let OneSignal display it
+              event.notification?.display?.();
+            }
             
             // Show toast
             toast.success(`📬 Otrzymano: ${notifData.title}`, { 

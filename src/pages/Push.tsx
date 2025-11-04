@@ -237,17 +237,77 @@ const Push = () => {
             device_type: navigator.platform,
             browser: navigator.userAgent.includes('Android') ? 'Android Chrome' : 'Desktop Chrome'
           };
-          
-          try {
-            await OneSignal.User.addTags(tags);
-            console.log("[REGISTER] Tags added for identification:", tags);
 
-            // Verify tags were added
-            const verifyTags = await OneSignal.User.getTags();
-            console.log("[REGISTER] Tags verification:", verifyTags);
-          } catch (tagError) {
-            console.warn("⚠️ [REGISTER] Tag operation failed (non-critical):", tagError);
-            // Don't throw - tags are not critical for basic functionality
+          // Add tags with retry logic
+          let tagsAdded = false;
+          let retryCount = 0;
+          const maxRetries = 3;
+
+          while (!tagsAdded && retryCount < maxRetries) {
+            try {
+              console.log(`[REGISTER] Adding tags (attempt ${retryCount + 1}/${maxRetries})...`);
+              await OneSignal.User.addTags(tags);
+              console.log("[REGISTER] ✅ Tags added successfully:", tags);
+
+              // Wait a bit for server sync
+              await new Promise(resolve => setTimeout(resolve, 1500));
+
+              // Verify tags were synced - check multiple times if needed
+              let verifyAttempt = 0;
+              const maxVerifyAttempts = 3;
+              let verifyTags = null;
+
+              while (verifyAttempt < maxVerifyAttempts) {
+                verifyTags = await OneSignal.User.getTags();
+                console.log(`[REGISTER] Tags verification (attempt ${verifyAttempt + 1}/${maxVerifyAttempts}):`, verifyTags);
+
+                // Check if the critical tag is present
+                if (verifyTags && verifyTags.street_test_device === "true") {
+                  console.log("[REGISTER] ✅ street_test_device tag confirmed on server!");
+                  tagsAdded = true;
+                  break;
+                }
+
+                console.warn(`[REGISTER] ⚠️ street_test_device tag not yet visible (attempt ${verifyAttempt + 1}/${maxVerifyAttempts})`);
+                verifyAttempt++;
+
+                if (verifyAttempt < maxVerifyAttempts) {
+                  // Wait before next verification
+                  await new Promise(resolve => setTimeout(resolve, 1000));
+                }
+              }
+
+              if (!tagsAdded) {
+                throw new Error("Tag verification failed - street_test_device not found on server");
+              }
+
+            } catch (tagError) {
+              retryCount++;
+              console.error(`❌ [REGISTER] Tag operation failed (attempt ${retryCount}/${maxRetries}):`, tagError);
+
+              if (retryCount >= maxRetries) {
+                console.error("❌ [REGISTER] Tag sync failed after all retries!");
+                console.error("[REGISTER] This means push notifications may not work correctly.");
+                console.error("[REGISTER] Try the following:");
+                console.error("  1. Click 'Wyłącz powiadomienia'");
+                console.error("  2. Wait 10 seconds");
+                console.error("  3. Click 'Włącz powiadomienia' again");
+
+                toast.error(
+                  `⚠️ Ostrzeżenie: Tag street_test_device nie został zsynchronizowany.\n\nPowiadomienia mogą nie działać poprawnie.\n\nSpróbuj wyłączyć i ponownie włączyć powiadomienia.`,
+                  { duration: 10000 }
+                );
+              } else {
+                // Wait before retry with exponential backoff
+                const waitTime = 1000 * Math.pow(2, retryCount - 1); // 1s, 2s, 4s
+                console.log(`[REGISTER] Waiting ${waitTime}ms before retry...`);
+                await new Promise(resolve => setTimeout(resolve, waitTime));
+              }
+            }
+          }
+
+          if (tagsAdded) {
+            console.log("✅ [REGISTER] All tags successfully synced to server!");
           }
 
           console.log("✅ [REGISTER] Successfully registered for push notifications");
@@ -371,7 +431,7 @@ const Push = () => {
 
           if (!details.tags?.street_test_device) {
             issues.push("Missing street_test_device tag");
-            fixes.push("Click 'Sprawdź pełny status' to auto-add tag");
+            fixes.push("Will attempt to auto-add tag now...");
           }
 
           if (issues.length > 0) {
@@ -386,6 +446,54 @@ const Push = () => {
             });
           } else {
             console.log("[DIAGNOSE] ✅ No issues found - subscription looks good!");
+          }
+
+          // Auto-fix: Add missing street_test_device tag if user is opted in
+          if (details.optedIn && !details.tags?.street_test_device) {
+            console.log("");
+            console.log("[DIAGNOSE] 🔧 AUTO-FIX: Attempting to add missing street_test_device tag...");
+
+            let tagAdded = false;
+            let retryCount = 0;
+            const maxRetries = 3;
+
+            while (!tagAdded && retryCount < maxRetries) {
+              try {
+                console.log(`[DIAGNOSE] Adding tag (attempt ${retryCount + 1}/${maxRetries})...`);
+                await OneSignal.User.addTag("street_test_device", "true");
+
+                // Wait for sync
+                await new Promise(resolve => setTimeout(resolve, 1500));
+
+                // Verify
+                const verifyTags = await OneSignal.User.getTags();
+                if (verifyTags && verifyTags.street_test_device === "true") {
+                  console.log("[DIAGNOSE] ✅ AUTO-FIX: street_test_device tag successfully added!");
+                  tagAdded = true;
+
+                  // Remove the tag issue from the issues array
+                  const tagIssueIndex = issues.findIndex(i => i.includes("street_test_device"));
+                  if (tagIssueIndex !== -1) {
+                    issues.splice(tagIssueIndex, 1);
+                  }
+                } else {
+                  throw new Error("Tag not verified after adding");
+                }
+              } catch (tagError) {
+                retryCount++;
+                console.error(`[DIAGNOSE] ❌ AUTO-FIX failed (attempt ${retryCount}/${maxRetries}):`, tagError);
+
+                if (retryCount < maxRetries) {
+                  const waitTime = 1000 * Math.pow(2, retryCount - 1);
+                  await new Promise(resolve => setTimeout(resolve, waitTime));
+                }
+              }
+            }
+
+            if (!tagAdded) {
+              console.error("[DIAGNOSE] ❌ AUTO-FIX: Failed to add tag after all retries");
+              fixes.push("Manual fix needed: Click 'Wyłącz powiadomienia' then 'Włącz powiadomienia'");
+            }
           }
 
           console.log("[DIAGNOSE] ================================================================");
@@ -467,22 +575,49 @@ const Push = () => {
 
           console.log("📊 [CHECK-STATUS] Full Status:", status);
 
-          // Check if required tag is missing and add it
+          // Check if required tag is missing and add it with retry logic
           if (optedIn && !tags.street_test_device) {
-            try {
-              console.log("⚠️ [CHECK-STATUS] Missing street_test_device tag, adding it now...");
-              await OneSignal.User.addTag("street_test_device", "true");
-              console.log("✅ [CHECK-STATUS] Added missing street_test_device tag");
-              toast.success(
-                `Status: Subscribed ✅\nBrakujący tag został dodany!\nID: ${id || 'None'}`,
-                { duration: 5000 }
-              );
-            } catch (tagError) {
-              console.warn("⚠️ [CHECK-STATUS] Failed to add missing tag:", tagError);
-              toast.warning(
-                `Status: Subscribed ✅ (tag add failed)\nID: ${id || 'None'}`,
-                { duration: 5000 }
-              );
+            let tagAdded = false;
+            let retryCount = 0;
+            const maxRetries = 3;
+
+            while (!tagAdded && retryCount < maxRetries) {
+              try {
+                console.log(`⚠️ [CHECK-STATUS] Missing street_test_device tag, adding it now (attempt ${retryCount + 1}/${maxRetries})...`);
+                await OneSignal.User.addTag("street_test_device", "true");
+
+                // Wait for server sync
+                await new Promise(resolve => setTimeout(resolve, 1500));
+
+                // Verify tag was added
+                const verifyTags = await OneSignal.User.getTags();
+                if (verifyTags && verifyTags.street_test_device === "true") {
+                  console.log("✅ [CHECK-STATUS] street_test_device tag successfully added and verified!");
+                  tagAdded = true;
+                  toast.success(
+                    `Status: Subscribed ✅\nBrakujący tag został dodany i potwierdzony!\nID: ${id || 'None'}`,
+                    { duration: 5000 }
+                  );
+                } else {
+                  throw new Error("Tag not found after adding");
+                }
+              } catch (tagError) {
+                retryCount++;
+                console.error(`❌ [CHECK-STATUS] Failed to add tag (attempt ${retryCount}/${maxRetries}):`, tagError);
+
+                if (retryCount >= maxRetries) {
+                  console.error("❌ [CHECK-STATUS] Tag sync failed after all retries!");
+                  toast.error(
+                    `⚠️ Nie udało się dodać tagu street_test_device.\nPowiadomienia mogą nie działać.\n\nSpróbuj wyłączyć i ponownie włączyć powiadomienia.`,
+                    { duration: 8000 }
+                  );
+                } else {
+                  // Exponential backoff
+                  const waitTime = 1000 * Math.pow(2, retryCount - 1);
+                  console.log(`[CHECK-STATUS] Waiting ${waitTime}ms before retry...`);
+                  await new Promise(resolve => setTimeout(resolve, waitTime));
+                }
+              }
             }
           } else {
             const statusMessage = optedIn

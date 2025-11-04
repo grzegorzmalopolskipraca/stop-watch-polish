@@ -41,84 +41,31 @@
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
     
+    <!-- OneSignal SDK -->
     <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
     <script>
-      // Proactive cleanup of legacy/non-OneSignal service workers (sw.js, wonderpush, vite-pwa)
-      (function () {
-        if (!('serviceWorker' in navigator)) return;
-        console.log('[SW Cleanup] Checking existing service workers...');
-        navigator.serviceWorker.getRegistrations().then(async (regs) => {
-          console.log('[SW Cleanup] Registrations:', regs.map(r => ({
-            scope: r.scope,
-            script: (r.active?.scriptURL || r.installing?.scriptURL || r.waiting?.scriptURL || '<unknown>')
-          })));
-          let removed = false;
-          for (const r of regs) {
-            const script = r.active?.scriptURL || r.installing?.scriptURL || r.waiting?.scriptURL || '';
-            const isOneSignal = /OneSignalSDKWorker\.js|OneSignalSDKUpdaterWorker\.js/.test(script);
-            const isLegacy = /\/sw\.js$|wonderpush|workbox|vite-pwa/i.test(script);
-            if (!isOneSignal && isLegacy) {
-              console.warn('[SW Cleanup] Unregistering legacy worker:', { scope: r.scope, script });
-              try { await r.unregister(); removed = true; }
-              catch (e) { console.warn('[SW Cleanup] Unregister failed', e); }
-            }
-          }
-          if (removed && !sessionStorage.getItem('swCleanupReloaded')) {
-            console.log('[SW Cleanup] Reloading page to allow OneSignal worker to take control...');
-            sessionStorage.setItem('swCleanupReloaded', '1');
-            location.reload();
-          }
-        }).catch(e => console.warn('[SW Cleanup] getRegistrations failed', e));
-      })();
-
       window.OneSignalDeferred = window.OneSignalDeferred || [];
       OneSignalDeferred.push(async function(OneSignal) {
-        console.log('[OneSignal] Starting initialization...');
-        
-        await OneSignal.init({
-          appId: "16ce973c-c7b3-42ff-b7b4-fe48be517186",
-          serviceWorkerPath: "/OneSignalSDKWorker.js",
-          serviceWorkerUpdaterPath: "/OneSignalSDKUpdaterWorker.js",
-          allowLocalhostAsSecureOrigin: true,
-        });
-        
-        console.log('[OneSignal] ✅ Initialized successfully');
-        
-        // Log subscription status
-        const isPushSupported = await OneSignal.Notifications.isPushSupported();
-        console.log('[OneSignal] Push supported:', isPushSupported);
-        
-        const permission = await OneSignal.Notifications.permissionNative;
-        console.log('[OneSignal] Current permission:', permission);
-        
-        // Display notifications in foreground (v16 API)
-        OneSignal.Notifications.addEventListener('foregroundWillDisplay', (event) => {
-          console.log('[OneSignal] 🔔 Notification received in foreground:', {
-            title: event.notification.title,
-            body: event.notification.body,
-            additionalData: event.notification.additionalData
+        console.log("🚀 [HEAD] Initializing OneSignal from head script...");
+        try {
+          await OneSignal.init({
+            appId: "16ce973c-c7b3-42ff-b7b4-fe48be517186",
+            allowLocalhostAsSecureOrigin: true,
           });
+          console.log("✅ [HEAD] OneSignal initialized successfully");
           
-          event.preventDefault();
-          console.log('[OneSignal] Calling getNotification().display()...');
+          // Log subscription status
+          const isPushSupported = OneSignal.Notifications.isPushSupported();
+          console.log("[HEAD] Push supported:", isPushSupported);
           
-          // Correct v16 API - use getNotification()
-          event.getNotification().display();
+          const permission = OneSignal.Notifications.permissionNative;
+          console.log("[HEAD] Current permission:", permission);
           
-          console.log('[OneSignal] ✅ Notification display() called');
-        });
-        
-        // Log when notification is clicked
-        OneSignal.Notifications.addEventListener('click', (event) => {
-          console.log('[OneSignal] 👆 Notification clicked:', event.notification);
-        });
-        
-        // Log permission changes
-        OneSignal.Notifications.addEventListener('permissionChange', (granted) => {
-          console.log('[OneSignal] Permission changed to:', granted ? 'granted' : 'denied');
-        });
-        
-        console.log('[OneSignal] All event listeners registered');
+          const optedIn = OneSignal.User.PushSubscription.optedIn;
+          console.log("[HEAD] User opted in:", optedIn);
+        } catch (error) {
+          console.error("❌ [HEAD] OneSignal initialization failed:", error);
+        }
       });
     </script>
   </body>

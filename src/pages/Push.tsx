@@ -502,6 +502,71 @@ const Push = () => {
     }
   };
 
+  const handleActivateServiceWorker = async () => {
+    try {
+      console.log("");
+      console.log("🔄 [ACTIVATE-SW] ==================== ACTIVATING SERVICE WORKER ====================");
+      console.log("[ACTIVATE-SW] Timestamp:", new Date().toISOString());
+
+      if (!('serviceWorker' in navigator)) {
+        toast.error("Service Worker nie jest wspierany");
+        return;
+      }
+
+      const registration = await navigator.serviceWorker.getRegistration();
+      if (!registration) {
+        toast.error("Brak zarejestrowanego Service Worker");
+        return;
+      }
+
+      console.log("[ACTIVATE-SW] Current registration state:", {
+        active: !!registration.active,
+        waiting: !!registration.waiting,
+        installing: !!registration.installing
+      });
+
+      if (registration.waiting) {
+        console.log("[ACTIVATE-SW] ⚠️ There is a service worker WAITING to activate!");
+        console.log("[ACTIVATE-SW] This means an update is pending");
+        console.log("[ACTIVATE-SW] Sending skipWaiting message...");
+
+        // Tell the waiting service worker to skip waiting and activate
+        registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+
+        // Wait for the new service worker to take control
+        await new Promise((resolve) => {
+          navigator.serviceWorker.addEventListener('controllerchange', () => {
+            console.log("[ACTIVATE-SW] ✅ Controller changed - new service worker activated!");
+            resolve(true);
+          }, { once: true });
+
+          // Timeout after 5 seconds
+          setTimeout(() => {
+            console.log("[ACTIVATE-SW] ⏱️ Timeout waiting for controller change");
+            resolve(false);
+          }, 5000);
+        });
+
+        console.log("[ACTIVATE-SW] ✅ Service Worker update complete!");
+        console.log("[ACTIVATE-SW] Reloading page to use new service worker...");
+        toast.success("Service Worker zaktualizowany! Odświeżam stronę...", { duration: 2000 });
+
+        setTimeout(() => {
+          window.location.reload();
+        }, 2000);
+      } else {
+        console.log("[ACTIVATE-SW] ✅ No service worker waiting - already using latest version");
+        toast.info("Service Worker już jest w najnowszej wersji");
+      }
+
+      console.log("[ACTIVATE-SW] ================================================================");
+      console.log("");
+    } catch (error) {
+      console.error("❌ [ACTIVATE-SW] Error:", error);
+      toast.error(`Błąd: ${error instanceof Error ? error.message : 'Unknown'}`);
+    }
+  };
+
   const handlePingServiceWorker = async () => {
     try {
       console.log("");
@@ -893,6 +958,20 @@ const Push = () => {
 
             {isInitialized && (
               <>
+                <div className="p-3 bg-red-50 dark:bg-red-900/20 rounded border border-red-200 dark:border-red-800 mb-2">
+                  <p className="text-xs text-red-800 dark:text-red-200 font-semibold mb-2">
+                    ⚠️ WAŻNE: Jeśli widzisz "waiting: true" w logach, kliknij poniżej!
+                  </p>
+                  <Button
+                    onClick={handleActivateServiceWorker}
+                    variant="destructive"
+                    className="w-full"
+                    size="sm"
+                  >
+                    🔄 Aktywuj nowy Service Worker
+                  </Button>
+                </div>
+
                 <Button
                   onClick={handleDiagnoseSubscription}
                   variant="destructive"

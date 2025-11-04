@@ -123,15 +123,25 @@ self.addEventListener('message', function(event) {
   console.log('[SW-Message] Timestamp:', new Date().toISOString());
   console.log('[SW-Message] Message data:', event.data);
 
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    console.log('[SW-Message] Received SKIP_WAITING - activating new service worker...');
+    self.skipWaiting();
+    console.log('[SW-Message] ✅ skipWaiting() called');
+  }
+
   if (event.data && event.data.type === 'PING') {
     console.log('[SW-Message] Received PING, sending PONG...');
-    event.ports[0].postMessage({
-      type: 'PONG',
-      timestamp: new Date().toISOString(),
-      serviceWorkerActive: true,
-      scope: self.registration.scope
-    });
-    console.log('[SW-Message] PONG sent');
+    if (event.ports && event.ports[0]) {
+      event.ports[0].postMessage({
+        type: 'PONG',
+        timestamp: new Date().toISOString(),
+        serviceWorkerActive: true,
+        scope: self.registration.scope
+      });
+      console.log('[SW-Message] PONG sent');
+    } else {
+      console.error('[SW-Message] ❌ No message port available for PONG response');
+    }
   }
 
   if (event.data && event.data.type === 'TEST_NOTIFICATION') {

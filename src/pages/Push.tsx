@@ -62,18 +62,27 @@ const Push = () => {
           // Get user ID and token if available
           const id = OneSignal.User.PushSubscription.id;
           const token = OneSignal.User.PushSubscription.token;
-          const extId = await OneSignal.User.getExternalId();
+
+          // Try to get external ID, but don't fail if it doesn't exist
+          let extId = null;
+          try {
+            if (typeof OneSignal.User.getExternalId === 'function') {
+              extId = await OneSignal.User.getExternalId();
+            }
+          } catch (extIdError) {
+            console.warn("⚠️ [COMPONENT] Could not get external ID:", extIdError);
+          }
 
           console.log("🆔 [COMPONENT] Subscription Details:", {
-            id,
-            token,
-            externalId: extId,
+            id: id || null,
+            token: token ? token.substring(0, 50) + '...' : null,
+            externalId: extId || null,
             optedIn
           });
 
-          setUserId(id);
-          setPushToken(token);
-          setExternalId(extId);
+          setUserId(id || null);
+          setPushToken(token || null);
+          setExternalId(extId || null);
 
           // Listen for subscription changes
           OneSignal.User.PushSubscription.addEventListener("change", (event: any) => {
@@ -87,10 +96,13 @@ const Push = () => {
           });
 
           console.log("✅ [COMPONENT] Component initialization complete");
-          setIsInitialized(true);
         } catch (innerError) {
           console.error("❌ [COMPONENT] Error in OneSignal callback:", innerError);
-          throw innerError;
+          // Don't throw - we still want to mark as initialized if OneSignal is available
+          toast.warning("OneSignal załadowany z ostrzeżeniami. Sprawdź console.");
+        } finally {
+          // Always mark as initialized if we got this far (OneSignal is available)
+          setIsInitialized(true);
         }
       });
     } catch (error) {
@@ -151,7 +163,8 @@ const Push = () => {
   const handleUnregister = async () => {
     try {
       console.log("🔕 [UNREGISTER] Starting unregistration...");
-      
+      console.log("[UNREGISTER] Current state - isSubscribed:", isSubscribed, "userId:", userId);
+
       if (!window.OneSignalDeferred) {
         throw new Error("OneSignal SDK not loaded");
       }
@@ -160,13 +173,22 @@ const Push = () => {
         try {
           console.log("[UNREGISTER] Opting out of push notifications...");
           await OneSignal.User.PushSubscription.optOut();
-          
+
+          // Wait a bit for the state to update
+          await new Promise(resolve => setTimeout(resolve, 500));
+
+          // Check the new state
+          const optedIn = OneSignal.User.PushSubscription.optedIn;
+          console.log("[UNREGISTER] After opt-out, optedIn status:", optedIn);
+
+          // Manually update state to ensure button re-enables
+          setIsSubscribed(false);
+
           console.log("✅ [UNREGISTER] Successfully unregistered from push notifications");
-          
           toast.success("Powiadomienia push wyłączone");
         } catch (innerError) {
           console.error("❌ [UNREGISTER] Inner unregistration error:", innerError);
-          throw innerError;
+          toast.error("Błąd podczas wyłączania powiadomień");
         }
       });
     } catch (error) {
@@ -289,14 +311,20 @@ const Push = () => {
                 </>
               )}
             </div>
-            {userId && (
+            {(userId || isSubscribed) && (
               <div className="text-xs text-muted-foreground space-y-1 mt-2">
-                <p className="font-mono break-all">
-                  <strong>User ID:</strong> {userId}
-                </p>
+                {userId ? (
+                  <p className="font-mono break-all">
+                    <strong>User ID:</strong> {userId}
+                  </p>
+                ) : (
+                  <p className="text-amber-600">
+                    ⏳ Oczekiwanie na User ID...
+                  </p>
+                )}
                 {pushToken && (
                   <p className="font-mono break-all">
-                    <strong>Token:</strong> {pushToken.substring(0, 50)}...
+                    <strong>Token:</strong> {pushToken.length > 50 ? pushToken.substring(0, 50) + '...' : pushToken}
                   </p>
                 )}
                 {externalId && (
@@ -304,9 +332,11 @@ const Push = () => {
                     <strong>External ID:</strong> {externalId}
                   </p>
                 )}
-                <p className="text-xs text-amber-600 mt-1">
-                  💡 Tip: Na Androidzie subskrypcja może pojawić się jako "Linux armv8l" w dashboardzie OneSignal
-                </p>
+                {isSubscribed && (
+                  <p className="text-xs text-amber-600 mt-1">
+                    💡 Tip: Na Androidzie subskrypcja może pojawić się jako "Linux armv8l" w dashboardzie OneSignal
+                  </p>
+                )}
               </div>
             )}
           </div>

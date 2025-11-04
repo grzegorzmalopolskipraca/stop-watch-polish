@@ -303,7 +303,21 @@ New "🧪 Test powiadomienia przeglądarki" button that:
 1. **Android Settings** → **Apps** → **Chrome** → **Notifications** → Enable
 2. **Chrome** → **Settings** → **Site settings** → **Notifications** → Allow for ejedzie.pl
 
+**Android-Specific Requirement:**
+- Android Chrome **requires** Service Worker's `showNotification()` method
+- Direct `new Notification()` throws error: "Illegal constructor"
+- The test button now automatically uses Service Worker method on Android
+
 **Logs to Check:**
+```
+[TEST-BROWSER] Using Service Worker method: true  ✅
+[TEST-BROWSER] Getting service worker registration...
+[TEST-BROWSER] Service worker ready: true  ✅
+[TEST-BROWSER] Calling registration.showNotification()...
+✅ [TEST-BROWSER] Test notification sent via Service Worker
+```
+
+**Registration Logs:**
 ```
 [REGISTER] Registration details: {
   userAgent: "... Android ...",

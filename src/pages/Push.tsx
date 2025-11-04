@@ -287,7 +287,7 @@ const Push = () => {
 
   const handleTestBrowserNotification = async () => {
     try {
-      console.log("🧪 [TEST-BROWSER] Testing browser notification directly...");
+      console.log("🧪 [TEST-BROWSER] Testing browser notification...");
 
       // Check if notifications are supported
       if (!("Notification" in window)) {
@@ -317,40 +317,70 @@ const Push = () => {
         return;
       }
 
-      // Create a test notification directly
-      console.log("[TEST-BROWSER] Creating test notification...");
-      const notification = new Notification("🧪 Test powiadomienia", {
-        body: "To jest testowe powiadomienie bezpośrednio z przeglądarki",
-        icon: "/icon-192.png",
-        badge: "/icon-192.png",
-        tag: "test-notification",
-        requireInteraction: false,
-        data: { test: true }
-      });
+      // Check if we need to use Service Worker (required on Android)
+      const useServiceWorker = 'serviceWorker' in navigator;
+      console.log("[TEST-BROWSER] Using Service Worker method:", useServiceWorker);
 
-      notification.onclick = function() {
-        console.log("👆 [TEST-BROWSER] Notification clicked!");
-        window.focus();
-        notification.close();
-      };
+      if (useServiceWorker) {
+        // Android Chrome requires Service Worker registration
+        console.log("[TEST-BROWSER] Getting service worker registration...");
+        const registration = await navigator.serviceWorker.ready;
+        console.log("[TEST-BROWSER] Service worker ready:", !!registration);
 
-      notification.onshow = function() {
-        console.log("✅ [TEST-BROWSER] Notification shown!");
-      };
+        if (!registration) {
+          throw new Error("Service Worker not available");
+        }
 
-      notification.onerror = function(error) {
-        console.error("❌ [TEST-BROWSER] Notification error:", error);
-      };
+        // Use Service Worker's showNotification (works on all platforms including Android)
+        console.log("[TEST-BROWSER] Calling registration.showNotification()...");
+        await registration.showNotification("🧪 Test powiadomienia", {
+          body: "To jest testowe powiadomienie z Service Worker (działa na Android!)",
+          icon: "/icon-192.png",
+          badge: "/icon-192.png",
+          tag: "test-notification",
+          requireInteraction: false,
+          vibrate: [200, 100, 200],
+          data: { test: true, url: window.location.href }
+        });
 
-      notification.onclose = function() {
-        console.log("❌ [TEST-BROWSER] Notification closed");
-      };
+        console.log("✅ [TEST-BROWSER] Test notification sent via Service Worker");
+        toast.success("Testowe powiadomienie wysłane przez Service Worker!");
+      } else {
+        // Desktop browsers - use direct Notification API
+        console.log("[TEST-BROWSER] Creating test notification directly...");
+        const notification = new Notification("🧪 Test powiadomienia", {
+          body: "To jest testowe powiadomienie bezpośrednio z przeglądarki",
+          icon: "/icon-192.png",
+          badge: "/icon-192.png",
+          tag: "test-notification",
+          requireInteraction: false,
+          data: { test: true }
+        });
 
-      console.log("✅ [TEST-BROWSER] Test notification created successfully");
-      toast.success("Testowe powiadomienie wysłane!");
+        notification.onclick = function() {
+          console.log("👆 [TEST-BROWSER] Notification clicked!");
+          window.focus();
+          notification.close();
+        };
+
+        notification.onshow = function() {
+          console.log("✅ [TEST-BROWSER] Notification shown!");
+        };
+
+        notification.onerror = function(error) {
+          console.error("❌ [TEST-BROWSER] Notification error:", error);
+        };
+
+        notification.onclose = function() {
+          console.log("❌ [TEST-BROWSER] Notification closed");
+        };
+
+        console.log("✅ [TEST-BROWSER] Test notification created successfully");
+        toast.success("Testowe powiadomienie wysłane!");
+      }
     } catch (error) {
       console.error("❌ [TEST-BROWSER] Error:", error);
-      toast.error("Błąd podczas testu powiadomienia");
+      toast.error(`Błąd podczas testu powiadomienia: ${error instanceof Error ? error.message : 'Unknown'}`);
     }
   };
 
@@ -534,10 +564,11 @@ const Push = () => {
               🔧 Naprawione problemy:
             </h3>
             <ul className="text-xs text-blue-800 dark:text-blue-200 space-y-1 list-disc list-inside">
-              <li><strong>Android Chrome:</strong> Subskrypcje teraz działają. W dashboardzie OneSignal mogą się wyświetlać jako "Linux armv8l"</li>
+              <li><strong>Android Chrome:</strong> Naprawiono błąd "Illegal constructor" - test powiadomień teraz używa Service Worker (działa na Android!)</li>
+              <li><strong>Subskrypcje Android:</strong> Teraz działają prawidłowo. W dashboardzie OneSignal mogą się wyświetlać jako "Linux armv8l"</li>
               <li><strong>Wyświetlanie powiadomień:</strong> Dodano obsługę foreground notifications - powiadomienia będą się wyświetlać nawet gdy strona jest otwarta</li>
               <li><strong>Service Worker:</strong> Dodano handlery dla lepszej obsługi kliknięć w powiadomienia</li>
-              <li><strong>Debugging:</strong> Dodano tagi "test_device" i "street_test_device" dla testowania</li>
+              <li><strong>Debugging:</strong> Dodano szczegółowe logi na każdym etapie: otrzymanie → wyświetlenie → kliknięcie</li>
               <li><strong>Tag matching:</strong> Naprawiono problem "All included players are not subscribed" - tag "street_test_device" jest teraz poprawnie dodawany</li>
             </ul>
           </div>

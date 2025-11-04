@@ -21,6 +21,23 @@ const GRADIENT_COLORS = [
   { start: '#ef4444', end: '#dc2626' },
 ];
 
+// Streets from Index page - same as "Wybierz ulicę w Wrocławiu" selector
+const STREETS = [
+  "Borowska",
+  "Buforowa",
+  "Grabiszyńska",
+  "Grota Roweckiego",
+  "Karkonoska",
+  "Ołtaszyńska",
+  "Opolska",
+  "Parafialna",
+  "Powstańców Śląskich",
+  "Radosna",
+  "Sudecka",
+  "Ślężna",
+  "Zwycięska",
+];
+
 const Statystyki = () => {
   const [dailyVisits, setDailyVisits] = useState<any[]>([]);
   const [topStreets, setTopStreets] = useState<any[]>([]);
@@ -551,20 +568,11 @@ const Statystyki = () => {
   };
 
   const fetchAvailableStreets = async () => {
-    // Fetch ALL unique streets from traffic_reports table
-    const { data: streetsData } = await supabase
-      .from("traffic_reports")
-      .select("street")
-      .order("street", { ascending: true });
-
-    if (streetsData) {
-      // Get all unique streets and sort alphabetically
-      const uniqueStreets = Array.from(new Set(streetsData.map(s => s.street))).sort();
-      console.log(`Found ${uniqueStreets.length} unique streets in traffic_reports`);
-      setAvailableStreets(uniqueStreets);
-      if (uniqueStreets.length > 0 && !selectedStreet) {
-        setSelectedStreet(uniqueStreets[0]);
-      }
+    // Use the same streets as the Index page selector ("Wybierz ulicę w Wrocławiu")
+    console.log(`Using ${STREETS.length} predefined streets from Index page`);
+    setAvailableStreets(STREETS);
+    if (STREETS.length > 0 && !selectedStreet) {
+      setSelectedStreet(STREETS[0]);
     }
   };
 

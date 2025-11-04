@@ -301,6 +301,117 @@ const Push = () => {
     }
   };
 
+  const handleDiagnoseSubscription = async () => {
+    try {
+      console.log("");
+      console.log("🔍🔍🔍 [DIAGNOSE] ==================== SUBSCRIPTION DIAGNOSIS ====================");
+      console.log("[DIAGNOSE] Timestamp:", new Date().toISOString());
+
+      if (!window.OneSignalDeferred) {
+        throw new Error("OneSignal SDK not loaded");
+      }
+
+      window.OneSignalDeferred.push(async (OneSignal: any) => {
+        try {
+          // Get all subscription details
+          const details = {
+            // Permission
+            permissionNative: OneSignal.Notifications.permissionNative,
+            isPushSupported: OneSignal.Notifications.isPushSupported(),
+
+            // Subscription state
+            optedIn: OneSignal.User.PushSubscription.optedIn,
+            id: OneSignal.User.PushSubscription.id,
+            token: OneSignal.User.PushSubscription.token,
+
+            // User
+            onesignalId: OneSignal.User.onesignalId,
+            externalId: OneSignal.User.externalId,
+
+            // Tags
+            tags: await OneSignal.User.getTags(),
+
+            // Platform
+            userAgent: navigator.userAgent,
+            platform: navigator.platform,
+            isAndroid: navigator.userAgent.includes('Android'),
+            isMobile: /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
+          };
+
+          console.log("[DIAGNOSE] Complete Subscription Details:", details);
+          console.log("");
+          console.log("[DIAGNOSE] ==================== DIAGNOSIS SUMMARY ====================");
+          console.log("[DIAGNOSE] Permission:", details.permissionNative);
+          console.log("[DIAGNOSE] Push Supported:", details.isPushSupported);
+          console.log("[DIAGNOSE] Opted In:", details.optedIn);
+          console.log("[DIAGNOSE] Has ID:", !!details.id);
+          console.log("[DIAGNOSE] Has Token:", !!details.token);
+          console.log("[DIAGNOSE] Has street_test_device tag:", !!details.tags?.street_test_device);
+          console.log("");
+
+          // Diagnose issues
+          const issues = [];
+          const fixes = [];
+
+          if (details.permissionNative !== 'granted') {
+            issues.push("Permission not granted");
+            fixes.push("Click 'Włącz powiadomienia' to request permission");
+          }
+
+          if (!details.optedIn) {
+            issues.push("NOT OPTED IN - This is the problem!");
+            fixes.push("User needs to call OneSignal.User.PushSubscription.optIn()");
+            fixes.push("Try clicking 'Włącz powiadomienia' button");
+          }
+
+          if (!details.token) {
+            issues.push("No push token");
+            fixes.push("Token should be generated after permission granted");
+          }
+
+          if (!details.tags?.street_test_device) {
+            issues.push("Missing street_test_device tag");
+            fixes.push("Click 'Sprawdź pełny status' to auto-add tag");
+          }
+
+          if (issues.length > 0) {
+            console.error("[DIAGNOSE] ⚠️ ISSUES FOUND:");
+            issues.forEach((issue, i) => {
+              console.error(`  ${i + 1}. ${issue}`);
+            });
+            console.log("");
+            console.log("[DIAGNOSE] 🔧 SUGGESTED FIXES:");
+            fixes.forEach((fix, i) => {
+              console.log(`  ${i + 1}. ${fix}`);
+            });
+          } else {
+            console.log("[DIAGNOSE] ✅ No issues found - subscription looks good!");
+          }
+
+          console.log("[DIAGNOSE] ================================================================");
+          console.log("");
+
+          // Show toast with diagnosis
+          if (issues.length > 0) {
+            toast.error(
+              `Znaleziono ${issues.length} problem(ów):\n${issues.join('\n')}\n\nSzczegóły w konsoli`,
+              { duration: 8000 }
+            );
+          } else {
+            toast.success("Subskrypcja wygląda poprawnie!\nSzczegóły w konsoli", { duration: 5000 });
+          }
+
+        } catch (innerError) {
+          console.error("❌ [DIAGNOSE] Inner error:", innerError);
+          throw innerError;
+        }
+      });
+    } catch (error) {
+      console.error("❌ [DIAGNOSE] Error:", error);
+      toast.error("Nie udało się zdiagnozować subskrypcji");
+    }
+  };
+
   const handleCheckStatus = async () => {
     try {
       console.log("🔍 [CHECK-STATUS] Checking subscription status...");
@@ -388,6 +499,147 @@ const Push = () => {
     } catch (error) {
       console.error("❌ [CHECK-STATUS] Error:", error);
       toast.error("Nie udało się sprawdzić statusu");
+    }
+  };
+
+  const handlePingServiceWorker = async () => {
+    try {
+      console.log("");
+      console.log("🏓 [PING-SW] ==================== PINGING SERVICE WORKER ====================");
+      console.log("[PING-SW] Timestamp:", new Date().toISOString());
+
+      if (!('serviceWorker' in navigator)) {
+        toast.error("Service Worker nie jest wspierany");
+        return;
+      }
+
+      const registration = await navigator.serviceWorker.ready;
+      console.log("[PING-SW] Service worker ready");
+
+      if (!registration.active) {
+        toast.error("Service Worker nie jest aktywny");
+        console.error("[PING-SW] No active service worker");
+        return;
+      }
+
+      console.log("[PING-SW] Sending PING message to service worker...");
+
+      // Create a message channel for response
+      const messageChannel = new MessageChannel();
+
+      // Listen for response
+      const responsePromise = new Promise((resolve, reject) => {
+        messageChannel.port1.onmessage = (event) => {
+          console.log("[PING-SW] Received response:", event.data);
+          resolve(event.data);
+        };
+
+        // Timeout after 5 seconds
+        setTimeout(() => {
+          reject(new Error("Service Worker nie odpowiedział w ciągu 5 sekund"));
+        }, 5000);
+      });
+
+      // Send message
+      registration.active.postMessage(
+        { type: 'PING', timestamp: new Date().toISOString() },
+        [messageChannel.port2]
+      );
+
+      console.log("[PING-SW] Waiting for response...");
+
+      try {
+        const response = await responsePromise;
+        console.log("✅ [PING-SW] PONG received!");
+        console.log("[PING-SW] Response data:", response);
+        console.log("[PING-SW] Service Worker is ALIVE and RESPONDING");
+        console.log("[PING-SW] ================================================================");
+        console.log("");
+
+        toast.success(
+          `Service Worker odpowiada! ✅\nScope: ${response.scope}\nCzas: ${response.timestamp}`,
+          { duration: 5000 }
+        );
+      } catch (error) {
+        console.error("❌ [PING-SW] No response from service worker:", error);
+        console.log("[PING-SW] ================================================================");
+        toast.error("Service Worker nie odpowiada!");
+      }
+    } catch (error) {
+      console.error("❌ [PING-SW] Error:", error);
+      toast.error(`Błąd: ${error instanceof Error ? error.message : 'Unknown'}`);
+    }
+  };
+
+  const handleTestServiceWorkerPush = async () => {
+    try {
+      console.log("");
+      console.log("🧪🧪🧪 [TEST-SW-PUSH] ==================== TESTING SERVICE WORKER PUSH ====================");
+      console.log("[TEST-SW-PUSH] Timestamp:", new Date().toISOString());
+      console.log("[TEST-SW-PUSH] This simulates a push notification going through the service worker");
+
+      if (!('serviceWorker' in navigator)) {
+        toast.error("Service Worker nie jest wspierany");
+        return;
+      }
+
+      // Check if we have notification permission
+      if (Notification.permission !== 'granted') {
+        console.log("[TEST-SW-PUSH] Requesting permission first...");
+        const permission = await Notification.requestPermission();
+        if (permission !== 'granted') {
+          toast.error("Potrzebne uprawnienia do powiadomień");
+          return;
+        }
+      }
+
+      console.log("[TEST-SW-PUSH] Getting service worker registration...");
+      const registration = await navigator.serviceWorker.ready;
+      console.log("[TEST-SW-PUSH] Service worker registration:", {
+        scope: registration.scope,
+        active: !!registration.active,
+        installing: !!registration.installing,
+        waiting: !!registration.waiting,
+        updateViaCache: registration.updateViaCache
+      });
+
+      if (!registration.active) {
+        toast.error("Service Worker nie jest aktywny");
+        return;
+      }
+
+      console.log("[TEST-SW-PUSH] Service worker state:", registration.active.state);
+      console.log("[TEST-SW-PUSH] Service worker script URL:", registration.active.scriptURL);
+
+      // Show notification via service worker
+      console.log("[TEST-SW-PUSH] Showing notification via service worker...");
+      await registration.showNotification("🧪 Test Service Worker Push", {
+        body: "To powiadomienie przeszło przez Service Worker\nSprawdź console czy widzisz logi [SW-Show]",
+        icon: "/icon-192.png",
+        badge: "/icon-192.png",
+        tag: "sw-push-test-" + Date.now(),
+        requireInteraction: false,
+        vibrate: [200, 100, 200],
+        data: {
+          test: true,
+          timestamp: new Date().toISOString(),
+          type: "service-worker-test"
+        },
+        actions: [
+          { action: 'open', title: 'Otwórz' },
+          { action: 'close', title: 'Zamknij' }
+        ]
+      });
+
+      console.log("✅ [TEST-SW-PUSH] Notification shown via service worker");
+      console.log("[TEST-SW-PUSH] Check console for [SW-Show] logs from service worker");
+      console.log("[TEST-SW-PUSH] ================================================================");
+      console.log("");
+
+      toast.success("Test powiadomienia wysłany!\nSprawdź czy widzisz logi [SW-Show] w konsoli");
+    } catch (error) {
+      console.error("❌ [TEST-SW-PUSH] Error:", error);
+      toast.error(`Błąd: ${error instanceof Error ? error.message : 'Unknown'}`);
     }
   };
 
@@ -501,26 +753,57 @@ const Push = () => {
     }
 
     setIsSending(true);
-    console.log("📤 [SEND-PUSH] Sending push notification...");
+    console.log("");
+    console.log("📤📤📤 [SEND-PUSH] ==================== SENDING PUSH NOTIFICATION ====================");
+    console.log("[SEND-PUSH] Timestamp:", new Date().toISOString());
     console.log("[SEND-PUSH] Message:", pushMessage);
+    console.log("[SEND-PUSH] Current User ID:", userId);
+    console.log("[SEND-PUSH] Current Push Token:", pushToken?.substring(0, 50) + "...");
+    console.log("[SEND-PUSH] Is Subscribed (local state):", isSubscribed);
 
     try {
+      const requestBody = {
+        street: "test_device",
+        message: pushMessage,
+      };
+      console.log("[SEND-PUSH] Request body:", requestBody);
+      console.log("[SEND-PUSH] Invoking Supabase function: send-push-notifications");
+
       const { data, error } = await supabase.functions.invoke("send-push-notifications", {
-        body: {
-          street: "test_device",
-          message: pushMessage,
-        },
+        body: requestBody,
       });
 
-      console.log("[SEND-PUSH] Response:", { data, error });
+      console.log("[SEND-PUSH] ==================== RESPONSE RECEIVED ====================");
+      console.log("[SEND-PUSH] Response data:", data);
+      console.log("[SEND-PUSH] Response error:", error);
+
+      if (data?.data) {
+        console.log("[SEND-PUSH] OneSignal response ID:", data.data.id);
+        console.log("[SEND-PUSH] OneSignal recipients:", data.data.recipients);
+        console.log("[SEND-PUSH] OneSignal errors:", data.data.errors);
+
+        if (data.data.errors && data.data.errors.length > 0) {
+          console.error("⚠️ [SEND-PUSH] OneSignal reported errors:", data.data.errors);
+          console.error("[SEND-PUSH] This usually means:");
+          console.error("  1. No users have the tag 'street_test_device' with optedIn=true");
+          console.error("  2. Or the users exist but are not properly subscribed");
+          console.error("[SEND-PUSH] Check OneSignal dashboard:");
+          console.error("  - Go to Audience → Subscriptions");
+          console.error("  - Filter by tag: street_test_device = true");
+          console.error("  - Check if any users are shown");
+          console.error("  - Check if their 'Subscribed' column = Yes");
+        }
+      }
 
       if (error) {
-        console.error("❌ [SEND-PUSH] Error:", error);
+        console.error("❌ [SEND-PUSH] Supabase error:", error);
         toast.error("Nie udało się wysłać powiadomienia");
       } else {
         console.log("✅ [SEND-PUSH] Push notification sent successfully");
         toast.success("Powiadomienie wysłane!");
       }
+      console.log("[SEND-PUSH] ================================================================");
+      console.log("");
     } catch (error) {
       console.error("❌ [SEND-PUSH] Exception:", error);
       toast.error("Wystąpił błąd podczas wysyłania");
@@ -611,6 +894,30 @@ const Push = () => {
             {isInitialized && (
               <>
                 <Button
+                  onClick={handleDiagnoseSubscription}
+                  variant="destructive"
+                  className="w-full"
+                >
+                  🩺 Diagnoza subskrypcji
+                </Button>
+
+                <Button
+                  onClick={handlePingServiceWorker}
+                  variant="default"
+                  className="w-full"
+                >
+                  🏓 Ping Service Worker
+                </Button>
+
+                <Button
+                  onClick={handleTestServiceWorkerPush}
+                  variant="default"
+                  className="w-full"
+                >
+                  🔧 Test SW Notification
+                </Button>
+
+                <Button
                   onClick={handleCheckStatus}
                   variant="secondary"
                   className="w-full"
@@ -683,13 +990,14 @@ const Push = () => {
               💡 Wskazówki debugowania:
             </h3>
             <ul className="text-xs text-amber-800 dark:text-amber-200 space-y-1 list-disc list-inside">
-              <li><strong>NOWE:</strong> Użyj "🧪 Test powiadomienia przeglądarki" aby sprawdzić czy powiadomienia w ogóle działają (pomija OneSignal)</li>
-              <li><strong>WAŻNE:</strong> Jeśli zasubskrybowałeś przed tą zmianą, kliknij "Sprawdź pełny status" aby automatycznie dodać brakujący tag "street_test_device"</li>
-              <li>Użyj "Sprawdź pełny status" aby zobaczyć service worker, uprawnienia i wszystkie szczegóły subskrypcji</li>
-              <li>Sprawdź console przeglądarki (F12) aby zobaczyć dokładne logi z każdego etapu otrzymywania powiadomienia</li>
-              <li>W OneSignal dashboard filtruj po tagu "test_device" = "true" lub "street_test_device" = "true"</li>
+              <li><strong>🩺 NOWE: "Diagnoza subskrypcji"</strong> - Kliknij to NAJPIERW na Androidzie! Pokaże dokładnie dlaczego subskrypcja nie działa</li>
+              <li><strong>Problem Android:</strong> Jeśli Android pokazuje "registered but not subscribed", użyj "Diagnoza subskrypcji" aby zobaczyć co jest nie tak</li>
+              <li><strong>🧪 Test przeglądarki:</strong> Sprawdza czy powiadomienia w ogóle działają (pomija OneSignal)</li>
+              <li><strong>🔍 Pełny status:</strong> Pokazuje service worker, uprawnienia, tagi i wszystkie szczegóły</li>
+              <li><strong>WAŻNE:</strong> Jeśli masz tag ale błąd "All included players are not subscribed", problem to optedIn=false</li>
+              <li>Sprawdź console przeglądarki (F12) - wszystkie logi mają wyraźne nagłówki z ===</li>
               <li>Na Androidzie upewnij się że Chrome ma włączone powiadomienia w ustawieniach systemu</li>
-              <li>Logi będą pokazywać czy powiadomienie zostało: otrzymane → wyświetlone → kliknięte</li>
+              <li>Logi będą pokazywać: 🔔🔔🔔 otrzymane → ✅✅✅ wyświetlone → 👆👆👆 kliknięte</li>
             </ul>
           </div>
         </div>

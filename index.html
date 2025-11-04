@@ -73,40 +73,20 @@
 
       window.OneSignalDeferred = window.OneSignalDeferred || [];
       OneSignalDeferred.push(async function(OneSignal) {
-        try {
-          OneSignal.Debug.setLogLevel('trace');
-          console.log('[OneSignal] init starting', { origin: location.origin });
-          
-          const result = await OneSignal.init({
-            appId: "16ce973c-c7b3-42ff-b7b4-fe48be517186",
-            serviceWorkerPath: "/OneSignalSDKWorker.js",
-            serviceWorkerUpdaterPath: "/OneSignalSDKUpdaterWorker.js",
-          });
-          
-          console.log('[OneSignal] init success', result);
-          
-          // Safe debug logging via SDK events (v16 API)
-          OneSignal.Notifications.addEventListener('click', (event) => {
-            console.log('[OneSignal] Notification clicked:', event);
-          });
-          
-          OneSignal.Notifications.addEventListener('foregroundWillDisplay', (event) => {
-            console.log('[OneSignal] Notification will display:', event);
-            // CRITICAL: Display notification even when browser is open (foreground)
-            event.notification.display();
-          });
-          
-          if ('serviceWorker' in navigator) {
-            try {
-              const regs = await navigator.serviceWorker.getRegistrations();
-              console.log('[OneSignal] existing service workers:', regs.map(r => ({ scope: r.scope, script: (r.active?.scriptURL || r.installing?.scriptURL || r.waiting?.scriptURL || '<unknown>') })));
-            } catch (e) {
-              console.warn('[OneSignal] unable to list service workers', e);
-            }
-          }
-        } catch (e) {
-          console.error('[OneSignal] init error', e);
-        }
+        await OneSignal.init({
+          appId: "16ce973c-c7b3-42ff-b7b4-fe48be517186",
+          serviceWorkerPath: "/OneSignalSDKWorker.js",
+          serviceWorkerUpdaterPath: "/OneSignalSDKUpdaterWorker.js",
+          allowLocalhostAsSecureOrigin: true,
+        });
+        
+        console.log('[OneSignal] Initialized successfully');
+        
+        // Display notifications in foreground
+        OneSignal.Notifications.addEventListener('foregroundWillDisplay', (event) => {
+          event.preventDefault();
+          event.notification.display();
+        });
       });
     </script>
   </body>

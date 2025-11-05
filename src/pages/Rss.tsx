@@ -4,8 +4,9 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Trash2, Edit2, ChevronUp, ChevronDown, Plus, Minus, Database } from "lucide-react";
+import { Trash2, Edit2, ChevronUp, ChevronDown, Plus, Minus, Database, Clock } from "lucide-react";
 import { RssTicker } from "@/components/RssTicker";
+import { formatDistanceToNow } from "date-fns";
 
 interface RssItem {
   id: string;
@@ -22,12 +23,15 @@ const Rss = () => {
   const [newItemText, setNewItemText] = useState("");
   const [tickerSpeed, setTickerSpeed] = useState(60);
   const [isDeletingRateLimits, setIsDeletingRateLimits] = useState(false);
+  const [autoTrafficInterval, setAutoTrafficInterval] = useState(15);
+  const [lastRunAt, setLastRunAt] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
     if (isAuthenticated) {
       fetchItems();
       fetchTickerSpeed();
+      fetchAutoTrafficSettings();
     }
   }, [isAuthenticated]);
 
@@ -39,6 +43,39 @@ const Rss = () => {
     
     if (data) {
       setTickerSpeed(data.speed);
+    }
+  };
+
+  const fetchAutoTrafficSettings = async () => {
+    const { data } = await supabase
+      .from('auto_traffic_settings')
+      .select('*')
+      .maybeSingle();
+    
+    if (data) {
+      setAutoTrafficInterval(data.interval_minutes);
+      setLastRunAt(data.last_run_at);
+    }
+  };
+
+  const updateAutoTrafficInterval = async (newInterval: number) => {
+    setAutoTrafficInterval(newInterval);
+    
+    const { data: existing } = await supabase
+      .from('auto_traffic_settings')
+      .select('id')
+      .maybeSingle();
+
+    if (existing) {
+      await supabase
+        .from('auto_traffic_settings')
+        .update({ interval_minutes: newInterval })
+        .eq('id', existing.id);
+      
+      toast({
+        title: "Success",
+        description: `Auto traffic interval updated to ${newInterval} minutes`,
+      });
     }
   };
 
@@ -302,35 +339,60 @@ const Rss = () => {
         <div className="max-w-4xl mx-auto space-y-6">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <h1 className="text-3xl font-bold">RSS Ticker Management</h1>
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-muted-foreground">Speed:</span>
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">Ticker Speed:</span>
+                  <Button
+                    onClick={() => updateTickerSpeed(Math.min(tickerSpeed + 10, 120))}
+                    variant="outline"
+                    size="icon"
+                  >
+                    <Minus className="h-4 w-4" />
+                  </Button>
+                  <span className="text-sm font-medium w-12 text-center">{tickerSpeed}s</span>
+                  <Button
+                    onClick={() => updateTickerSpeed(Math.max(tickerSpeed - 10, 20))}
+                    variant="outline"
+                    size="icon"
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
                 <Button
-                  onClick={() => updateTickerSpeed(Math.min(tickerSpeed + 10, 120))}
-                  variant="outline"
-                  size="icon"
+                  onClick={handleDeleteOldRateLimits}
+                  disabled={isDeletingRateLimits}
+                  variant="destructive"
+                  size="sm"
+                  className="flex items-center gap-2"
                 >
-                  <Minus className="h-4 w-4" />
-                </Button>
-                <span className="text-sm font-medium w-12 text-center">{tickerSpeed}s</span>
-                <Button
-                  onClick={() => updateTickerSpeed(Math.max(tickerSpeed - 10, 20))}
-                  variant="outline"
-                  size="icon"
-                >
-                  <Plus className="h-4 w-4" />
+                  <Database className="h-4 w-4" />
+                  {isDeletingRateLimits ? "Deleting..." : "Clean Rate Limits"}
                 </Button>
               </div>
-              <Button
-                onClick={handleDeleteOldRateLimits}
-                disabled={isDeletingRateLimits}
-                variant="destructive"
-                size="sm"
-                className="flex items-center gap-2"
-              >
-                <Database className="h-4 w-4" />
-                {isDeletingRateLimits ? "Deleting..." : "Clean Rate Limits"}
-              </Button>
+              
+              <div className="flex flex-col gap-2 p-4 border rounded-lg bg-card">
+                <h3 className="text-sm font-semibold">Auto Traffic Monitoring</h3>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">Interval:</span>
+                  {[15, 20, 25, 30].map((interval) => (
+                    <Button
+                      key={interval}
+                      onClick={() => updateAutoTrafficInterval(interval)}
+                      variant={autoTrafficInterval === interval ? "default" : "outline"}
+                      size="sm"
+                    >
+                      {interval}m
+                    </Button>
+                  ))}
+                </div>
+                {lastRunAt && (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Clock className="h-4 w-4" />
+                    <span>Last run: {formatDistanceToNow(new Date(lastRunAt), { addSuffix: true })}</span>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         

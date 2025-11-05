@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      auto_traffic_settings: {
+        Row: {
+          created_at: string
+          id: string
+          interval_minutes: number
+          is_enabled: boolean
+          last_run_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          interval_minutes?: number
+          is_enabled?: boolean
+          last_run_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          interval_minutes?: number
+          is_enabled?: boolean
+          last_run_at?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       carpooling_votes: {
         Row: {
           created_at: string

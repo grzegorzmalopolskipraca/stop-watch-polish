@@ -32,3 +32,9 @@ verify_jwt = false
 
 [functions.fetch-rss-feed]
 verify_jwt = false
+
+[functions.auto-submit-traffic-report]
+verify_jwt = false
+
+[functions.auto-traffic-monitor]
+verify_jwt = false

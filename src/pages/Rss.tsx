@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Trash2, Edit2, ChevronUp, ChevronDown, Plus, Minus } from "lucide-react";
+import { Trash2, Edit2, ChevronUp, ChevronDown, Plus, Minus, Database } from "lucide-react";
 import { RssTicker } from "@/components/RssTicker";
 
 interface RssItem {
@@ -21,6 +21,7 @@ const Rss = () => {
   const [editText, setEditText] = useState("");
   const [newItemText, setNewItemText] = useState("");
   const [tickerSpeed, setTickerSpeed] = useState(60);
+  const [isDeletingRateLimits, setIsDeletingRateLimits] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -212,6 +213,65 @@ const Rss = () => {
     fetchItems();
   };
 
+  const handleDeleteOldRateLimits = async () => {
+    if (!confirm("Are you sure you want to delete 10,000 oldest rate limit entries? This action cannot be undone.")) {
+      return;
+    }
+
+    setIsDeletingRateLimits(true);
+
+    try {
+      // First, get the IDs of the 10,000 oldest records
+      const { data: oldestRecords, error: fetchError } = await supabase
+        .from("rate_limits")
+        .select("id")
+        .order("created_at", { ascending: true })
+        .limit(10000);
+
+      if (fetchError) {
+        throw fetchError;
+      }
+
+      if (!oldestRecords || oldestRecords.length === 0) {
+        toast({
+          title: "Info",
+          description: "No rate limit records to delete",
+        });
+        setIsDeletingRateLimits(false);
+        return;
+      }
+
+      console.log(`[Rate Limits Cleanup] Found ${oldestRecords.length} oldest records to delete`);
+
+      // Delete those records
+      const idsToDelete = oldestRecords.map(r => r.id);
+      const { error: deleteError } = await supabase
+        .from("rate_limits")
+        .delete()
+        .in("id", idsToDelete);
+
+      if (deleteError) {
+        throw deleteError;
+      }
+
+      console.log(`[Rate Limits Cleanup] Successfully deleted ${oldestRecords.length} records`);
+
+      toast({
+        title: "Success",
+        description: `Deleted ${oldestRecords.length} oldest rate limit entries`,
+      });
+    } catch (error) {
+      console.error("[Rate Limits Cleanup] Error:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete rate limit entries",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeletingRateLimits(false);
+    }
+  };
+
   if (!isAuthenticated) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -240,24 +300,36 @@ const Rss = () => {
       
       <div className="p-8">
         <div className="max-w-4xl mx-auto space-y-6">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <h1 className="text-3xl font-bold">RSS Ticker Management</h1>
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">Speed:</span>
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">Speed:</span>
+                <Button
+                  onClick={() => updateTickerSpeed(Math.min(tickerSpeed + 10, 120))}
+                  variant="outline"
+                  size="icon"
+                >
+                  <Minus className="h-4 w-4" />
+                </Button>
+                <span className="text-sm font-medium w-12 text-center">{tickerSpeed}s</span>
+                <Button
+                  onClick={() => updateTickerSpeed(Math.max(tickerSpeed - 10, 20))}
+                  variant="outline"
+                  size="icon"
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
               <Button
-                onClick={() => updateTickerSpeed(Math.min(tickerSpeed + 10, 120))}
-                variant="outline"
-                size="icon"
+                onClick={handleDeleteOldRateLimits}
+                disabled={isDeletingRateLimits}
+                variant="destructive"
+                size="sm"
+                className="flex items-center gap-2"
               >
-                <Minus className="h-4 w-4" />
-              </Button>
-              <span className="text-sm font-medium w-12 text-center">{tickerSpeed}s</span>
-              <Button
-                onClick={() => updateTickerSpeed(Math.max(tickerSpeed - 10, 20))}
-                variant="outline"
-                size="icon"
-              >
-                <Plus className="h-4 w-4" />
+                <Database className="h-4 w-4" />
+                {isDeletingRateLimits ? "Deleting..." : "Clean Rate Limits"}
               </Button>
             </div>
           </div>

@@ -1421,7 +1421,7 @@ const Index = () => {
                 className="w-full"
               >
                 <BellOff className="mr-2 h-4 w-4" />
-                Włącz ważne powiadomienia o korkach
+                Powiadom mnie, gdy coś zablokuje drogę
               </Button>
             </div>
           )}

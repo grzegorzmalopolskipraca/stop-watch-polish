@@ -25,6 +25,7 @@ const Rss = () => {
   const [isDeletingRateLimits, setIsDeletingRateLimits] = useState(false);
   const [autoTrafficInterval, setAutoTrafficInterval] = useState(15);
   const [lastRunAt, setLastRunAt] = useState<string | null>(null);
+  const [isMonitoring, setIsMonitoring] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -76,6 +77,33 @@ const Rss = () => {
         title: "Success",
         description: `Auto traffic interval updated to ${newInterval} minutes`,
       });
+    }
+  };
+
+  const handleManualMonitor = async () => {
+    setIsMonitoring(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('auto-traffic-monitor');
+      
+      if (error) {
+        throw error;
+      }
+
+      await fetchAutoTrafficSettings(); // Refresh settings to get new last_run_at
+      
+      toast({
+        title: "Success",
+        description: data.message || `Processed ${data.processed || 0} reports`,
+      });
+    } catch (error) {
+      console.error('Error running monitor:', error);
+      toast({
+        title: "Error",
+        description: "Failed to run traffic monitor",
+        variant: "destructive",
+      });
+    } finally {
+      setIsMonitoring(false);
     }
   };
 
@@ -373,7 +401,7 @@ const Rss = () => {
               
               <div className="flex flex-col gap-2 p-4 border rounded-lg bg-card">
                 <h3 className="text-sm font-semibold">Auto Traffic Monitoring</h3>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <span className="text-sm text-muted-foreground">Interval:</span>
                   {[15, 20, 25, 30].map((interval) => (
                     <Button
@@ -385,6 +413,16 @@ const Rss = () => {
                       {interval}m
                     </Button>
                   ))}
+                  <Button
+                    onClick={handleManualMonitor}
+                    disabled={isMonitoring}
+                    variant="secondary"
+                    size="sm"
+                    className="ml-auto"
+                  >
+                    <Clock className="h-4 w-4 mr-2" />
+                    {isMonitoring ? "Running..." : "Run Now"}
+                  </Button>
                 </div>
                 {lastRunAt && (
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -392,6 +430,9 @@ const Rss = () => {
                     <span>Last run: {formatDistanceToNow(new Date(lastRunAt), { addSuffix: true })}</span>
                   </div>
                 )}
+                <p className="text-xs text-muted-foreground mt-2">
+                  Monitors all streets automatically between 5 AM - 10 PM. Click "Run Now" to trigger manually.
+                </p>
               </div>
             </div>
           </div>

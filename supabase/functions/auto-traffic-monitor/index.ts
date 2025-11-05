@@ -96,13 +96,33 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Update last run time
+    // Get settings and check if enough time has passed
     const { data: settings } = await supabase
       .from('auto_traffic_settings')
       .select('*')
       .maybeSingle();
 
     if (settings) {
+      // Check if we should run based on interval
+      if (settings.last_run_at) {
+        const lastRun = new Date(settings.last_run_at);
+        const minutesSinceLastRun = (now.getTime() - lastRun.getTime()) / (1000 * 60);
+        
+        if (minutesSinceLastRun < settings.interval_minutes) {
+          console.log(`[Auto Traffic Monitor] Too soon. Last run: ${minutesSinceLastRun.toFixed(1)}m ago, interval: ${settings.interval_minutes}m`);
+          return new Response(
+            JSON.stringify({ 
+              success: true, 
+              message: 'Too soon since last run',
+              minutesSinceLastRun: minutesSinceLastRun.toFixed(1),
+              intervalMinutes: settings.interval_minutes
+            }),
+            { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+      }
+
+      // Update last run time
       await supabase
         .from('auto_traffic_settings')
         .update({ last_run_at: now.toISOString() })

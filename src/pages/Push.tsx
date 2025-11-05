@@ -9,6 +9,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { ConsoleViewer } from "@/components/ConsoleViewer";
 
 const Push = () => {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [password, setPassword] = useState("");
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
@@ -25,9 +27,20 @@ const Push = () => {
   }>>([]);
 
   useEffect(() => {
-    console.log("🚀 [COMPONENT] Component mounted - Initializing OneSignal");
-    initializeOneSignal();
-  }, []);
+    if (isAuthenticated) {
+      console.log("🚀 [COMPONENT] Component mounted - Initializing OneSignal");
+      initializeOneSignal();
+    }
+  }, [isAuthenticated]);
+
+  const handleLogin = () => {
+    if (password === "grzelazny") {
+      setIsAuthenticated(true);
+      setPassword("");
+    } else {
+      toast.error("Incorrect password");
+    }
+  };
 
   const initializeOneSignal = async () => {
     try {
@@ -1010,6 +1023,28 @@ const Push = () => {
       setIsSending(false);
     }
   };
+
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="w-full max-w-md p-8 space-y-4">
+          <h1 className="text-2xl font-bold text-center">Push Notifications Management</h1>
+          <div className="space-y-4">
+            <Input
+              type="password"
+              placeholder="Enter password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              onKeyPress={(e) => e.key === "Enter" && handleLogin()}
+            />
+            <Button onClick={handleLogin} className="w-full">
+              Enter
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background p-4">

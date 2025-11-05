@@ -1916,10 +1916,6 @@ const Index = () => {
           <Link to="/statystyki" className="text-sm text-primary hover:underline">
             Statystyki
           </Link>
-          <span className="text-muted-foreground">•</span>
-          <Link to="/push" className="text-sm text-primary hover:underline">
-            Push
-          </Link>
         </div>
       </footer>
       

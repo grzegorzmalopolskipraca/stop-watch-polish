@@ -71,9 +71,24 @@ const Statystyki = () => {
   const [selectedHourChartDirection, setSelectedHourChartDirection] = useState<string>("both");
   const [trafficByStreetAndHourFiltered, setTrafficByStreetAndHourFiltered] = useState<any[]>([]);
 
+  // New state for index page selected street chart
+  const [indexPageStreet, setIndexPageStreet] = useState<string>("");
+  const [indexPageDirection, setIndexPageDirection] = useState<string>("to_center");
+  const [indexPageScatterData, setIndexPageScatterData] = useState<any[]>([]);
+
   useEffect(() => {
     fetchAllStatistics();
     fetchAvailableStreets();
+
+    // Load selected street and direction from localStorage (from index page)
+    const savedStreet = localStorage.getItem('selectedStreet');
+    const savedDirection = localStorage.getItem('selectedDirection');
+    if (savedStreet) {
+      setIndexPageStreet(savedStreet);
+    }
+    if (savedDirection) {
+      setIndexPageDirection(savedDirection);
+    }
   }, []);
 
   useEffect(() => {
@@ -85,6 +100,12 @@ const Statystyki = () => {
   useEffect(() => {
     fetchTrafficByStreetAndHourFiltered();
   }, [selectedHourChartDate, selectedHourChartStreet, selectedHourChartDirection]);
+
+  useEffect(() => {
+    if (indexPageStreet) {
+      fetchIndexPageScatterData();
+    }
+  }, [indexPageStreet, indexPageDirection, selectedDate]);
 
   const fetchAllStatistics = async () => {
     // 1. Daily visits over time (last 30 days)
@@ -727,6 +748,52 @@ const Statystyki = () => {
       setTrafficByStreetAndHourFiltered(hourlyData);
     } else {
       setTrafficByStreetAndHourFiltered([]);
+    }
+  };
+
+  const fetchIndexPageScatterData = async () => {
+    if (!indexPageStreet || !selectedDate) return;
+
+    const startOfDay = new Date(selectedDate);
+    startOfDay.setHours(0, 0, 0, 0);
+
+    const endOfDay = new Date(selectedDate);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    const { data: trafficData } = await supabase
+      .from("traffic_reports")
+      .select("status, reported_at, direction")
+      .eq("street", indexPageStreet)
+      .eq("direction", indexPageDirection)
+      .gte("reported_at", startOfDay.toISOString())
+      .lte("reported_at", endOfDay.toISOString());
+
+    if (trafficData) {
+      const statusToLabel: Record<string, string> = {
+        jedzie: 'Jedzie',
+        toczy_sie: 'Toczy się',
+        stoi: 'Stoi'
+      };
+
+      // Map all statuses to Y=0 (same vertical level)
+      const scatterData = trafficData.map(t => {
+        const hour = getHours(parseISO(t.reported_at));
+        const minutes = parseISO(t.reported_at).getMinutes();
+        const hourDecimal = hour + (minutes / 60);
+
+        return {
+          hour: hourDecimal,
+          status: 0, // All dots at Y=0
+          statusLabel: statusToLabel[t.status] || 'Nieznany',
+          time: format(parseISO(t.reported_at), "HH:mm", { locale: pl }),
+          rawStatus: t.status // For color coding
+        };
+      });
+
+      console.log(`[Index Page Chart] Fetched ${scatterData.length} data points for ${indexPageStreet} (${indexPageDirection}) on ${format(selectedDate, 'yyyy-MM-dd')}`);
+      setIndexPageScatterData(scatterData);
+    } else {
+      setIndexPageScatterData([]);
     }
   };
 
@@ -1429,6 +1496,80 @@ const Statystyki = () => {
               )}
             </CardContent>
           </Card>
+
+          {/* 19. Index Page Selected Street Traffic Status */}
+          {indexPageStreet && (
+            <Card className="lg:col-span-2 bg-gradient-to-br from-blue-500/5 to-cyan-500/5 border-blue-200 dark:border-blue-800">
+              <CardHeader>
+                <CardTitle className="text-blue-700 dark:text-blue-400">
+                  Raporty ruchu - {indexPageStreet} ({indexPageDirection === 'to_center' ? 'Do centrum' : 'Z centrum'})
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={400}>
+                  <ScatterChart>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                    <XAxis
+                      type="number"
+                      dataKey="hour"
+                      name="Godzina"
+                      domain={[0, 24]}
+                      ticks={[0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]}
+                      fontSize={12}
+                      label={{ value: 'Godzina', position: 'insideBottom', offset: -5, fontSize: 12 }}
+                    />
+                    <YAxis
+                      type="number"
+                      dataKey="status"
+                      name="Status"
+                      domain={[-0.5, 0.5]}
+                      ticks={[0]}
+                      fontSize={12}
+                      tickFormatter={() => ''}
+                    />
+                    <Tooltip
+                      cursor={{ strokeDasharray: '3 3' }}
+                      content={({ active, payload }) => {
+                        if (active && payload && payload.length) {
+                          return (
+                            <div className="bg-background border border-border rounded p-2 shadow-lg">
+                              <p className="text-sm font-semibold">{payload[0].payload.statusLabel}</p>
+                              <p className="text-xs text-muted-foreground">Godzina: {payload[0].payload.time}</p>
+                            </div>
+                          );
+                        }
+                        return null;
+                      }}
+                    />
+                    {/* Green dots for jedzie */}
+                    <Scatter
+                      data={indexPageScatterData.filter(d => d.rawStatus === 'jedzie')}
+                      fill="#10b981"
+                      shape="circle"
+                    />
+                    {/* Yellow dots for toczy_sie */}
+                    <Scatter
+                      data={indexPageScatterData.filter(d => d.rawStatus === 'toczy_sie')}
+                      fill="#f59e0b"
+                      shape="circle"
+                    />
+                    {/* Red dots for stoi */}
+                    <Scatter
+                      data={indexPageScatterData.filter(d => d.rawStatus === 'stoi')}
+                      fill="#ef4444"
+                      shape="circle"
+                    />
+                  </ScatterChart>
+                </ResponsiveContainer>
+
+                {indexPageScatterData.length === 0 && (
+                  <div className="text-center text-muted-foreground py-8">
+                    Brak danych dla wybranej ulicy, kierunku i daty
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
         </div>
       </main>
     </div>

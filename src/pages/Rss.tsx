@@ -33,6 +33,26 @@ const Rss = () => {
       fetchItems();
       fetchTickerSpeed();
       fetchAutoTrafficSettings();
+      
+      // Subscribe to auto traffic settings changes
+      const autoTrafficChannel = supabase
+        .channel('auto_traffic_settings_changes')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'auto_traffic_settings'
+          },
+          () => {
+            fetchAutoTrafficSettings();
+          }
+        )
+        .subscribe();
+
+      return () => {
+        autoTrafficChannel.unsubscribe();
+      };
     }
   }, [isAuthenticated]);
 

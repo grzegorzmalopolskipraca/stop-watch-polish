@@ -95,6 +95,50 @@ export type Database = {
         }
         Relationships: []
       }
+      coupons: {
+        Row: {
+          created_at: string
+          discount: number
+          id: string
+          image_link: string | null
+          local_id: string
+          local_name: string
+          status: string
+          time_from: string
+          time_to: string | null
+        }
+        Insert: {
+          created_at?: string
+          discount: number
+          id?: string
+          image_link?: string | null
+          local_id: string
+          local_name: string
+          status?: string
+          time_from?: string
+          time_to?: string | null
+        }
+        Update: {
+          created_at?: string
+          discount?: number
+          id?: string
+          image_link?: string | null
+          local_id?: string
+          local_name?: string
+          status?: string
+          time_from?: string
+          time_to?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coupons_local_id_fkey"
+            columns: ["local_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       daily_speed_stats: {
         Row: {
           created_at: string | null
@@ -179,6 +223,27 @@ export type Database = {
           reported_at?: string
           street?: string
           user_fingerprint?: string | null
+        }
+        Relationships: []
+      }
+      locations: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          street: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          street?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          street?: string | null
         }
         Relationships: []
       }

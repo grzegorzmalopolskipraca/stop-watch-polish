@@ -63,15 +63,21 @@ export default function Coupons() {
 
   // New coupon form
   const [newCouponImageLink, setNewCouponImageLink] = useState("");
+  const [newCouponImageFile, setNewCouponImageFile] = useState<File | null>(null);
+  const [newCouponImagePreview, setNewCouponImagePreview] = useState<string>("");
   const [newCouponDiscount, setNewCouponDiscount] = useState("");
   const [newCouponStatus, setNewCouponStatus] = useState<Coupon["status"]>("empty");
+  const [isUploadingNew, setIsUploadingNew] = useState(false);
 
   // Edit coupon form
   const [editCouponImageLink, setEditCouponImageLink] = useState("");
+  const [editCouponImageFile, setEditCouponImageFile] = useState<File | null>(null);
+  const [editCouponImagePreview, setEditCouponImagePreview] = useState<string>("");
   const [editCouponTimeFrom, setEditCouponTimeFrom] = useState("");
   const [editCouponTimeTo, setEditCouponTimeTo] = useState("");
   const [editCouponDiscount, setEditCouponDiscount] = useState("");
   const [editCouponStatus, setEditCouponStatus] = useState<Coupon["status"]>("empty");
+  const [isUploadingEdit, setIsUploadingEdit] = useState(false);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -235,6 +241,45 @@ export default function Coupons() {
     }
   };
 
+  const handleNewImageFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setNewCouponImageFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setNewCouponImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+      setNewCouponImageLink("");
+    }
+  };
+
+  const removeNewImage = () => {
+    setNewCouponImageFile(null);
+    setNewCouponImagePreview("");
+    setNewCouponImageLink("");
+  };
+
+  const uploadImage = async (file: File, prefix: string): Promise<string | null> => {
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${prefix}-${Date.now()}.${fileExt}`;
+    const filePath = `${fileName}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('coupon-images')
+      .upload(filePath, file);
+
+    if (uploadError) {
+      throw uploadError;
+    }
+
+    const { data } = supabase.storage
+      .from('coupon-images')
+      .getPublicUrl(filePath);
+
+    return data.publicUrl;
+  };
+
   const addCoupon = async () => {
     if (!selectedLocationId) {
       toast({
@@ -258,29 +303,50 @@ export default function Coupons() {
     const selectedLocation = locations.find((l) => l.id === selectedLocationId);
     if (!selectedLocation) return;
 
-    const { error } = await supabase.from("coupons").insert({
-      local_id: selectedLocationId,
-      local_name: selectedLocation.name,
-      image_link: newCouponImageLink.trim() || null,
-      discount,
-      status: newCouponStatus,
-    });
+    setIsUploadingNew(true);
 
-    if (error) {
+    try {
+      let imageUrl = newCouponImageLink.trim() || null;
+
+      // Upload file if provided
+      if (newCouponImageFile) {
+        imageUrl = await uploadImage(newCouponImageFile, 'coupon');
+      }
+
+      const { error } = await supabase.from("coupons").insert({
+        local_id: selectedLocationId,
+        local_name: selectedLocation.name,
+        image_link: imageUrl,
+        discount,
+        status: newCouponStatus,
+      });
+
+      if (error) {
+        toast({
+          title: "Error adding coupon",
+          description: error.message,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Success",
+          description: "Coupon added successfully",
+        });
+        setNewCouponImageLink("");
+        setNewCouponImageFile(null);
+        setNewCouponImagePreview("");
+        setNewCouponDiscount("");
+        setNewCouponStatus("empty");
+        loadCoupons();
+      }
+    } catch (error: any) {
       toast({
-        title: "Error adding coupon",
+        title: "Error uploading image",
         description: error.message,
         variant: "destructive",
       });
-    } else {
-      toast({
-        title: "Success",
-        description: "Coupon added successfully",
-      });
-      setNewCouponImageLink("");
-      setNewCouponDiscount("");
-      setNewCouponStatus("empty");
-      loadCoupons();
+    } finally {
+      setIsUploadingNew(false);
     }
   };
 
@@ -304,9 +370,29 @@ export default function Coupons() {
     }
   };
 
+  const handleEditImageFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setEditCouponImageFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setEditCouponImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const removeEditImage = async () => {
+    setEditCouponImageFile(null);
+    setEditCouponImagePreview("");
+    setEditCouponImageLink("");
+  };
+
   const startEditingCoupon = (coupon: Coupon) => {
     setEditingCouponId(coupon.id);
     setEditCouponImageLink(coupon.image_link || "");
+    setEditCouponImageFile(null);
+    setEditCouponImagePreview(coupon.image_link || "");
     setEditCouponTimeFrom(formatDateTimeLocal(coupon.time_from));
     setEditCouponTimeTo(coupon.time_to ? formatDateTimeLocal(coupon.time_to) : "");
     setEditCouponDiscount(coupon.discount.toString());
@@ -316,6 +402,8 @@ export default function Coupons() {
   const cancelEditingCoupon = () => {
     setEditingCouponId(null);
     setEditCouponImageLink("");
+    setEditCouponImageFile(null);
+    setEditCouponImagePreview("");
     setEditCouponTimeFrom("");
     setEditCouponTimeTo("");
     setEditCouponDiscount("");
@@ -333,30 +421,49 @@ export default function Coupons() {
       return;
     }
 
-    const { error } = await supabase
-      .from("coupons")
-      .update({
-        image_link: editCouponImageLink.trim() || null,
-        time_from: editCouponTimeFrom,
-        time_to: editCouponTimeTo || null,
-        discount,
-        status: editCouponStatus,
-      })
-      .eq("id", id);
+    setIsUploadingEdit(true);
 
-    if (error) {
+    try {
+      let imageUrl = editCouponImageLink.trim() || null;
+
+      // Upload new file if provided
+      if (editCouponImageFile) {
+        imageUrl = await uploadImage(editCouponImageFile, 'coupon-edit');
+      }
+
+      const { error } = await supabase
+        .from("coupons")
+        .update({
+          image_link: imageUrl,
+          time_from: editCouponTimeFrom,
+          time_to: editCouponTimeTo || null,
+          discount,
+          status: editCouponStatus,
+        })
+        .eq("id", id);
+
+      if (error) {
+        toast({
+          title: "Error updating coupon",
+          description: error.message,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Success",
+          description: "Coupon updated successfully",
+        });
+        cancelEditingCoupon();
+        loadCoupons();
+      }
+    } catch (error: any) {
       toast({
-        title: "Error updating coupon",
+        title: "Error uploading image",
         description: error.message,
         variant: "destructive",
       });
-    } else {
-      toast({
-        title: "Success",
-        description: "Coupon updated successfully",
-      });
-      cancelEditingCoupon();
-      loadCoupons();
+    } finally {
+      setIsUploadingEdit(false);
     }
   };
 
@@ -558,47 +665,89 @@ export default function Coupons() {
               <h3 className="font-medium">
                 Add New Coupon for: {selectedLocation?.name}
               </h3>
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-                <div>
-                  <Label htmlFor="newCouponImageLink">Image Link</Label>
-                  <Input
-                    id="newCouponImageLink"
-                    type="url"
-                    value={newCouponImageLink}
-                    onChange={(e) => setNewCouponImageLink(e.target.value)}
-                    placeholder="https://..."
-                  />
+              <div className="space-y-3">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                  <div className="md:col-span-2">
+                    <Label htmlFor="newCouponImageFile">Upload Image</Label>
+                    <Input
+                      id="newCouponImageFile"
+                      type="file"
+                      accept="image/*"
+                      onChange={handleNewImageFileChange}
+                      disabled={isUploadingNew}
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <Label htmlFor="newCouponImageLink">Or Image URL</Label>
+                    <Input
+                      id="newCouponImageLink"
+                      type="url"
+                      value={newCouponImageLink}
+                      onChange={(e) => setNewCouponImageLink(e.target.value)}
+                      placeholder="https://..."
+                      disabled={!!newCouponImageFile || isUploadingNew}
+                    />
+                  </div>
                 </div>
-                <div>
-                  <Label htmlFor="newCouponDiscount">Discount (%)</Label>
-                  <Input
-                    id="newCouponDiscount"
-                    type="number"
-                    min="1"
-                    max="100"
-                    value={newCouponDiscount}
-                    onChange={(e) => setNewCouponDiscount(e.target.value)}
-                    placeholder="20"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="newCouponStatus">Status</Label>
-                  <Select value={newCouponStatus} onValueChange={(v) => setNewCouponStatus(v as Coupon["status"])}>
-                    <SelectTrigger id="newCouponStatus">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="empty">empty</SelectItem>
-                      <SelectItem value="active">active</SelectItem>
-                      <SelectItem value="used">used</SelectItem>
-                      <SelectItem value="redeemed">redeemed</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="flex items-end">
-                  <Button onClick={addCoupon} className="w-full bg-green-600 hover:bg-green-700">
-                    Add Coupon
-                  </Button>
+                {(newCouponImagePreview || newCouponImageLink) && (
+                  <div className="flex items-center gap-2">
+                    <img
+                      src={newCouponImagePreview || newCouponImageLink}
+                      alt="Preview"
+                      className="w-20 h-20 object-cover rounded border"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={removeNewImage}
+                      disabled={isUploadingNew}
+                    >
+                      Remove Image
+                    </Button>
+                  </div>
+                )}
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                  <div>
+                    <Label htmlFor="newCouponDiscount">Discount (%)</Label>
+                    <Input
+                      id="newCouponDiscount"
+                      type="number"
+                      min="1"
+                      max="100"
+                      value={newCouponDiscount}
+                      onChange={(e) => setNewCouponDiscount(e.target.value)}
+                      placeholder="20"
+                      disabled={isUploadingNew}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="newCouponStatus">Status</Label>
+                    <Select 
+                      value={newCouponStatus} 
+                      onValueChange={(v) => setNewCouponStatus(v as Coupon["status"])}
+                      disabled={isUploadingNew}
+                    >
+                      <SelectTrigger id="newCouponStatus">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="empty">empty</SelectItem>
+                        <SelectItem value="active">active</SelectItem>
+                        <SelectItem value="used">used</SelectItem>
+                        <SelectItem value="redeemed">redeemed</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="md:col-span-2 flex items-end">
+                    <Button 
+                      onClick={addCoupon} 
+                      className="w-full bg-green-600 hover:bg-green-700"
+                      disabled={isUploadingNew}
+                    >
+                      {isUploadingNew ? "Uploading..." : "Add Coupon"}
+                    </Button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -625,12 +774,41 @@ export default function Coupons() {
                         <TableCell className="font-mono text-xs">{coupon.id.slice(0, 8)}...</TableCell>
                         <TableCell>{coupon.local_name}</TableCell>
                         <TableCell>
-                          <Input
-                            type="url"
-                            value={editCouponImageLink}
-                            onChange={(e) => setEditCouponImageLink(e.target.value)}
-                            className="w-32"
-                          />
+                          <div className="space-y-2">
+                            {(editCouponImagePreview || editCouponImageLink) && (
+                              <div className="flex items-center gap-2">
+                                <img
+                                  src={editCouponImagePreview || editCouponImageLink}
+                                  alt="Preview"
+                                  className="w-12 h-12 object-cover rounded"
+                                />
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={removeEditImage}
+                                  disabled={isUploadingEdit}
+                                >
+                                  Remove
+                                </Button>
+                              </div>
+                            )}
+                            <Input
+                              type="file"
+                              accept="image/*"
+                              onChange={handleEditImageFileChange}
+                              className="w-32"
+                              disabled={isUploadingEdit}
+                            />
+                            <Input
+                              type="url"
+                              value={editCouponImageLink}
+                              onChange={(e) => setEditCouponImageLink(e.target.value)}
+                              placeholder="Or URL"
+                              className="w-32"
+                              disabled={!!editCouponImageFile || isUploadingEdit}
+                            />
+                          </div>
                         </TableCell>
                         <TableCell>
                           <Input
@@ -672,10 +850,19 @@ export default function Coupons() {
                           </Select>
                         </TableCell>
                         <TableCell className="space-x-2">
-                          <Button size="sm" onClick={() => saveCoupon(coupon.id)}>
-                            Save
+                          <Button 
+                            size="sm" 
+                            onClick={() => saveCoupon(coupon.id)}
+                            disabled={isUploadingEdit}
+                          >
+                            {isUploadingEdit ? "Saving..." : "Save"}
                           </Button>
-                          <Button size="sm" variant="outline" onClick={cancelEditingCoupon}>
+                          <Button 
+                            size="sm" 
+                            variant="outline" 
+                            onClick={cancelEditingCoupon}
+                            disabled={isUploadingEdit}
+                          >
                             Cancel
                           </Button>
                         </TableCell>

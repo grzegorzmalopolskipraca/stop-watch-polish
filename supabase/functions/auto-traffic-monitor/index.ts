@@ -137,15 +137,28 @@ Deno.serve(async (req) => {
     let successCount = 0;
     let skipCount = 0;
     let errorCount = 0;
+    const totalStreets = Object.keys(STREET_COORDINATES).length;
+    let processedRequests = 0;
+
+    console.log(`[Auto Traffic Monitor] Processing ${totalStreets} streets × 2 directions = ${totalStreets * 2} total requests`);
 
     // Process each street
     for (const [streetName, coords] of Object.entries(STREET_COORDINATES)) {
+      console.log(`[Auto Traffic Monitor] ===== Processing street: ${streetName} =====`);
+      
       // Process both directions
       for (const direction of ['to_center', 'from_center']) {
+        processedRequests++;
+        const requestStartTime = Date.now();
+        
         try {
+          console.log(`[Auto Traffic Monitor] [${processedRequests}/${totalStreets * 2}] Starting ${streetName} (${direction})`);
+          
           // Determine origin and destination based on direction
           const origin = direction === 'to_center' ? coords.start : coords.end;
           const destination = direction === 'to_center' ? coords.end : coords.start;
+
+          console.log(`[Auto Traffic Monitor] Calling Google API for ${streetName} (${direction}) - Origin: ${origin.lat},${origin.lng} Destination: ${destination.lat},${destination.lng}`);
 
           // Call get-traffic-data edge function
           const { data: trafficData, error: trafficError } = await supabase.functions.invoke(
@@ -158,17 +171,32 @@ Deno.serve(async (req) => {
             }
           );
 
+          const apiCallDuration = Date.now() - requestStartTime;
+          console.log(`[Auto Traffic Monitor] Google API response received in ${apiCallDuration}ms for ${streetName} (${direction})`);
+
           if (trafficError) {
-            console.error(`[Auto Traffic Monitor] Error getting traffic for ${streetName} (${direction}):`, trafficError);
+            console.error(`[Auto Traffic Monitor] ❌ Error getting traffic for ${streetName} (${direction}):`, trafficError);
             errorCount++;
+            
+            // Add 30-second delay before next request
+            if (processedRequests < totalStreets * 2) {
+              console.log(`[Auto Traffic Monitor] Waiting 30 seconds before next request...`);
+              await new Promise(resolve => setTimeout(resolve, 30000));
+            }
             continue;
           }
 
           // Extract speed from traffic data
           const route = trafficData?.routes?.[0];
           if (!route?.legs?.[0]) {
-            console.log(`[Auto Traffic Monitor] No route data for ${streetName} (${direction}). Skipping.`);
+            console.log(`[Auto Traffic Monitor] ⚠️ No route data for ${streetName} (${direction}). Skipping.`);
             skipCount++;
+            
+            // Add 30-second delay before next request
+            if (processedRequests < totalStreets * 2) {
+              console.log(`[Auto Traffic Monitor] Waiting 30 seconds before next request...`);
+              await new Promise(resolve => setTimeout(resolve, 30000));
+            }
             continue;
           }
 
@@ -176,9 +204,17 @@ Deno.serve(async (req) => {
           const durationInTraffic = leg.duration_in_traffic?.value || leg.duration?.value;
           const distance = leg.distance?.value;
 
+          console.log(`[Auto Traffic Monitor] Traffic data for ${streetName} (${direction}): distance=${distance}m, duration=${durationInTraffic}s`);
+
           if (!durationInTraffic || !distance) {
-            console.log(`[Auto Traffic Monitor] Missing duration/distance for ${streetName} (${direction}). Skipping.`);
+            console.log(`[Auto Traffic Monitor] ⚠️ Missing duration/distance for ${streetName} (${direction}). Skipping.`);
             skipCount++;
+            
+            // Add 30-second delay before next request
+            if (processedRequests < totalStreets * 2) {
+              console.log(`[Auto Traffic Monitor] Waiting 30 seconds before next request...`);
+              await new Promise(resolve => setTimeout(resolve, 30000));
+            }
             continue;
           }
 
@@ -187,17 +223,24 @@ Deno.serve(async (req) => {
 
           // Skip if speed is 0 or invalid
           if (avgSpeed <= 0 || !isFinite(avgSpeed)) {
-            console.log(`[Auto Traffic Monitor] Invalid speed (${avgSpeed}) for ${streetName} (${direction}). Skipping.`);
+            console.log(`[Auto Traffic Monitor] ⚠️ Invalid speed (${avgSpeed}) for ${streetName} (${direction}). Skipping.`);
             skipCount++;
+            
+            // Add 30-second delay before next request
+            if (processedRequests < totalStreets * 2) {
+              console.log(`[Auto Traffic Monitor] Waiting 30 seconds before next request...`);
+              await new Promise(resolve => setTimeout(resolve, 30000));
+            }
             continue;
           }
 
           // Map speed to status
           const status = mapSpeedToStatus(avgSpeed);
 
-          console.log(`[Auto Traffic Monitor] ${streetName} (${direction}): ${avgSpeed.toFixed(1)} km/h -> ${status}`);
+          console.log(`[Auto Traffic Monitor] ✅ ${streetName} (${direction}): ${avgSpeed.toFixed(1)} km/h -> ${status}`);
 
           // Submit traffic report
+          console.log(`[Auto Traffic Monitor] Submitting report for ${streetName} (${direction})...`);
           const { error: submitError } = await supabase.functions.invoke(
             'auto-submit-traffic-report',
             {
@@ -212,18 +255,28 @@ Deno.serve(async (req) => {
           );
 
           if (submitError) {
-            console.error(`[Auto Traffic Monitor] Error submitting report for ${streetName} (${direction}):`, submitError);
+            console.error(`[Auto Traffic Monitor] ❌ Error submitting report for ${streetName} (${direction}):`, submitError);
             errorCount++;
           } else {
+            console.log(`[Auto Traffic Monitor] ✅ Report submitted successfully for ${streetName} (${direction})`);
             successCount++;
           }
 
-          // Small delay to avoid overwhelming the API
-          await new Promise(resolve => setTimeout(resolve, 500));
+          // 30-second delay between requests to avoid overwhelming Google API
+          if (processedRequests < totalStreets * 2) {
+            console.log(`[Auto Traffic Monitor] ⏱️ Waiting 30 seconds before next request (${processedRequests}/${totalStreets * 2} completed)...`);
+            await new Promise(resolve => setTimeout(resolve, 30000));
+          }
 
         } catch (error) {
-          console.error(`[Auto Traffic Monitor] Exception for ${streetName} (${direction}):`, error);
+          console.error(`[Auto Traffic Monitor] ❌ Exception for ${streetName} (${direction}):`, error);
           errorCount++;
+          
+          // Add 30-second delay even on error
+          if (processedRequests < totalStreets * 2) {
+            console.log(`[Auto Traffic Monitor] Waiting 30 seconds before next request (after error)...`);
+            await new Promise(resolve => setTimeout(resolve, 30000));
+          }
         }
       }
     }

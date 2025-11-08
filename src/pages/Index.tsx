@@ -1422,7 +1422,7 @@ const Index = () => {
                 className="w-full"
               >
                 <BellOff className="mr-2 h-4 w-4" />
-                Powiadom mnie, gdy coś zablokuje drogę
+                Powiadom mnie o blokadzie drogi
               </Button>
             </div>
           )}
@@ -1482,7 +1482,7 @@ const Index = () => {
         {/* Next Green Slot */}
         {(nextGreenSlot || nextToczySlot || nextStoiSlot) && (
           <section className="bg-card rounded-lg p-5 border border-border space-y-3">
-            <h3 className="text-lg font-semibold">
+            <h3 className="text-sm font-semibold">
               Korzystaj! Wyjedź, gdy ruch jest mniejszy:
             </h3>
             

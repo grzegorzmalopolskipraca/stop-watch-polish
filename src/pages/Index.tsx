@@ -1289,35 +1289,17 @@ const Index = () => {
       {/* Sticky Header */}
       <header className="sticky top-0 z-10 bg-card border-b border-border shadow-sm">
         <div className="container max-w-2xl mx-auto px-4 py-4">
-          <div className="mb-3">
-            <p className="text-sm text-muted-foreground mb-1">Oszczędzaj czas i paliwo. Nim ruszysz sprawdź</p>
-            <a href="https://ejedzie.pl" className="block">
-              <h1 className="text-xl font-bold hover:text-primary transition-colors cursor-pointer">
-                Czy {selectedStreet} stoi?
-              </h1>
-            </a>
-          </div>
-
           <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <label className="text-sm font-medium">Wybierz ulicę w Wrocławiu</label>
-              <div className="flex flex-col items-end -mt-1">
-                <a
-                  href="https://ejedzie.pl"
-                  className="text-lg font-semibold text-primary hover:text-primary/80 transition-colors whitespace-nowrap leading-tight"
-                >
-                  e<span className="text-green-600">J</span>edzie.pl
-                </a>
+            {/* Top tagline */}
+            <p className="text-sm text-muted-foreground">Oszczędzaj czas i paliwo. Nim ruszysz sprawdź</p>
 
-              </div>
-            </div>
-
-            {/* Street Select and Direction Toggle in one row on desktop, stacked on mobile */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-2 md:gap-3">
-              {/* Street Select - 1/3 width on desktop, full width on mobile */}
-              <div className="md:col-span-1">
+            {/* Main question with inline street select + direction filters (desktop) */}
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+              {/* Question with inline select */}
+              <div className="flex items-center gap-2 flex-wrap">
+                <h1 className="text-xl font-bold whitespace-nowrap">Czy</h1>
                 <Select value={selectedStreet} onValueChange={setSelectedStreet}>
-                  <SelectTrigger className="w-full h-11">
+                  <SelectTrigger className="w-auto min-w-[180px] h-10 text-base font-bold">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -1328,22 +1310,23 @@ const Index = () => {
                     ))}
                   </SelectContent>
                 </Select>
+                <h1 className="text-xl font-bold whitespace-nowrap">stoi?</h1>
               </div>
 
-              {/* Direction Buttons - 2/3 width on desktop (2 columns), full width on mobile */}
-              <div className="md:col-span-2">
+              {/* Direction Buttons - shown on desktop only */}
+              <div className="hidden md:block md:flex-shrink-0">
                 <Tabs value={direction} onValueChange={setDirection} className="w-full">
-                  <TabsList className="grid w-full grid-cols-2 h-11 bg-muted">
+                  <TabsList className="grid grid-cols-2 h-10 bg-muted w-auto">
                     <TabsTrigger
                       value="to_center"
-                      className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:font-bold data-[state=active]:shadow-md flex items-center justify-center gap-2"
+                      className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:font-bold data-[state=active]:shadow-md flex items-center justify-center gap-2 px-4"
                     >
                       <ArrowUp className="w-4 h-4" />
                       Do centrum
                     </TabsTrigger>
                     <TabsTrigger
                       value="from_center"
-                      className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:font-bold data-[state=active]:shadow-md flex items-center justify-center gap-2"
+                      className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:font-bold data-[state=active]:shadow-md flex items-center justify-center gap-2 px-4"
                     >
                       <ArrowDown className="w-4 h-4" />
                       Od centrum
@@ -1351,6 +1334,39 @@ const Index = () => {
                   </TabsList>
                 </Tabs>
               </div>
+            </div>
+
+            {/* Label and logo */}
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-muted-foreground">Wybierz ulicę w Wrocławiu</p>
+              <a
+                href="https://ejedzie.pl"
+                className="text-lg font-semibold text-primary hover:text-primary/80 transition-colors whitespace-nowrap leading-tight"
+              >
+                e<span className="text-green-600">J</span>edzie.pl
+              </a>
+            </div>
+
+            {/* Direction Buttons - shown on mobile only */}
+            <div className="md:hidden">
+              <Tabs value={direction} onValueChange={setDirection} className="w-full">
+                <TabsList className="grid w-full grid-cols-2 h-11 bg-muted">
+                  <TabsTrigger
+                    value="to_center"
+                    className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:font-bold data-[state=active]:shadow-md flex items-center justify-center gap-2"
+                  >
+                    <ArrowUp className="w-4 h-4" />
+                    Do centrum
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="from_center"
+                    className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:font-bold data-[state=active]:shadow-md flex items-center justify-center gap-2"
+                  >
+                    <ArrowDown className="w-4 h-4" />
+                    Od centrum
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
             </div>
           </div>
         </div>

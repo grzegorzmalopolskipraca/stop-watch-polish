@@ -31,6 +31,7 @@ import { toast } from "sonner";
 import { WeeklyTimeline } from "@/components/WeeklyTimeline";
 import { TodayTimeline } from "@/components/TodayTimeline";
 import { Legend } from "@/components/Legend";
+import { PredictedTraffic } from "@/components/PredictedTraffic";
 import { StreetChat } from "@/components/StreetChat";
 import { StreetVoting } from "@/components/StreetVoting";
 import { CityVoting } from "@/components/CityVoting";
@@ -1474,6 +1475,9 @@ const Index = () => {
             </Button>
           </div>
         </section>
+
+        {/* Predicted Traffic */}
+        <PredictedTraffic reports={weeklyReports} direction={direction} />
 
         {/* Next Green Slot */}
         {(nextGreenSlot || nextToczySlot || nextStoiSlot) && (

@@ -260,7 +260,7 @@ const Index = () => {
     }
 
     // Find next green slot from current time
-    const now = new Date();
+    // Reuse 'now' from line 150
     const currentHour = now.getHours();
     const currentMinute = now.getMinutes();
     const currentTotalMinutes = currentHour * 60 + currentMinute;
@@ -404,7 +404,7 @@ const Index = () => {
       });
     }
 
-    const now = new Date();
+    // Reuse 'now' from line 303
     const currentHour = now.getHours();
     const currentMinute = now.getMinutes();
     const currentTotalMinutes = currentHour * 60 + currentMinute;
@@ -545,7 +545,7 @@ const Index = () => {
       });
     }
 
-    const now = new Date();
+    // Reuse 'now' from line 444
     const currentHour = now.getHours();
     const currentMinute = now.getMinutes();
     const currentTotalMinutes = currentHour * 60 + currentMinute;

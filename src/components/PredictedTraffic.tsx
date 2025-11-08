@@ -137,7 +137,34 @@ export const PredictedTraffic = ({ reports, direction }: PredictedTrafficProps) 
         )}
       </div>
       
-      <div className="space-y-1">
+      <div className="relative">
+        {/* Time legend - labels above (even indices) */}
+        <div className="relative h-5 mb-1">
+          {legendTimes.map((time, index) => {
+            // Only show even-indexed labels (0, 2, 4, 6) above
+            if (index % 2 !== 0) return null;
+
+            const isFirst = index === 0;
+            const isLast = index === legendTimes.length - 1;
+            // Each legend item represents 10 minutes, rectangles are 5 minutes
+            // So legend index i should be at position (i * 10) / 60 = i / 6 of total width
+            const position = (index * 100) / 6;
+
+            return (
+              <span
+                key={index}
+                className="text-xs text-muted-foreground absolute bottom-0"
+                style={{
+                  left: `${position}%`,
+                  transform: isFirst ? 'translateX(0)' : isLast ? 'translateX(-100%)' : 'translateX(-50%)'
+                }}
+              >
+                {time}
+              </span>
+            );
+          })}
+        </div>
+
         {/* Timeline */}
         <div className="flex gap-0.5">
           {predictionData.map((interval, index) => (
@@ -150,32 +177,30 @@ export const PredictedTraffic = ({ reports, direction }: PredictedTrafficProps) 
             />
           ))}
         </div>
-        
-        {/* Time legend */}
-        <div className="relative pt-1">
-          <div className="relative">
-            {legendTimes.map((time, index) => {
-              const isFirst = index === 0;
-              const isLast = index === legendTimes.length - 1;
-              // Each legend item represents 10 minutes, rectangles are 5 minutes
-              // So legend index i should be at position (i * 10) / 60 = i / 6 of total width
-              const position = (index * 100) / 6;
 
-              return (
-                <span
-                  key={index}
-                  className="text-xs text-muted-foreground"
-                  style={{
-                    position: 'absolute',
-                    left: `${position}%`,
-                    transform: isFirst ? 'translateX(0)' : isLast ? 'translateX(-100%)' : 'translateX(-50%)'
-                  }}
-                >
-                  {time}
-                </span>
-              );
-            })}
-          </div>
+        {/* Time legend - labels below (odd indices) */}
+        <div className="relative h-5 mt-1">
+          {legendTimes.map((time, index) => {
+            // Only show odd-indexed labels (1, 3, 5) below
+            if (index % 2 === 0) return null;
+
+            const isFirst = index === 0;
+            const isLast = index === legendTimes.length - 1;
+            const position = (index * 100) / 6;
+
+            return (
+              <span
+                key={index}
+                className="text-xs text-muted-foreground absolute top-0"
+                style={{
+                  left: `${position}%`,
+                  transform: isFirst ? 'translateX(0)' : isLast ? 'translateX(-100%)' : 'translateX(-50%)'
+                }}
+              >
+                {time}
+              </span>
+            );
+          })}
         </div>
       </div>
     </div>

@@ -1,6 +1,5 @@
 import { useMemo } from "react";
-import { TrendingUp } from "lucide-react";
-import { addMinutes, format, subWeeks, startOfMinute } from "date-fns";
+import { addMinutes, format, subWeeks, differenceInMinutes } from "date-fns";
 import { pl } from "date-fns/locale";
 
 interface Report {
@@ -22,7 +21,7 @@ const COLORS = {
 };
 
 export const PredictedTraffic = ({ reports, direction }: PredictedTrafficProps) => {
-  const predictionData = useMemo(() => {
+  const { predictionData, minutesToNextStoi, currentIsStoi } = useMemo(() => {
     const now = new Date();
     const currentMinute = now.getMinutes();
     const currentHour = now.getHours();
@@ -88,7 +87,19 @@ export const PredictedTraffic = ({ reports, direction }: PredictedTrafficProps) 
       });
     }
     
-    return intervals;
+    // Check if current status is 'stoi' (first interval)
+    const currentIsStoi = intervals[0]?.status === 'stoi';
+    
+    // Find minutes to next 'stoi' status
+    let minutesToNextStoi = null;
+    for (let i = 0; i < intervals.length; i++) {
+      if (intervals[i].status === 'stoi') {
+        minutesToNextStoi = differenceInMinutes(intervals[i].time, now);
+        break;
+      }
+    }
+    
+    return { predictionData: intervals, minutesToNextStoi, currentIsStoi };
   }, [reports, direction]);
   
   // Generate legend times (every 10 minutes)
@@ -112,16 +123,13 @@ export const PredictedTraffic = ({ reports, direction }: PredictedTrafficProps) 
 
   return (
     <div className="space-y-4 p-6 rounded-xl bg-gradient-to-br from-blue-50/50 via-white to-blue-50/30 dark:from-blue-950/20 dark:via-background dark:to-blue-900/10 border border-blue-200/50 dark:border-blue-800/30 shadow-lg">
-      <div className="flex items-start gap-4">
-        <div className="flex-shrink-0 p-3 rounded-full bg-blue-100 dark:bg-blue-900/30 animate-pulse">
-          <TrendingUp className="w-12 h-12 text-blue-600 dark:text-blue-400" />
-        </div>
-        <div className="flex-1">
-          <h2 className="text-lg font-semibold text-foreground">Przewidywany stan ruchu</h2>
+      <div>
+        <h2 className="text-lg font-semibold text-foreground">Ruch na ulicy w następnej godzinie</h2>
+        {!currentIsStoi && minutesToNextStoi !== null && minutesToNextStoi > 0 && (
           <p className="text-sm text-muted-foreground mt-1">
-            Następna godzina (na podstawie danych z ostatniego tygodnia)
+            Następny korek za {minutesToNextStoi} minut
           </p>
-        </div>
+        )}
       </div>
       
       <div className="space-y-1">
@@ -139,12 +147,22 @@ export const PredictedTraffic = ({ reports, direction }: PredictedTrafficProps) 
         </div>
         
         {/* Time legend */}
-        <div className="flex justify-between text-xs text-muted-foreground pt-1">
-          {legendTimes.map((time, index) => (
-            <span key={index} className="text-center" style={{ width: '1ch' }}>
-              {time}
-            </span>
-          ))}
+        <div className="relative pt-1">
+          <div className="flex">
+            {legendTimes.map((time, index) => (
+              <span 
+                key={index} 
+                className="text-xs text-muted-foreground text-center"
+                style={{ 
+                  width: `${100 / (legendTimes.length - 1)}%`,
+                  marginLeft: index === 0 ? '0' : `-${50 / (legendTimes.length - 1)}%`,
+                  marginRight: index === legendTimes.length - 1 ? '0' : `-${50 / (legendTimes.length - 1)}%`
+                }}
+              >
+                {time}
+              </span>
+            ))}
+          </div>
         </div>
       </div>
     </div>

@@ -289,17 +289,7 @@ export const WeatherForecast = ({ street }: Props) => {
           </p>
         </div>
       </div>
-      
-      {weatherMeta && (
-        <div className="text-xs text-muted-foreground bg-blue-50/50 dark:bg-blue-950/30 rounded p-2 border border-blue-200/30 dark:border-blue-800/30">
-          <div className="flex flex-wrap gap-x-3 gap-y-1">
-            <span>📍 Lokalizacja: {weatherMeta.location.latitude.toFixed(4)}, {weatherMeta.location.longitude.toFixed(4)}</span>
-            <span>🕐 Wygenerowano: {new Date(weatherMeta.generatedAt).toLocaleTimeString('pl-PL')}</span>
-            <span>📡 Źródło: {weatherMeta.source}</span>
-          </div>
-        </div>
-      )}
-      
+
       <div className="space-y-2">
         {weatherSlots.map((slot, index) => {
           // Find minimum rainfall

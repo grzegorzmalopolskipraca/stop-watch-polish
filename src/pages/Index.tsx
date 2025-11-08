@@ -1311,6 +1311,12 @@ const Index = () => {
                   </SelectContent>
                 </Select>
                 <h1 className="text-xl font-bold whitespace-nowrap">stoi?</h1>
+                <a
+                  href="https://ejedzie.pl"
+                  className="text-lg font-semibold text-primary hover:text-primary/80 transition-colors whitespace-nowrap leading-tight ml-2"
+                >
+                  e<span className="text-green-600">J</span>edzie.pl
+                </a>
               </div>
 
               {/* Direction Buttons - shown on desktop only */}
@@ -1334,17 +1340,6 @@ const Index = () => {
                   </TabsList>
                 </Tabs>
               </div>
-            </div>
-
-            {/* Label and logo */}
-            <div className="flex items-center justify-between">
-              <p className="text-sm text-muted-foreground">Wybierz ulicę w Wrocławiu</p>
-              <a
-                href="https://ejedzie.pl"
-                className="text-lg font-semibold text-primary hover:text-primary/80 transition-colors whitespace-nowrap leading-tight"
-              >
-                e<span className="text-green-600">J</span>edzie.pl
-              </a>
             </div>
 
             {/* Direction Buttons - shown on mobile only */}

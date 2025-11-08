@@ -1291,7 +1291,7 @@ const Index = () => {
         <div className="container max-w-2xl mx-auto px-4 py-4">
           <div className="space-y-3">
             {/* Top tagline */}
-            <p className="text-sm text-muted-foreground">Wrocławiu oszczędzaj czas i paliwo. Nim ruszysz sprawdź</p>
+            <p className="text-sm text-muted-foreground">Oszczędzaj czas i paliwo. Nim ruszysz sprawdź:</p>
 
             {/* Main question with inline street select + direction filters (desktop) */}
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">

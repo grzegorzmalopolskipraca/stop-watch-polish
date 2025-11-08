@@ -146,14 +146,16 @@ const Index = () => {
       return null;
     }
 
-    // Filter reports to only today and past 7 days
-    const today = startOfDay(new Date());
-    const weekAgo = new Date(today);
-    weekAgo.setDate(weekAgo.getDate() - 7);
+    // Get today's day of week (0 = Sunday, 1 = Monday, etc.)
+    const now = new Date();
+    const todayDayOfWeek = now.getDay();
 
+    // Filter reports to same day of week and same direction only
+    // For example, if today is Monday and direction is "do centrum",
+    // only use reports from previous Mondays going "do centrum"
     const relevantReports = weeklyReports.filter((r) => {
       const reportDate = new Date(r.reported_at);
-      return reportDate >= weekAgo && reportDate <= new Date();
+      return reportDate.getDay() === todayDayOfWeek && r.direction === direction;
     });
 
     // Use 10-minute intervals
@@ -289,7 +291,7 @@ const Index = () => {
     }
 
     return null;
-  }, [weeklyReports]);
+  }, [weeklyReports, direction]);
 
   // Calculate next toczy_sie slot
   const nextToczySlot = useMemo(() => {
@@ -297,13 +299,14 @@ const Index = () => {
       return null;
     }
 
-    const today = startOfDay(new Date());
-    const weekAgo = new Date(today);
-    weekAgo.setDate(weekAgo.getDate() - 7);
+    // Get today's day of week (0 = Sunday, 1 = Monday, etc.)
+    const now = new Date();
+    const todayDayOfWeek = now.getDay();
 
+    // Filter reports to same day of week and same direction only
     const relevantReports = weeklyReports.filter((r) => {
       const reportDate = new Date(r.reported_at);
-      return reportDate >= weekAgo && reportDate <= new Date();
+      return reportDate.getDay() === todayDayOfWeek && r.direction === direction;
     });
 
     interface IntervalStatus {
@@ -429,7 +432,7 @@ const Index = () => {
     }
 
     return null;
-  }, [weeklyReports]);
+  }, [weeklyReports, direction]);
 
   // Calculate next stoi slot
   const nextStoiSlot = useMemo(() => {
@@ -437,13 +440,14 @@ const Index = () => {
       return null;
     }
 
-    const today = startOfDay(new Date());
-    const weekAgo = new Date(today);
-    weekAgo.setDate(weekAgo.getDate() - 7);
+    // Get today's day of week (0 = Sunday, 1 = Monday, etc.)
+    const now = new Date();
+    const todayDayOfWeek = now.getDay();
 
+    // Filter reports to same day of week and same direction only
     const relevantReports = weeklyReports.filter((r) => {
       const reportDate = new Date(r.reported_at);
-      return reportDate >= weekAgo && reportDate <= new Date();
+      return reportDate.getDay() === todayDayOfWeek && r.direction === direction;
     });
 
     interface IntervalStatus {
@@ -569,7 +573,7 @@ const Index = () => {
     }
 
     return null;
-  }, [weeklyReports]);
+  }, [weeklyReports, direction]);
 
   // Save selected street to localStorage
   useEffect(() => {

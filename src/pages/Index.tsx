@@ -1364,6 +1364,9 @@ const Index = () => {
       {/* Main Content */}
       <main className="container max-w-2xl mx-auto px-4 py-6 space-y-8">
 
+        {/* Live traffic label */}
+        <p className="text-sm text-gray-400 text-center">Korki na żywo na podstawie zgłoszeń mieszkańców</p>
+
         {/* Current Status */}
         <section
           className={`relative rounded-lg p-6 text-center transition-colors min-h-[200px] flex flex-col justify-center ${
@@ -1395,12 +1398,7 @@ const Index = () => {
               >
                 {currentStatus === 'stoi' && 'Lepiej wyjedź później'}
                 {currentStatus === 'toczy_sie' && 'Jedź jeśli musisz'}
-                {currentStatus === 'jedzie' && 'Możesz jechać'}
-              </p>
-              <p
-                className={`text-sm ${statusConfig.textColor} opacity-90`}
-              >
-                Na żywo na podstawie zgłoszeń mieszkańców.
+                {currentStatus === 'jedzie' && 'Możesz ruszać :)'}
               </p>
               {Object.keys(lastTenStats).length > 0 && (
                 <>

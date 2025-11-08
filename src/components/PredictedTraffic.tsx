@@ -148,18 +148,21 @@ export const PredictedTraffic = ({ reports, direction }: PredictedTrafficProps) 
         
         {/* Time legend */}
         <div className="relative pt-1">
-          <div className="flex justify-between">
+          <div className="relative">
             {legendTimes.map((time, index) => {
               const isFirst = index === 0;
               const isLast = index === legendTimes.length - 1;
-              
+              // Each legend item represents 10 minutes, rectangles are 5 minutes
+              // So legend index i should be at position (i * 10) / 60 = i / 6 of total width
+              const position = (index * 100) / 6;
+
               return (
-                <span 
-                  key={index} 
+                <span
+                  key={index}
                   className="text-xs text-muted-foreground"
-                  style={{ 
+                  style={{
                     position: 'absolute',
-                    left: `${(index * 100) / (legendTimes.length - 1)}%`,
+                    left: `${position}%`,
                     transform: isFirst ? 'translateX(0)' : isLast ? 'translateX(-100%)' : 'translateX(-50%)'
                   }}
                 >

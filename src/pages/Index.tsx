@@ -1287,7 +1287,7 @@ const Index = () => {
           <div className="mb-3">
             <p className="text-sm text-muted-foreground mb-1">Oszczędzaj czas i paliwo. Nim ruszysz sprawdź</p>
             <a href="https://ejedzie.pl" className="block">
-              <h1 className="text-2xl font-bold hover:text-primary transition-colors cursor-pointer">
+              <h1 className="text-xl font-bold hover:text-primary transition-colors cursor-pointer">
                 Czy {selectedStreet} stoi?
               </h1>
             </a>
@@ -1429,7 +1429,7 @@ const Index = () => {
         </section>
 
         {/* Report Buttons */}
-        <section className="space-y-3 -mt-1.5">
+        <section className="space-y-3 -mt-2.5">
           <h3 className="text-sm font-medium text-center">
             Poinformuj sąsiadów. Jak wygląda teraz ruch?
           </h3>

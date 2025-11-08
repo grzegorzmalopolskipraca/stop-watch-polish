@@ -705,16 +705,17 @@ const Index = () => {
   const fetchReports = async (street: string, currentDirection: string = direction) => {
     setIsLoading(true);
     try {
-      // Fetch last 7 days of reports for weekly timeline
-      const weekAgo = new Date();
-      weekAgo.setDate(weekAgo.getDate() - 7);
+      // Fetch last 4 weeks of reports for better traffic predictions
+      // (Components like WeeklyTimeline and GreenWave filter to 7 days internally)
+      const fourWeeksAgo = new Date();
+      fourWeeksAgo.setDate(fourWeeksAgo.getDate() - 28);
 
       const { data: weekData, error: weekError } = await supabase
         .from("traffic_reports")
         .select("*")
         .eq("street", street)
         .eq("direction", currentDirection)
-        .gte("reported_at", weekAgo.toISOString())
+        .gte("reported_at", fourWeeksAgo.toISOString())
         .order("reported_at", { ascending: false });
 
       if (weekError) throw weekError;
@@ -725,7 +726,7 @@ const Index = () => {
         .from("traffic_reports")
         .select("*")
         .eq("street", street)
-        .gte("reported_at", weekAgo.toISOString())
+        .gte("reported_at", fourWeeksAgo.toISOString())
         .order("reported_at", { ascending: false });
 
       if (commuteError) throw commuteError;

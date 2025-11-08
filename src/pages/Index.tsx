@@ -1285,7 +1285,7 @@ const Index = () => {
       <header className="sticky top-0 z-10 bg-card border-b border-border shadow-sm">
         <div className="container max-w-2xl mx-auto px-4 py-4">
           <div className="mb-3">
-            <p className="text-sm text-muted-foreground mb-1">Oszczędzaj czas, paliwo i nerwy. Zanim ruszysz sprawdź</p>
+            <p className="text-sm text-muted-foreground mb-1">Oszczędzaj czas i paliwo. Nim ruszysz sprawdź</p>
             <a href="https://ejedzie.pl" className="block">
               <h1 className="text-2xl font-bold hover:text-primary transition-colors cursor-pointer">
                 Czy {selectedStreet} stoi?
@@ -1295,11 +1295,11 @@ const Index = () => {
           
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <label className="text-sm font-medium">Wybierz ulicę w Wrocławiu</label>
+              <label className="text-sm">Wybierz ulicę w Wrocławiu</label>
               <div className="flex flex-col items-end -mt-1">
-                <a 
-                  href="https://ejedzie.pl" 
-                  className="text-xl font-semibold text-primary hover:text-primary/80 transition-colors whitespace-nowrap leading-tight"
+                <a
+                  href="https://ejedzie.pl"
+                  className="text-lg font-semibold text-primary hover:text-primary/80 transition-colors whitespace-nowrap leading-tight"
                 >
                   e<span className="text-green-600">J</span>edzie.pl
                 </a>
@@ -1325,7 +1325,7 @@ const Index = () => {
       {/* Main Content */}
       <main className="container max-w-2xl mx-auto px-4 py-6 space-y-8">
         {/* Direction Toggle */}
-        <section>
+        <section className="-my-1.5">
           <Tabs value={direction} onValueChange={setDirection} className="w-full">
             <TabsList className="grid w-full grid-cols-2 h-12 bg-muted">
               <TabsTrigger 
@@ -1368,7 +1368,7 @@ const Index = () => {
           ) : statusConfig ? (
             <>
               <h2
-                className={`text-3xl font-bold mb-2 ${statusConfig.textColor}`}
+                className={`text-2xl font-bold mb-2 ${statusConfig.textColor}`}
               >
                 {selectedStreet} {statusConfig.label}
               </h2>
@@ -1429,7 +1429,7 @@ const Index = () => {
         </section>
 
         {/* Report Buttons */}
-        <section className="space-y-3">
+        <section className="space-y-3 -mt-1.5">
           <h3 className="text-sm font-medium text-center">
             Poinformuj sąsiadów. Jak wygląda teraz ruch?
           </h3>

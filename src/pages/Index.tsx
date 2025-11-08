@@ -1297,10 +1297,10 @@ const Index = () => {
               </h1>
             </a>
           </div>
-          
-          <div className="space-y-2">
+
+          <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <label className="text-sm">Wybierz ulicę w Wrocławiu</label>
+              <label className="text-sm font-medium">Wybierz ulicę w Wrocławiu</label>
               <div className="flex flex-col items-end -mt-1">
                 <a
                   href="https://ejedzie.pl"
@@ -1308,48 +1308,58 @@ const Index = () => {
                 >
                   e<span className="text-green-600">J</span>edzie.pl
                 </a>
-                
+
               </div>
             </div>
-            <Select value={selectedStreet} onValueChange={setSelectedStreet}>
-              <SelectTrigger className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {STREETS.map((street) => (
-                  <SelectItem key={street} value={street}>
-                    {street}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+
+            {/* Street Select and Direction Toggle in one row on desktop, stacked on mobile */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-2 md:gap-3">
+              {/* Street Select - 1/3 width on desktop, full width on mobile */}
+              <div className="md:col-span-1">
+                <Select value={selectedStreet} onValueChange={setSelectedStreet}>
+                  <SelectTrigger className="w-full h-11">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {STREETS.map((street) => (
+                      <SelectItem key={street} value={street}>
+                        {street}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Direction Buttons - 2/3 width on desktop (2 columns), full width on mobile */}
+              <div className="md:col-span-2">
+                <Tabs value={direction} onValueChange={setDirection} className="w-full">
+                  <TabsList className="grid w-full grid-cols-2 h-11 bg-muted">
+                    <TabsTrigger
+                      value="to_center"
+                      className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:font-bold data-[state=active]:shadow-md flex items-center justify-center gap-2"
+                    >
+                      <ArrowUp className="w-4 h-4" />
+                      <span className="hidden sm:inline">Do centrum</span>
+                      <span className="sm:hidden">Do</span>
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="from_center"
+                      className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:font-bold data-[state=active]:shadow-md flex items-center justify-center gap-2"
+                    >
+                      <ArrowDown className="w-4 h-4" />
+                      <span className="hidden sm:inline">Od centrum</span>
+                      <span className="sm:hidden">Od</span>
+                    </TabsTrigger>
+                  </TabsList>
+                </Tabs>
+              </div>
+            </div>
           </div>
         </div>
       </header>
 
       {/* Main Content */}
       <main className="container max-w-2xl mx-auto px-4 py-6 space-y-8">
-        {/* Direction Toggle */}
-        <section className="-my-1.5">
-          <Tabs value={direction} onValueChange={setDirection} className="w-full">
-            <TabsList className="grid w-full grid-cols-2 h-12 bg-muted">
-              <TabsTrigger 
-                value="to_center" 
-                className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:font-bold data-[state=active]:shadow-md flex items-center gap-2"
-              >
-                <ArrowUp className="w-4 h-4" />
-                Do centrum
-              </TabsTrigger>
-              <TabsTrigger 
-                value="from_center"
-                className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:font-bold data-[state=active]:shadow-md flex items-center gap-2"
-              >
-                <ArrowDown className="w-4 h-4" />
-                Od centrum
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
-        </section>
 
         {/* Current Status */}
         <section

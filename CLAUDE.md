@@ -101,6 +101,41 @@ public/
 - **stoi** (red) - stopped/heavy traffic
 - **toczy_sie** (yellow/orange) - moving slowly
 - **jedzie** (green) - flowing normally
+- **neutral** (grey) - no data available
+
+### Traffic Prediction Logic
+**CRITICAL: Data Filtering for Predictions**
+
+All traffic prediction components (`nextGreenSlot`, `nextToczySlot`, `nextStoiSlot`, `PredictedTraffic`) must filter data consistently:
+
+1. **Historical Data Period:** Fetch 4 weeks (28 days) of traffic reports from database
+2. **Day-of-Week Filtering:** Filter to same day of week as current day (e.g., only Mondays if today is Monday)
+3. **Direction Filtering:** Filter by selected direction (`do centrum` or `od centrum`)
+4. **Time Window Aggregation:** Group reports into time intervals and use majority vote to determine status
+
+**Example pattern (Index.tsx lines 143-294):**
+```typescript
+const now = new Date();
+const todayDayOfWeek = now.getDay();
+
+const relevantReports = weeklyReports.filter((r) => {
+  const reportDate = new Date(r.reported_at);
+  return reportDate.getDay() === todayDayOfWeek && r.direction === direction;
+});
+```
+
+**Common Mistake to Avoid:**
+- ❌ Don't use all 7 days of the week for predictions (different traffic patterns)
+- ❌ Don't ignore direction filter (traffic varies by direction)
+- ❌ Don't declare duplicate `const now` variables in same scope
+- ✅ All prediction useMemo hooks must include `direction` in dependency array
+
+### Traffic Calculation Intervals
+- **PredictedTraffic:** 5-minute intervals (12 per hour) for next hour forecast
+- **WeeklyTimeline:** 30-minute blocks from 5:00-22:00 for last 7 days
+- **GreenWave:** 10-minute intervals analyzed over last 7 days
+- **TodayTimeline:** 1-hour blocks for full 24-hour day
+- All use majority vote when multiple reports exist in same time window
 
 ## Important Files
 
@@ -111,9 +146,13 @@ public/
 
 ### Components
 - `src/components/TrafficLine.tsx` - Visual traffic status line
-- `src/components/TodayTimeline.tsx` - Today's traffic timeline
-- `src/components/WeeklyTimeline.tsx` - Weekly traffic patterns
-- `src/components/PredictedTraffic.tsx` - AI/ML traffic predictions
+- `src/components/TodayTimeline.tsx` - Today's traffic timeline (1-hour intervals, 24 hours)
+- `src/components/WeeklyTimeline.tsx` - Weekly traffic patterns (30-min blocks, 5:00-22:00, last 7 days)
+- `src/components/PredictedTraffic.tsx` - Traffic predictions (5-min intervals, next 60 minutes)
+  - Uses **alternating legend layout**: time labels alternate above/below colored rectangles for better mobile spacing
+  - Title: "Prognoza na najbliższą godzinę"
+- `src/components/GreenWave.tsx` - Optimal departure time recommendations (10-min intervals)
+- `src/components/WeatherForecast.tsx` - Weather for cyclists/motorcyclists (metadata hidden: location, timestamp, source)
 - `src/components/StreetVoting.tsx` - Street improvement voting
 - `src/components/StreetChat.tsx` - Street-specific chat
 - `src/components/SmsSubscription.tsx` - SMS subscription feature
@@ -138,6 +177,23 @@ Key debugging steps:
 4. Filter OneSignal dashboard by tags to find subscriptions
 5. Use `/push` page "Sprawdź pełny status" button to auto-fix missing tags
 
+## Database Schema
+
+### traffic_reports Table
+Primary table storing all traffic status reports:
+- `id` (string) - UUID primary key
+- `street` (string) - Street name
+- `status` (string) - Traffic status: "stoi", "toczy_sie", "jedzie"
+- `direction` (string) - Traffic direction: "do centrum", "od centrum"
+- `reported_at` (string/timestamp) - When report was created
+- `created_at` (string/timestamp) - Database insert time
+- `user_fingerprint` (string, nullable) - Anonymous user identifier
+
+**Query Patterns:**
+- Always filter by `street`, `direction`, and time range
+- Use `.gte("reported_at", date)` for historical data
+- Order by `reported_at` descending for most recent first
+
 ## Development Notes
 
 ### Path Aliases
@@ -146,16 +202,35 @@ Key debugging steps:
 ### TypeScript
 - Project uses relaxed TypeScript settings for rapid development
 - Allow implicit any, unused parameters, and nullable types
+- When adding new filtering logic, ensure TypeScript interfaces match database schema
 
 ### Styling
-- Uses Tailwind CSS with custom traffic color palette
+- Uses Tailwind CSS with custom traffic color palette:
+  - `bg-traffic-stoi` - Red for stopped traffic
+  - `bg-traffic-toczy` - Yellow/orange for slow traffic
+  - `bg-traffic-jedzie` - Green for flowing traffic
+  - `bg-traffic-neutral` - Grey for no data
 - shadcn-ui components in `src/components/ui/`
 - Custom animations with `tailwindcss-animate`
+- Alternating layouts for small devices: see PredictedTraffic legend implementation
 
 ### Environment Variables
 Required in `.env` file:
 - `VITE_SUPABASE_URL`
 - `VITE_SUPABASE_PUBLISHABLE_KEY`
+
+### Common Development Patterns
+1. **Adding new time-based visualization:**
+   - Define interval size (5min, 10min, 30min, 1hr)
+   - Filter reports by street, direction, and day-of-week
+   - Use majority vote for status in each interval
+   - Display with appropriate color coding
+
+2. **Modifying prediction logic:**
+   - Update data fetch to include sufficient history (4 weeks recommended)
+   - Ensure day-of-week and direction filtering
+   - Update useMemo dependency arrays
+   - Avoid duplicate variable declarations in same scope
 
 ### Supabase Edge Functions
 Located in `supabase/functions/`:

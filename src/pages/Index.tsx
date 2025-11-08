@@ -1365,7 +1365,7 @@ const Index = () => {
       <main className="container max-w-2xl mx-auto px-4 py-6 space-y-8">
 
         {/* Live traffic label */}
-        <p className="text-sm text-gray-400 text-center">Korki na żywo na podstawie zgłoszeń mieszkańców</p>
+        <p className="text-sm text-gray-400 text-center -mb-4">Korki na żywo na podstawie zgłoszeń mieszkańców</p>
 
         {/* Current Status */}
         <section

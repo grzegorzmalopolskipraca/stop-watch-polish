@@ -1339,16 +1339,14 @@ const Index = () => {
                       className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:font-bold data-[state=active]:shadow-md flex items-center justify-center gap-2"
                     >
                       <ArrowUp className="w-4 h-4" />
-                      <span className="hidden sm:inline">Do centrum</span>
-                      <span className="sm:hidden">Do</span>
+                      Do centrum
                     </TabsTrigger>
                     <TabsTrigger
                       value="from_center"
                       className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:font-bold data-[state=active]:shadow-md flex items-center justify-center gap-2"
                     >
                       <ArrowDown className="w-4 h-4" />
-                      <span className="hidden sm:inline">Od centrum</span>
-                      <span className="sm:hidden">Od</span>
+                      Od centrum
                     </TabsTrigger>
                   </TabsList>
                 </Tabs>

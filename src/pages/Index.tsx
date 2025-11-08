@@ -1386,6 +1386,13 @@ const Index = () => {
                 {selectedStreet} {statusConfig.label}
               </h2>
               <p
+                className={`text-lg font-semibold mt-2 mb-3 ${statusConfig.textColor}`}
+              >
+                {currentStatus === 'stoi' && 'Lepiej wyjedź później'}
+                {currentStatus === 'toczy_sie' && 'Jedź jeśli musisz'}
+                {currentStatus === 'jedzie' && 'Możesz jechać'}
+              </p>
+              <p
                 className={`text-sm ${statusConfig.textColor} opacity-90`}
               >
                 Na żywo na podstawie zgłoszeń mieszkańców.

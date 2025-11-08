@@ -148,15 +148,15 @@ export const PredictedTraffic = ({ reports, direction }: PredictedTrafficProps) 
         
         {/* Time legend */}
         <div className="relative pt-1">
-          <div className="flex">
+          <div className="flex justify-between">
             {legendTimes.map((time, index) => (
               <span 
                 key={index} 
-                className="text-xs text-muted-foreground text-center"
+                className="text-xs text-muted-foreground"
                 style={{ 
-                  width: `${100 / (legendTimes.length - 1)}%`,
-                  marginLeft: index === 0 ? '0' : `-${50 / (legendTimes.length - 1)}%`,
-                  marginRight: index === legendTimes.length - 1 ? '0' : `-${50 / (legendTimes.length - 1)}%`
+                  position: 'absolute',
+                  left: `${(index * 100) / (legendTimes.length - 1)}%`,
+                  transform: 'translateX(-50%)'
                 }}
               >
                 {time}

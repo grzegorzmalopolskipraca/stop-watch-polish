@@ -1687,83 +1687,6 @@ const Index = () => {
         {/* Weather Forecast */}
         <WeatherForecast street={selectedStreet} />
 
-        {/* Use Cases */}
-        <section className="bg-card rounded-lg p-6 border border-border space-y-4">
-          <h3 className="text-lg font-semibold text-center mb-4">
-            Jak korzystać z serwisu?
-          </h3>
-          <ul className="space-y-3 text-sm">
-            <li className="flex items-start gap-2">
-              <span className="text-primary mt-0.5">•</span>
-              <span>Dodaj info o korkach, informuj sąsiadów</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <span className="text-primary mt-0.5">•</span>
-              <span>Wybierasz się na zakupy, jedź gdy nie ma ruchu</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <span className="text-primary mt-0.5">•</span>
-              <span>Sprawdź rano czy jest korek, by nie spóźnić się do pracy</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <span className="text-primary mt-0.5">•</span>
-              <span>Luźny wypad na miasto? Wybierz najodpowiednią porę</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <span className="text-primary mt-0.5">•</span>
-              <span>Jedziesz na siłownię lub basen? Jedź podczas zielonej fali</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <span className="text-primary mt-0.5">•</span>
-              <span>Łączmy się w bólu, śmiejmy z korków</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <span className="text-primary mt-0.5">•</span>
-              <span>Bądźmy dla siebie mili i uprzejmi</span>
-            </li>
-          </ul>
-          <Button
-            onClick={async () => {
-              const url = "https://ejedzie.pl";
-              const title = "Czy stoi?";
-              const text = "Zobacz aktualny stan ruchu na Twojej ulicy!";
-              
-              if (navigator.share) {
-                try {
-                  await navigator.share({ title, text, url });
-                  toast.success("Dziękujemy za udostępnienie!");
-                } catch (error) {
-                  if ((error as Error).name !== "AbortError") {
-                    console.error("Error sharing:", error);
-                  }
-                }
-              } else {
-                try {
-                  await navigator.clipboard.writeText(url);
-                  toast.success("Link skopiowany do schowka!");
-                } catch (error) {
-                  console.error("Error copying to clipboard:", error);
-                  toast.error("Nie można skopiować linku");
-                }
-              }
-            }}
-            className="w-full"
-            variant="outline"
-          >
-            <Share2 className="mr-2 h-4 w-4" />
-            Udostępnij znajomemu
-          </Button>
-          
-          <Button
-            onClick={handleInstallClick}
-            className="w-full"
-            variant="outline"
-          >
-            <Download className="mr-2 h-4 w-4" />
-            Dodaj aplikację na pulpit
-          </Button>
-        </section>
-
         {/* Street Chat */}
         <section>
           <StreetChat street={selectedStreet} />
@@ -1877,11 +1800,6 @@ const Index = () => {
           </div>
         </section>
 
-        {/* Street Voting */}
-        <section>
-          <StreetVoting existingStreets={STREETS} />
-        </section>
-
         {/* City Voting */}
         <section className="hidden">
           <CityVoting />
@@ -1908,6 +1826,88 @@ const Index = () => {
             Wspieram rozwój strony
           </Button>
         </div>
+
+        {/* Use Cases */}
+        <section className="bg-card rounded-lg p-6 border border-border space-y-4">
+          <h3 className="text-lg font-semibold text-center mb-4">
+            Jak korzystać z serwisu?
+          </h3>
+          <ul className="space-y-3 text-sm">
+            <li className="flex items-start gap-2">
+              <span className="text-primary mt-0.5">•</span>
+              <span>Dodaj info o korkach, informuj sąsiadów</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-primary mt-0.5">•</span>
+              <span>Wybierasz się na zakupy, jedź gdy nie ma ruchu</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-primary mt-0.5">•</span>
+              <span>Sprawdź rano czy jest korek, by nie spóźnić się do pracy</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-primary mt-0.5">•</span>
+              <span>Luźny wypad na miasto? Wybierz najodpowiednią porę</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-primary mt-0.5">•</span>
+              <span>Jedziesz na siłownię lub basen? Jedź podczas zielonej fali</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-primary mt-0.5">•</span>
+              <span>Łączmy się w bólu, śmiejmy z korków</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-primary mt-0.5">•</span>
+              <span>Bądźmy dla siebie mili i uprzejmi</span>
+            </li>
+          </ul>
+          <Button
+            onClick={async () => {
+              const url = "https://ejedzie.pl";
+              const title = "Czy stoi?";
+              const text = "Zobacz aktualny stan ruchu na Twojej ulicy!";
+
+              if (navigator.share) {
+                try {
+                  await navigator.share({ title, text, url });
+                  toast.success("Dziękujemy za udostępnienie!");
+                } catch (error) {
+                  if ((error as Error).name !== "AbortError") {
+                    console.error("Error sharing:", error);
+                  }
+                }
+              } else {
+                try {
+                  await navigator.clipboard.writeText(url);
+                  toast.success("Link skopiowany do schowka!");
+                } catch (error) {
+                  console.error("Error copying to clipboard:", error);
+                  toast.error("Nie można skopiować linku");
+                }
+              }
+            }}
+            className="w-full"
+            variant="outline"
+          >
+            <Share2 className="mr-2 h-4 w-4" />
+            Udostępnij znajomemu
+          </Button>
+
+          <Button
+            onClick={handleInstallClick}
+            className="w-full"
+            variant="outline"
+          >
+            <Download className="mr-2 h-4 w-4" />
+            Dodaj aplikację na pulpit
+          </Button>
+        </section>
+
+        {/* Street Voting */}
+        <section>
+          <StreetVoting existingStreets={STREETS} />
+        </section>
 
         <div className="flex flex-wrap justify-center gap-4 mt-6 pt-4 border-t border-border">
           <Link to="/o-projekcie" className="text-sm text-primary hover:underline">

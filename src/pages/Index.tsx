@@ -1611,6 +1611,9 @@ const Index = () => {
           />
         </section>
 
+        {/* Weekly Timeline */}
+        <WeeklyTimeline reports={weeklyReports} />
+
         {/* Last Update Info */}
         <section className="text-center text-sm text-muted-foreground space-y-1">
           <p>
@@ -1680,9 +1683,6 @@ const Index = () => {
         <section>
           <SmsSubscription selectedStreet={selectedStreet} />
         </section>
-
-        {/* Weekly Timeline */}
-        <WeeklyTimeline reports={weeklyReports} />
 
         {/* Weather Forecast */}
         <WeatherForecast street={selectedStreet} />

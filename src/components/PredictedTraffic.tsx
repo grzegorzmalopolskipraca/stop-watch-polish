@@ -130,6 +130,7 @@ export const PredictedTraffic = ({ reports, direction }: PredictedTrafficProps) 
     <div className="space-y-4 p-6 rounded-xl bg-gradient-to-br from-blue-50/50 via-white to-blue-50/30 dark:from-blue-950/20 dark:via-background dark:to-blue-900/10 border border-blue-200/50 dark:border-blue-800/30 shadow-lg">
       <div>
         <h2 className="text-lg font-semibold text-foreground">Prognoza na najbliższą godzinę</h2>
+        <p className="text-xs text-muted-foreground mt-1">Wyjedź, kiedy masz zielone</p>
         {!currentIsStoi && minutesToNextStoi !== null && minutesToNextStoi > 0 && (
           <p className="text-sm text-muted-foreground mt-1">
             Następny korek za {minutesToNextStoi} minut

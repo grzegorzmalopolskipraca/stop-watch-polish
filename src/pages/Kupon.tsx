@@ -87,87 +87,89 @@ export default function Kupon() {
   }, [couponId]);
 
   const startScanning = async () => {
+    console.log("=== [CAMERA DEBUG] Starting camera scan ===");
     setScanning(true);
     setCameraError(null); // Clear previous errors
 
     try {
-      // First, explicitly request camera permission
+      console.log("[CAMERA DEBUG] Step 1: Checking navigator.mediaDevices support");
+      // Check if browser supports media devices
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         const errorMsg = "Twoja przeglądarka nie obsługuje dostępu do kamery";
+        console.error("[CAMERA DEBUG] ERROR: Browser doesn't support media devices");
         toast.error(errorMsg);
         setCameraError(errorMsg);
         setScanning(false);
         return;
       }
+      console.log("[CAMERA DEBUG] ✓ navigator.mediaDevices is supported");
 
-      // Request camera permission
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: "environment" } // Prefer back camera on mobile
-        });
-        // Stop the stream immediately - we just needed to get permission
-        stream.getTracks().forEach(track => track.stop());
-      } catch (permissionError: any) {
-        console.error("Permission error:", permissionError);
-        let errorMsg = "";
-        if (permissionError.name === "NotAllowedError" || permissionError.name === "PermissionDeniedError") {
-          errorMsg = `Dostęp do kamery został odrzucony. Zezwól na dostęp do kamery w ustawieniach przeglądarki.\n\nTyp błędu: ${permissionError.name}\nWiadomość: ${permissionError.message}`;
-          toast.error("Dostęp do kamery został odrzucony. Zezwól na dostęp do kamery w ustawieniach przeglądarki.");
-        } else if (permissionError.name === "NotFoundError") {
-          errorMsg = `Nie znaleziono kamery na tym urządzeniu.\n\nTyp błędu: ${permissionError.name}\nWiadomość: ${permissionError.message}`;
-          toast.error("Nie znaleziono kamery na tym urządzeniu");
-        } else {
-          errorMsg = `Nie można uzyskać dostępu do kamery.\n\nTyp błędu: ${permissionError.name}\nWiadomość: ${permissionError.message}`;
-          toast.error("Nie można uzyskać dostępu do kamery. Sprawdź uprawnienia.");
-        }
-        setCameraError(errorMsg);
-        setScanning(false);
-        return;
-      }
+      console.log("[CAMERA DEBUG] Step 2: Initializing BrowserMultiFormatReader");
+      console.log("[CAMERA DEBUG] Current codeReaderRef.current:", codeReaderRef.current);
 
-      // Now initialize the QR scanner
+      // Initialize the QR scanner
       if (!codeReaderRef.current) {
+        console.log("[CAMERA DEBUG] Creating new BrowserMultiFormatReader instance");
         codeReaderRef.current = new BrowserMultiFormatReader();
+        console.log("[CAMERA DEBUG] BrowserMultiFormatReader created:", codeReaderRef.current);
+        console.log("[CAMERA DEBUG] Available methods:", Object.getOwnPropertyNames(Object.getPrototypeOf(codeReaderRef.current)));
+      } else {
+        console.log("[CAMERA DEBUG] Using existing BrowserMultiFormatReader instance");
       }
 
-      const videoInputDevices = await codeReaderRef.current.listVideoInputDevices();
-
-      if (videoInputDevices.length === 0) {
-        const errorMsg = "Nie znaleziono kamery";
-        toast.error(errorMsg);
-        setCameraError(errorMsg);
-        setScanning(false);
-        return;
-      }
-
-      // Use the back camera if available (usually the last one on mobile)
-      const selectedDeviceId = videoInputDevices[videoInputDevices.length - 1].deviceId;
+      console.log("[CAMERA DEBUG] Step 3: Checking videoRef.current");
+      console.log("[CAMERA DEBUG] videoRef.current:", videoRef.current);
 
       if (videoRef.current) {
-        codeReaderRef.current.decodeFromVideoDevice(
-          selectedDeviceId,
+        console.log("[CAMERA DEBUG] Step 4: Calling decodeFromVideoDevice");
+        console.log("[CAMERA DEBUG] Parameters: deviceId=undefined, videoElement=", videoRef.current);
+
+        // Use undefined for deviceId to let the browser select the best camera
+        // On mobile, it will typically prefer the back camera
+        await codeReaderRef.current.decodeFromVideoDevice(
+          undefined,
           videoRef.current,
           (result, error) => {
             if (result) {
+              console.log("[CAMERA DEBUG] ✓ QR Code scanned successfully:", result.getText());
               const scannedText = result.getText();
               setScannedData(scannedText);
               stopScanning();
               toast.success("QR kod zeskanowany!");
             }
             if (error && !(error.name === "NotFoundException")) {
-              console.error("Scanning error:", error);
-              const errorMsg = `Błąd skanowania:\n\nTyp: ${error.name}\nWiadomość: ${error.message}`;
-              setCameraError(errorMsg);
+              console.error("[CAMERA DEBUG] Scanning error (not NotFoundException):", error);
             }
           }
         );
+        console.log("[CAMERA DEBUG] ✓ decodeFromVideoDevice called successfully");
+      } else {
+        console.error("[CAMERA DEBUG] ERROR: videoRef.current is null");
+        throw new Error("Video element reference is null");
       }
     } catch (err: any) {
-      console.error("Error starting scanner:", err);
-      const errorMsg = `Wystąpił błąd podczas uruchamiania kamery.\n\nTyp: ${err.name || 'Unknown'}\nWiadomość: ${err.message || err.toString()}`;
-      toast.error("Wystąpił błąd podczas uruchamiania kamery");
+      console.error("[CAMERA DEBUG] === EXCEPTION CAUGHT ===");
+      console.error("[CAMERA DEBUG] Error name:", err.name);
+      console.error("[CAMERA DEBUG] Error message:", err.message);
+      console.error("[CAMERA DEBUG] Error stack:", err.stack);
+      console.error("[CAMERA DEBUG] Full error object:", err);
+
+      let errorMsg = "";
+
+      if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
+        errorMsg = `Dostęp do kamery został odrzucony. Zezwól na dostęp do kamery w ustawieniach przeglądarki.\n\nTyp błędu: ${err.name}\nWiadomość: ${err.message}`;
+        toast.error("Dostęp do kamery został odrzucony. Zezwól na dostęp do kamery w ustawieniach przeglądarki.");
+      } else if (err.name === "NotFoundError") {
+        errorMsg = `Nie znaleziono kamery na tym urządzeniu.\n\nTyp błędu: ${err.name}\nWiadomość: ${err.message}`;
+        toast.error("Nie znaleziono kamery na tym urządzeniu");
+      } else {
+        errorMsg = `Wystąpił błąd podczas uruchamiania kamery.\n\nTyp: ${err.name || 'Unknown'}\nWiadomość: ${err.message || err.toString()}\nStack: ${err.stack || 'N/A'}`;
+        toast.error("Nie można uruchomić kamery. Sprawdź uprawnienia.");
+      }
+
       setCameraError(errorMsg);
       setScanning(false);
+      console.log("[CAMERA DEBUG] === Error handling complete ===");
     }
   };
 

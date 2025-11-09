@@ -123,6 +123,14 @@ const Index = () => {
   const [todayMinSpeed, setTodayMinSpeed] = useState<Record<string, number>>({});
   const [todayMaxSpeed, setTodayMaxSpeed] = useState<Record<string, number>>({});
   const [streetDistance, setStreetDistance] = useState<number | null>(null);
+  const [couponReward, setCouponReward] = useState<{
+    id: string;
+    local_name: string;
+    discount: number;
+    location_street: string | null;
+    image_link: string | null;
+  } | null>(null);
+  const [showCouponDialog, setShowCouponDialog] = useState(false);
 
   // Format duration helper function
   const formatDuration = (minutes: number): string => {
@@ -1084,6 +1092,81 @@ const Index = () => {
     setStreetDistance(distance);
   };
 
+  const checkAndAssignCoupon = async (userFingerprint: string) => {
+    try {
+      const today = format(startOfDay(new Date()), 'yyyy-MM-dd');
+      
+      // Check if user already has a coupon assigned today
+      const lastCouponDate = localStorage.getItem(`lastCouponDate_${userFingerprint}`);
+      if (lastCouponDate === today) {
+        console.log("[Coupon] User already received coupon today");
+        return;
+      }
+
+      // Get first active coupon
+      const { data: coupons, error: couponError } = await supabase
+        .from("coupons")
+        .select(`
+          id,
+          local_name,
+          discount,
+          local_id,
+          image_link
+        `)
+        .eq("status", "active")
+        .order("created_at", { ascending: true })
+        .limit(1);
+
+      if (couponError || !coupons || coupons.length === 0) {
+        console.log("[Coupon] No active coupons available");
+        return;
+      }
+
+      const coupon = coupons[0];
+
+      // Get location details
+      const { data: location } = await supabase
+        .from("locations")
+        .select("street")
+        .eq("id", coupon.local_id)
+        .single();
+
+      // Update coupon status to redeemed and set time_to to 3 days from now
+      const threeDaysFromNow = new Date();
+      threeDaysFromNow.setDate(threeDaysFromNow.getDate() + 3);
+      threeDaysFromNow.setHours(23, 59, 59, 999);
+
+      const { error: updateError } = await supabase
+        .from("coupons")
+        .update({
+          status: "redeemed",
+          time_to: threeDaysFromNow.toISOString()
+        })
+        .eq("id", coupon.id);
+
+      if (updateError) {
+        console.error("[Coupon] Error updating coupon:", updateError);
+        return;
+      }
+
+      // Store that user received coupon today
+      localStorage.setItem(`lastCouponDate_${userFingerprint}`, today);
+
+      // Show coupon dialog
+      setCouponReward({
+        id: coupon.id,
+        local_name: coupon.local_name,
+        discount: coupon.discount,
+        location_street: location?.street || null,
+        image_link: coupon.image_link
+      });
+      setShowCouponDialog(true);
+
+    } catch (error) {
+      console.error("[Coupon] Error in checkAndAssignCoupon:", error);
+    }
+  };
+
   // Auto-submit when status becomes null and we have valid speed
   useEffect(() => {
     if (currentStatus === null && latestSpeed !== null && latestSpeed > 0) {
@@ -1134,6 +1217,9 @@ const Index = () => {
         toast.success("Dziękujemy za zgłoszenie!");
         // RSS ticker disabled - uncomment line below to re-enable
         // setShowRssTicker(true);
+        
+        // Check for coupon reward (only for manual submissions, first time today)
+        await checkAndAssignCoupon(userFingerprint);
       }
       
       // Wait for database to commit, then refresh status box
@@ -2053,6 +2139,74 @@ const Index = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Coupon Reward Dialog */}
+      <Dialog open={showCouponDialog} onOpenChange={setShowCouponDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-center text-xl">
+              Twoje zaangażowanie zostało nagrodzone przez Patrona portalu eJedzie.pl
+            </DialogTitle>
+            <DialogDescription className="text-center pt-2">
+              Otrzymujesz Kupon ze zniżką od 10 do {couponReward?.discount}%. Kupon jest ważny 3 dni
+            </DialogDescription>
+          </DialogHeader>
+          
+          {couponReward && (
+            <div className="space-y-4 py-4">
+              {/* Coupon Image */}
+              {couponReward.image_link && (
+                <div className="rounded-lg overflow-hidden border border-border">
+                  <img
+                    src={couponReward.image_link}
+                    alt="Kupon"
+                    className="w-full h-auto object-cover"
+                  />
+                </div>
+              )}
+              
+              {/* Location Details */}
+              <div className="text-center space-y-1">
+                <p className="font-semibold text-lg">{couponReward.local_name}</p>
+                {couponReward.location_street && (
+                  <p className="text-sm text-muted-foreground">{couponReward.location_street}</p>
+                )}
+              </div>
+              
+              {/* Copy Link Section */}
+              <div className="space-y-3 pt-2">
+                <p className="text-sm font-semibold text-center">
+                  Skopiuj i zapisz swój link do kuponu. Otwórz link w lokalu
+                </p>
+                <div className="bg-muted p-3 rounded-lg">
+                  <p className="text-xs font-mono break-all text-center">
+                    https://ejedzie.pl/kupon?id={couponReward.id}
+                  </p>
+                </div>
+                <Button
+                  onClick={() => {
+                    navigator.clipboard.writeText(`https://ejedzie.pl/kupon?id=${couponReward.id}`);
+                    toast.success("Link skopiowany do schowka!");
+                  }}
+                  className="w-full"
+                  variant="outline"
+                >
+                  Kopiuj link
+                </Button>
+                <Button
+                  onClick={() => {
+                    setShowCouponDialog(false);
+                    setCouponReward(null);
+                  }}
+                  className="w-full"
+                >
+                  Skopiowane i zapisane, zamknij
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Bottom Navigation Menu */}
       <nav className="fixed bottom-0 left-0 right-0 bg-card border-t border-border shadow-lg z-50 pb-safe">

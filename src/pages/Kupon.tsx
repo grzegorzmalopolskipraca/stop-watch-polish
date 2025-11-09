@@ -36,6 +36,7 @@ export default function Kupon() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const codeReaderRef = useRef<BrowserQRCodeReader | null>(null);
   const isProcessingScanRef = useRef(false); // Prevent multiple scans
+  const activeStreamRef = useRef<MediaStream | null>(null);
 
   useEffect(() => {
     const fetchCoupon = async () => {
@@ -139,7 +140,7 @@ export default function Kupon() {
         console.log("[CAMERA DEBUG] videoRef.current:", videoRef.current);
 
         // Use undefined for deviceId to let the browser select the best camera
-        await codeReaderRef.current.decodeFromVideoDevice(
+        const controls = await codeReaderRef.current.decodeFromVideoDevice(
           undefined,
           videoRef.current,
           (result, error) => {
@@ -165,6 +166,12 @@ export default function Kupon() {
             }
           }
         );
+        
+        // Store the video stream for cleanup
+        if (videoRef.current && videoRef.current.srcObject) {
+          activeStreamRef.current = videoRef.current.srcObject as MediaStream;
+        }
+        
         console.log("[CAMERA DEBUG] ✓ Camera started successfully");
       } catch (err: any) {
         console.error("[CAMERA DEBUG] === EXCEPTION CAUGHT ===");
@@ -197,14 +204,22 @@ export default function Kupon() {
 
   const stopScanning = () => {
     console.log("[CAMERA DEBUG] Stopping camera...");
-    if (codeReaderRef.current) {
-      try {
-        codeReaderRef.current.reset();
-        console.log("[CAMERA DEBUG] ✓ Camera stopped successfully");
-      } catch (err) {
-        console.error("[CAMERA DEBUG] Error stopping camera:", err);
-      }
+    
+    // Stop all video tracks
+    if (activeStreamRef.current) {
+      activeStreamRef.current.getTracks().forEach(track => {
+        track.stop();
+        console.log("[CAMERA DEBUG] Stopped track:", track.kind);
+      });
+      activeStreamRef.current = null;
     }
+    
+    // Clear video element
+    if (videoRef.current && videoRef.current.srcObject) {
+      videoRef.current.srcObject = null;
+    }
+    
+    console.log("[CAMERA DEBUG] ✓ Camera stopped successfully");
     setScanning(false);
     setCameraError(null); // Clear any errors
     isProcessingScanRef.current = false; // Reset processing flag
@@ -270,10 +285,14 @@ export default function Kupon() {
 
   useEffect(() => {
     return () => {
-      if (codeReaderRef.current) {
-        codeReaderRef.current.reset();
+      // Cleanup on unmount
+      if (activeStreamRef.current) {
+        activeStreamRef.current.getTracks().forEach(track => track.stop());
       }
-      isProcessingScanRef.current = false; // Reset on unmount
+      if (videoRef.current && videoRef.current.srcObject) {
+        videoRef.current.srcObject = null;
+      }
+      isProcessingScanRef.current = false;
     };
   }, []);
 

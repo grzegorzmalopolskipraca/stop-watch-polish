@@ -35,6 +35,7 @@ export default function Kupon() {
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const codeReaderRef = useRef<BrowserQRCodeReader | null>(null);
+  const isProcessingScanRef = useRef(false); // Prevent multiple scans
 
   useEffect(() => {
     const fetchCoupon = async () => {
@@ -89,6 +90,13 @@ export default function Kupon() {
   const startScanning = () => {
     console.log("=== [CAMERA DEBUG] User clicked scan button ===");
 
+    // Check if coupon is already used
+    if (coupon?.status === "used") {
+      console.log("[CAMERA DEBUG] Coupon already used, showing warning");
+      toast.error("Ten kupon został już wykorzystany");
+      return;
+    }
+
     // Check if browser supports media devices
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
       const errorMsg = "Twoja przeglądarka nie obsługuje dostępu do kamery";
@@ -101,6 +109,7 @@ export default function Kupon() {
     console.log("[CAMERA DEBUG] ✓ Browser supports media devices");
     console.log("[CAMERA DEBUG] Setting scanning to true (will trigger video element mount)");
     setCameraError(null);
+    isProcessingScanRef.current = false; // Reset the processing flag for new scan
     setScanning(true);
     // The actual camera initialization will happen in useEffect when video element is mounted
   };
@@ -135,11 +144,21 @@ export default function Kupon() {
           videoRef.current,
           (result, error) => {
             if (result) {
+              // Prevent processing the same scan multiple times
+              if (isProcessingScanRef.current) {
+                console.log("[CAMERA DEBUG] Already processing a scan, ignoring duplicate");
+                return;
+              }
+
+              isProcessingScanRef.current = true;
               console.log("[CAMERA DEBUG] ✓ QR Code scanned successfully:", result.getText());
               const scannedText = result.getText();
               setScannedData(scannedText);
               stopScanning();
               toast.success("QR kod zeskanowany!");
+
+              // Mark coupon as used in database
+              markCouponAsUsed();
             }
             if (error && !(error.name === "NotFoundException")) {
               console.error("[CAMERA DEBUG] Scanning error (not NotFoundException):", error);
@@ -188,17 +207,53 @@ export default function Kupon() {
     }
     setScanning(false);
     setCameraError(null); // Clear any errors
+    isProcessingScanRef.current = false; // Reset processing flag
   };
 
   const resetAndScanAgain = () => {
     console.log("[CAMERA DEBUG] Reset and scan again clicked");
+
+    // Check if coupon is already used
+    if (coupon?.status === "used") {
+      toast.error("Ten kupon został już wykorzystany i nie można go użyć ponownie");
+      return;
+    }
+
     setScannedData(null);
     setCameraError(null);
-    // This will automatically trigger startScanning when user clicks the button again
-    // Or we can auto-start:
+    // Automatically restart camera for next scan
     setTimeout(() => {
       startScanning();
     }, 100);
+  };
+
+  const markCouponAsUsed = async () => {
+    if (!couponId) {
+      console.error("[COUPON] Cannot mark as used - no coupon ID");
+      return;
+    }
+
+    console.log("[COUPON] Marking coupon as used:", couponId);
+
+    try {
+      const { error } = await supabase
+        .from("coupons")
+        .update({ status: "used" })
+        .eq("id", couponId);
+
+      if (error) {
+        console.error("[COUPON] Error updating coupon status:", error);
+        toast.error("Nie udało się zaktualizować statusu kuponu");
+      } else {
+        console.log("[COUPON] ✓ Coupon marked as used successfully");
+        // Update local state to reflect the change
+        if (coupon) {
+          setCoupon({ ...coupon, status: "used" });
+        }
+      }
+    } catch (err) {
+      console.error("[COUPON] Exception while updating coupon:", err);
+    }
   };
 
   useEffect(() => {
@@ -206,6 +261,7 @@ export default function Kupon() {
       if (codeReaderRef.current) {
         codeReaderRef.current.reset();
       }
+      isProcessingScanRef.current = false; // Reset on unmount
     };
   }, []);
 
@@ -272,17 +328,36 @@ export default function Kupon() {
           <h1 className="text-2xl font-bold">Kupon zniżkowy</h1>
         </div>
 
+        {/* Coupon Image */}
+        {coupon.image_link && (
+          <div className="rounded-lg overflow-hidden border border-border">
+            <img
+              src={coupon.image_link}
+              alt="Kupon"
+              className="w-full h-auto object-cover"
+            />
+          </div>
+        )}
+
         {/* Instructions */}
         {!scannedData && (
           <div className="bg-card rounded-lg p-6 border border-border space-y-4">
             <p className="text-lg leading-relaxed">
-              Możesz teraz zrealizować kupon. Pozwól na dostęp do kamery i zeskanuj QR Code widoczny na przyklejonej kartce w lokalu z logiem 'eJedzie.pl'. Po zeskanowaniu dowiesz się jaką masz zniżkę.
+              Zrealizuj kupon. Zeskanuj QR kod w lokalu z kartki z napisem "eJedzie.pl skanuj kod". Zobacz jaką zniżkę otrzymałeś i pokaż obsłudze. Smacznego :)
             </p>
           </div>
         )}
 
         {/* Coupon Details */}
         <div className="bg-card rounded-lg p-6 border border-border space-y-4">
+          {coupon.status === "used" && (
+            <div className="bg-orange-50 dark:bg-orange-950 border border-orange-300 dark:border-orange-700 rounded-lg p-4">
+              <p className="text-sm font-semibold text-orange-800 dark:text-orange-200">
+                ⚠️ Kupon został już wykorzystany
+              </p>
+            </div>
+          )}
+
           <div className="space-y-2">
             <p className="text-sm text-muted-foreground">ID kuponu</p>
             <p className="text-xl font-mono font-bold">{coupon.id.slice(0, 8).toUpperCase()}</p>
@@ -319,9 +394,10 @@ export default function Kupon() {
                   onClick={startScanning}
                   className="w-full h-16 text-lg"
                   size="lg"
+                  disabled={coupon.status === "used"}
                 >
                   <Camera className="mr-2 h-6 w-6" />
-                  Zeskanuj QR Code
+                  {coupon.status === "used" ? "Kupon został już wykorzystany" : "Zeskanuj QR kod, by odkryć swoją zniżkę"}
                 </Button>
 
                 {/* Camera Error Details */}
@@ -386,22 +462,27 @@ export default function Kupon() {
               </div>
             </div>
 
-            <div className="bg-card rounded-lg p-6 border-2 border-primary space-y-4 text-center">
+            <div className="bg-card rounded-lg p-6 border-2 border-primary text-center">
               <p className="text-2xl font-bold text-primary">
                 Pokaż kupon obsłudze przy zamówieniu i odbierz zniżkę
               </p>
-              <p className="text-lg text-muted-foreground">
-                Zniżka: <span className="font-bold text-foreground">{coupon.discount}%</span>
-              </p>
             </div>
 
-            <Button
-              onClick={resetAndScanAgain}
-              variant="outline"
-              className="w-full"
-            >
-              Zeskanuj ponownie
-            </Button>
+            {coupon.status !== "used" ? (
+              <Button
+                onClick={resetAndScanAgain}
+                variant="outline"
+                className="w-full"
+              >
+                Zeskanuj ponownie
+              </Button>
+            ) : (
+              <div className="bg-orange-50 dark:bg-orange-950 border border-orange-300 dark:border-orange-700 rounded-lg p-4 text-center">
+                <p className="text-sm font-semibold text-orange-800 dark:text-orange-200">
+                  Kupon został wykorzystany i nie można go już użyć ponownie
+                </p>
+              </div>
+            )}
           </div>
         )}
       </div>

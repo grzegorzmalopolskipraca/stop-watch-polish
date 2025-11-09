@@ -424,7 +424,7 @@ export default function Kupon() {
                   disabled={coupon.status === "used"}
                 >
                   <Camera className="mr-2 h-6 w-6" />
-                  {coupon.status === "used" ? "Kupon został już wykorzystany" : "Zeskanuj QR kod, by odkryć swoją zniżkę"}
+                  {coupon.status === "used" ? "Kupon został już wykorzystany" : "Skanuj kod QR, odbierz zniżkę"}
                 </Button>
 
                 {/* Camera Error Details */}

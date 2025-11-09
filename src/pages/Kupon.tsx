@@ -31,6 +31,7 @@ export default function Kupon() {
   const [error, setError] = useState<string | null>(null);
   const [scanning, setScanning] = useState(false);
   const [scannedData, setScannedData] = useState<string | null>(null);
+  const [cameraError, setCameraError] = useState<string | null>(null);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const codeReaderRef = useRef<BrowserMultiFormatReader | null>(null);
@@ -87,11 +88,14 @@ export default function Kupon() {
 
   const startScanning = async () => {
     setScanning(true);
+    setCameraError(null); // Clear previous errors
 
     try {
       // First, explicitly request camera permission
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        toast.error("Twoja przeglądarka nie obsługuje dostępu do kamery");
+        const errorMsg = "Twoja przeglądarka nie obsługuje dostępu do kamery";
+        toast.error(errorMsg);
+        setCameraError(errorMsg);
         setScanning(false);
         return;
       }
@@ -105,13 +109,18 @@ export default function Kupon() {
         stream.getTracks().forEach(track => track.stop());
       } catch (permissionError: any) {
         console.error("Permission error:", permissionError);
+        let errorMsg = "";
         if (permissionError.name === "NotAllowedError" || permissionError.name === "PermissionDeniedError") {
+          errorMsg = `Dostęp do kamery został odrzucony. Zezwól na dostęp do kamery w ustawieniach przeglądarki.\n\nTyp błędu: ${permissionError.name}\nWiadomość: ${permissionError.message}`;
           toast.error("Dostęp do kamery został odrzucony. Zezwól na dostęp do kamery w ustawieniach przeglądarki.");
         } else if (permissionError.name === "NotFoundError") {
+          errorMsg = `Nie znaleziono kamery na tym urządzeniu.\n\nTyp błędu: ${permissionError.name}\nWiadomość: ${permissionError.message}`;
           toast.error("Nie znaleziono kamery na tym urządzeniu");
         } else {
+          errorMsg = `Nie można uzyskać dostępu do kamery.\n\nTyp błędu: ${permissionError.name}\nWiadomość: ${permissionError.message}`;
           toast.error("Nie można uzyskać dostępu do kamery. Sprawdź uprawnienia.");
         }
+        setCameraError(errorMsg);
         setScanning(false);
         return;
       }
@@ -124,7 +133,9 @@ export default function Kupon() {
       const videoInputDevices = await codeReaderRef.current.listVideoInputDevices();
 
       if (videoInputDevices.length === 0) {
-        toast.error("Nie znaleziono kamery");
+        const errorMsg = "Nie znaleziono kamery";
+        toast.error(errorMsg);
+        setCameraError(errorMsg);
         setScanning(false);
         return;
       }
@@ -145,13 +156,17 @@ export default function Kupon() {
             }
             if (error && !(error.name === "NotFoundException")) {
               console.error("Scanning error:", error);
+              const errorMsg = `Błąd skanowania:\n\nTyp: ${error.name}\nWiadomość: ${error.message}`;
+              setCameraError(errorMsg);
             }
           }
         );
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error starting scanner:", err);
+      const errorMsg = `Wystąpił błąd podczas uruchamiania kamery.\n\nTyp: ${err.name || 'Unknown'}\nWiadomość: ${err.message || err.toString()}`;
       toast.error("Wystąpił błąd podczas uruchamiania kamery");
+      setCameraError(errorMsg);
       setScanning(false);
     }
   };
@@ -276,14 +291,26 @@ export default function Kupon() {
         {!scannedData && (
           <div className="bg-card rounded-lg p-6 border border-border space-y-4">
             {!scanning ? (
-              <Button
-                onClick={startScanning}
-                className="w-full h-16 text-lg"
-                size="lg"
-              >
-                <Camera className="mr-2 h-6 w-6" />
-                Zeskanuj QR Code
-              </Button>
+              <>
+                <Button
+                  onClick={startScanning}
+                  className="w-full h-16 text-lg"
+                  size="lg"
+                >
+                  <Camera className="mr-2 h-6 w-6" />
+                  Zeskanuj QR Code
+                </Button>
+
+                {/* Camera Error Details */}
+                {cameraError && (
+                  <div className="mt-4 p-4 bg-destructive/10 border border-destructive/30 rounded-lg">
+                    <p className="text-sm font-semibold text-destructive mb-2">Szczegóły błędu kamery:</p>
+                    <pre className="text-xs text-destructive/90 whitespace-pre-wrap break-words font-mono">
+                      {cameraError}
+                    </pre>
+                  </div>
+                )}
+              </>
             ) : (
               <div className="space-y-4">
                 <div className="relative aspect-square w-full max-w-md mx-auto rounded-lg overflow-hidden bg-black">
@@ -302,6 +329,16 @@ export default function Kupon() {
                 >
                   Anuluj skanowanie
                 </Button>
+
+                {/* Camera Error Details during scanning */}
+                {cameraError && (
+                  <div className="p-4 bg-destructive/10 border border-destructive/30 rounded-lg">
+                    <p className="text-sm font-semibold text-destructive mb-2">Szczegóły błędu kamery:</p>
+                    <pre className="text-xs text-destructive/90 whitespace-pre-wrap break-words font-mono">
+                      {cameraError}
+                    </pre>
+                  </div>
+                )}
               </div>
             )}
           </div>

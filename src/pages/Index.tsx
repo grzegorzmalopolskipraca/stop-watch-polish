@@ -2057,7 +2057,7 @@ const Index = () => {
       {/* Bottom Navigation Menu */}
       <nav className="fixed bottom-0 left-0 right-0 bg-card border-t border-border shadow-lg z-50 pb-safe">
         <div className="container max-w-2xl mx-auto">
-          <div className="grid grid-cols-6 gap-1 px-2 py-2">
+          <div className="grid grid-cols-6 gap-2 px-1 py-2">
             <button
               onClick={() => {
                 window.scrollTo({ top: 0, behavior: 'smooth' });

@@ -1909,20 +1909,6 @@ const Index = () => {
           </Button>
         </div>
 
-        <p>
-          Ulepszenia i sugestie piszcie na: grzegorzmalopolskipraca@gmail.com
-        </p>
-        <p className="text-xs mt-2">
-          <a 
-            href="/plakat-promocyjny.png" 
-            download="eJedzie-plakat.png"
-            className="text-primary hover:underline flex items-center gap-2"
-          >
-            <Printer className="h-4 w-4" />
-            Chcesz pomóc promować ten portal wśród sąsiadów? Wydrukuj tą kartkę i umieść ją za szybą.
-          </a>
-        </p>
-        
         <div className="flex flex-wrap justify-center gap-4 mt-6 pt-4 border-t border-border">
           <Link to="/o-projekcie" className="text-sm text-primary hover:underline">
             O projekcie

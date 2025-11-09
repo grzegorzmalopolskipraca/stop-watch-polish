@@ -2065,7 +2065,7 @@ const Index = () => {
               className="flex flex-col items-center pt-2 pb-1 px-1 text-xs hover:bg-muted rounded-lg transition-colors"
             >
               <Calendar className="w-5 h-5 mb-1 flex-shrink-0" />
-              <span className="leading-tight text-center">Kiedy jechać?</span>
+              <span className="leading-tight text-center h-8 flex items-center">Kiedy jechać?</span>
             </button>
             <button
               onClick={() => {
@@ -2080,7 +2080,7 @@ const Index = () => {
               className="flex flex-col items-center pt-2 pb-1 px-1 text-xs hover:bg-muted rounded-lg transition-colors"
             >
               <Activity className="w-5 h-5 mb-1 flex-shrink-0" />
-              <span className="leading-tight text-center">Stan ruchu</span>
+              <span className="leading-tight text-center h-8 flex items-center">Stan ruchu</span>
             </button>
             <button
               onClick={() => {
@@ -2095,7 +2095,7 @@ const Index = () => {
               className="flex flex-col items-center pt-2 pb-1 px-1 text-xs hover:bg-muted rounded-lg transition-colors"
             >
               <AlertTriangle className="w-5 h-5 mb-1 flex-shrink-0" />
-              <span className="leading-tight text-center">Zgłoś</span>
+              <span className="leading-tight text-center h-8 flex items-center">Zgłoś</span>
             </button>
             <button
               onClick={() => {
@@ -2110,7 +2110,7 @@ const Index = () => {
               className="flex flex-col items-center pt-2 pb-1 px-1 text-xs hover:bg-muted rounded-lg transition-colors"
             >
               <Bike className="w-5 h-5 mb-1 flex-shrink-0" />
-              <span className="leading-tight text-center">Na rowerze</span>
+              <span className="leading-tight text-center h-8 flex items-center">Na rowerze</span>
             </button>
             <button
               onClick={() => {
@@ -2125,7 +2125,7 @@ const Index = () => {
               className="flex flex-col items-center pt-2 pb-1 px-1 text-xs hover:bg-muted rounded-lg transition-colors"
             >
               <MessageSquare className="w-5 h-5 mb-1 flex-shrink-0" />
-              <span className="leading-tight text-center">CB radio</span>
+              <span className="leading-tight text-center h-8 flex items-center">CB radio</span>
             </button>
             <button
               onClick={() => {
@@ -2140,7 +2140,7 @@ const Index = () => {
               className="flex flex-col items-center pt-2 pb-1 px-1 text-xs hover:bg-muted rounded-lg transition-colors"
             >
               <HelpCircle className="w-5 h-5 mb-1 flex-shrink-0" />
-              <span className="leading-tight text-center">Jak korzystać</span>
+              <span className="leading-tight text-center h-8 flex items-center">Jak korzystać</span>
             </button>
           </div>
         </div>

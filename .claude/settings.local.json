@@ -6,7 +6,9 @@
       "WebFetch(domain:github.com)",
       "Bash(npm install)",
       "Bash(npx tsc:*)",
-      "Bash(node:*)"
+      "Bash(node:*)",
+      "Bash(npm install:*)",
+      "Bash(sudo chown:*)"
     ],
     "deny": [],
     "ask": []

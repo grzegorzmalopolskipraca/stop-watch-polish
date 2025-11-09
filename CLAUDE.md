@@ -151,14 +151,48 @@ const relevantReports = weeklyReports.filter((r) => {
 - `src/components/PredictedTraffic.tsx` - Traffic predictions (5-min intervals, next 60 minutes)
   - Uses **alternating legend layout**: time labels alternate above/below colored rectangles for better mobile spacing
   - Title: "Prognoza na najbliższą godzinę"
+  - Subtitle: "Wyjedź, kiedy masz zielone"
 - `src/components/GreenWave.tsx` - Optimal departure time recommendations (10-min intervals)
-- `src/components/WeatherForecast.tsx` - Weather for cyclists/motorcyclists (metadata hidden: location, timestamp, source)
-- `src/components/StreetVoting.tsx` - Street improvement voting
+  - Title: "Zielona fala"
+- `src/components/CommuteOptimizer.tsx` - Commute planning ("Jeździsz do pracy tylko kilka razy w tygodniu?")
+- `src/components/WeatherForecast.tsx` - Weather for cyclists/motorcyclists
+  - Title: "Jeździsz rowerem lub motocyklem?"
+  - Metadata hidden: location, timestamp, source
+- `src/components/StreetVoting.tsx` - Street improvement voting ("Głosuj którą ulicę dodać")
 - `src/components/StreetChat.tsx` - Street-specific chat
+  - Title: "Czat / cb radio"
+  - Description: "Czat dla sąsiadów. Napisz, dokąd jedziesz — ktoś może Cię zabrać i zmniejszyć korki"
 - `src/components/SmsSubscription.tsx` - SMS subscription feature
 
 ### Pages
 - `src/pages/Index.tsx` - Main traffic reporting page
+  - **Bottom Navigation Menu**: Fixed bottom menu with 6 items for mobile navigation
+    - Icons aligned horizontally using fixed text height (`h-8 flex items-center`)
+    - Smooth scrolling with header offset compensation
+    - Menu items: "Kiedy jechać?", "Stan ruchu", "Zgłoś", "Na rowerze", "CB radio", "Jak korzystać"
+  - **Section IDs for Navigation**:
+    - `#stan-ruchu` - Today's Timeline ("Dziś: stan ruchu")
+    - `#zglos` - Incident Reports ("Zgłoś zdarzenie na drodze")
+    - `#na-rowerze` - Weather Forecast
+    - `#cb-radio` - Street Chat
+    - `#jak-korzystac` - Support Section ("Nie chcę tracić życia w korkach, dlatego")
+  - **Page Structure Order** (from top to bottom):
+    1. Sticky header with street selector and direction filters
+    2. Live traffic label: "Korki na żywo na podstawie zgłoszeń mieszkańców"
+    3. Current status box with advice ("Możesz ruszać :)", "Jedź jeśli musisz", "Lepiej wyjedź później")
+    4. Report buttons (Stoi, Toczy się, Jedzie)
+    5. PredictedTraffic (5-min intervals)
+    6. "Planuj. Jedź, gdy ruch jest mniejszy:" section
+    7. GreenWave
+    8. CommuteOptimizer
+    9. TodayTimeline
+    10. WeeklyTimeline
+    11. Last update info
+    12. Incident reports
+    13. SMS subscription
+    14. WeatherForecast
+    15. StreetChat
+    16. Footer with support and usage sections
 - `src/pages/Push.tsx` - Push notification management and testing
 - `src/pages/Statystyki.tsx` - Traffic statistics
 - `src/pages/Coupons.tsx` - Coupons/rewards feature
@@ -212,7 +246,11 @@ Primary table storing all traffic status reports:
   - `bg-traffic-neutral` - Grey for no data
 - shadcn-ui components in `src/components/ui/`
 - Custom animations with `tailwindcss-animate`
-- Alternating layouts for small devices: see PredictedTraffic legend implementation
+- **Mobile-First Considerations**:
+  - Alternating legend layouts for small screens: see PredictedTraffic (time labels above/below rectangles)
+  - Fixed-height text containers for icon alignment: `h-8 flex items-center` pattern in bottom menu
+  - Header offset scrolling: Calculate sticky header height and subtract from scroll position
+  - Reduced margins with increased gaps: `px-1 gap-2` instead of `px-2 gap-1` for better spacing
 
 ### Environment Variables
 Required in `.env` file:
@@ -231,6 +269,26 @@ Required in `.env` file:
    - Ensure day-of-week and direction filtering
    - Update useMemo dependency arrays
    - Avoid duplicate variable declarations in same scope
+
+3. **Adding navigation to sections:**
+   - Add `id="section-name"` to the target section element
+   - For sticky header pages, implement header-offset scrolling:
+     ```typescript
+     const element = document.getElementById('section-id');
+     const header = document.querySelector('header');
+     const headerHeight = header?.offsetHeight || 0;
+     const elementPosition = element?.getBoundingClientRect().top + window.pageYOffset;
+     if (elementPosition) {
+       window.scrollTo({ top: elementPosition - headerHeight - 10, behavior: 'smooth' });
+     }
+     ```
+   - For top-of-page scrolling: `window.scrollTo({ top: 0, behavior: 'smooth' })`
+
+4. **Maintaining icon alignment in navigation menus:**
+   - Use fixed-height containers for text labels: `h-8 flex items-center`
+   - Add `flex-shrink-0` to icons to prevent distortion
+   - Use consistent padding: `pt-2 pb-1` instead of `py-2 justify-center`
+   - This ensures icons stay aligned even when text wraps to multiple lines
 
 ### Supabase Edge Functions
 Located in `supabase/functions/`:

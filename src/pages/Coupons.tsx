@@ -591,7 +591,7 @@ export default function Coupons() {
                 <TableRow key={location.id} className="hover:bg-muted/50">
                   {editingLocationId === location.id ? (
                     <>
-                      <TableCell className="font-mono text-xs">{location.id.slice(0, 8)}...</TableCell>
+                      <TableCell className="font-mono text-xs break-all">{location.id}</TableCell>
                       <TableCell>
                         <Input
                           value={editLocationName}
@@ -615,7 +615,7 @@ export default function Coupons() {
                     </>
                   ) : (
                     <>
-                      <TableCell className="font-mono text-xs">{location.id.slice(0, 8)}...</TableCell>
+                      <TableCell className="font-mono text-xs break-all">{location.id}</TableCell>
                       <TableCell>{location.name}</TableCell>
                       <TableCell>{location.street || "---"}</TableCell>
                       <TableCell className="space-x-2">
@@ -771,7 +771,7 @@ export default function Coupons() {
                   <TableRow key={coupon.id} className="hover:bg-muted/50">
                     {editingCouponId === coupon.id ? (
                       <>
-                        <TableCell className="font-mono text-xs">{coupon.id.slice(0, 8)}...</TableCell>
+                        <TableCell className="font-mono text-xs break-all">{coupon.id}</TableCell>
                         <TableCell>{coupon.local_name}</TableCell>
                         <TableCell>
                           <div className="space-y-2">
@@ -869,7 +869,7 @@ export default function Coupons() {
                       </>
                     ) : (
                       <>
-                        <TableCell className="font-mono text-xs">{coupon.id.slice(0, 8)}...</TableCell>
+                        <TableCell className="font-mono text-xs break-all">{coupon.id}</TableCell>
                         <TableCell>{coupon.local_name}</TableCell>
                         <TableCell>
                           {coupon.image_link ? (

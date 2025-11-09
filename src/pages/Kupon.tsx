@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Camera, ArrowLeft, CheckCircle } from "lucide-react";
 import { toast } from "sonner";
-import { BrowserMultiFormatReader } from "@zxing/browser";
+import { BrowserQRCodeReader } from "@zxing/browser";
 
 interface Coupon {
   id: string;
@@ -34,7 +34,7 @@ export default function Kupon() {
   const [cameraError, setCameraError] = useState<string | null>(null);
 
   const videoRef = useRef<HTMLVideoElement>(null);
-  const codeReaderRef = useRef<BrowserMultiFormatReader | null>(null);
+  const codeReaderRef = useRef<BrowserQRCodeReader | null>(null);
 
   useEffect(() => {
     const fetchCoupon = async () => {
@@ -104,17 +104,17 @@ export default function Kupon() {
       }
       console.log("[CAMERA DEBUG] ✓ navigator.mediaDevices is supported");
 
-      console.log("[CAMERA DEBUG] Step 2: Initializing BrowserMultiFormatReader");
+      console.log("[CAMERA DEBUG] Step 2: Initializing BrowserQRCodeReader");
       console.log("[CAMERA DEBUG] Current codeReaderRef.current:", codeReaderRef.current);
 
       // Initialize the QR scanner
       if (!codeReaderRef.current) {
-        console.log("[CAMERA DEBUG] Creating new BrowserMultiFormatReader instance");
-        codeReaderRef.current = new BrowserMultiFormatReader();
-        console.log("[CAMERA DEBUG] BrowserMultiFormatReader created:", codeReaderRef.current);
+        console.log("[CAMERA DEBUG] Creating new BrowserQRCodeReader instance");
+        codeReaderRef.current = new BrowserQRCodeReader();
+        console.log("[CAMERA DEBUG] BrowserQRCodeReader created:", codeReaderRef.current);
         console.log("[CAMERA DEBUG] Available methods:", Object.getOwnPropertyNames(Object.getPrototypeOf(codeReaderRef.current)));
       } else {
-        console.log("[CAMERA DEBUG] Using existing BrowserMultiFormatReader instance");
+        console.log("[CAMERA DEBUG] Using existing BrowserQRCodeReader instance");
       }
 
       console.log("[CAMERA DEBUG] Step 3: Checking videoRef.current");

@@ -8,7 +8,10 @@
       "Bash(npx tsc:*)",
       "Bash(node:*)",
       "Bash(npm install:*)",
-      "Bash(sudo chown:*)"
+      "Bash(sudo chown:*)",
+      "Bash(pkill:*)",
+      "Bash(cat:*)",
+      "Bash(npm run dev:*)"
     ],
     "deny": [],
     "ask": []

@@ -1590,6 +1590,11 @@ const Index = () => {
         {/* Green Wave */}
         <GreenWave reports={weeklyReports} />
 
+        {/* Commute Optimizer */}
+        <section className="bg-card rounded-lg p-5 border border-border">
+          <CommuteOptimizer reports={commuteReports} />
+        </section>
+
         {/* Today's Timeline */}
         <section className="bg-card rounded-lg p-5 border border-border space-y-4">
           <TodayTimeline 
@@ -1681,11 +1686,6 @@ const Index = () => {
 
         {/* Weather Forecast */}
         <WeatherForecast street={selectedStreet} />
-
-        {/* Commute Optimizer */}
-        <section className="bg-card rounded-lg p-5 border border-border">
-          <CommuteOptimizer reports={commuteReports} />
-        </section>
 
         {/* Use Cases */}
         <section className="bg-card rounded-lg p-6 border border-border space-y-4">

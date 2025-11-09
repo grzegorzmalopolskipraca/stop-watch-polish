@@ -331,13 +331,8 @@ export default function Kupon() {
     <div className="min-h-screen bg-background">
       <div className="container max-w-2xl mx-auto p-4 space-y-6">
         {/* Header */}
-        <div className="flex items-center gap-4">
-          <Link to="/">
-            <Button variant="ghost" size="icon">
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-          </Link>
-          <h1 className="text-2xl font-bold">Kupon zniżkowy</h1>
+        <div>
+          <h1 className="text-2xl font-bold">Kupon zniżkowy eJedzie.pl</h1>
         </div>
 
         {/* Coupon Image */}

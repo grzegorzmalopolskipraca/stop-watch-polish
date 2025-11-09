@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useSearchParams, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Camera, ArrowLeft, CheckCircle } from "lucide-react";
+import { Camera, ArrowLeft, CheckCircle, Navigation } from "lucide-react";
 import { toast } from "sonner";
 import { BrowserQRCodeReader } from "@zxing/browser";
 
@@ -256,6 +256,18 @@ export default function Kupon() {
     }
   };
 
+  const openGoogleMaps = () => {
+    if (!coupon || !location?.street) {
+      toast.error("Brak danych lokalizacji");
+      return;
+    }
+
+    const query = encodeURIComponent(`${coupon.local_name}, ${location.street}, Polska`);
+    const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${query}`;
+
+    window.open(googleMapsUrl, '_blank');
+  };
+
   useEffect(() => {
     return () => {
       if (codeReaderRef.current) {
@@ -377,11 +389,26 @@ export default function Kupon() {
           </div>
 
           <div className="space-y-2">
-            <p className="text-sm text-muted-foreground">Lokal</p>
-            <p className="text-lg font-semibold">{coupon.local_name}</p>
-            {location?.street && (
-              <p className="text-sm text-muted-foreground">{location.street}</p>
-            )}
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex-1">
+                <p className="text-sm text-muted-foreground">Lokal</p>
+                <p className="text-lg font-semibold">{coupon.local_name}</p>
+                {location?.street && (
+                  <p className="text-sm text-muted-foreground">{location.street}</p>
+                )}
+              </div>
+              {location?.street && (
+                <Button
+                  onClick={openGoogleMaps}
+                  variant="outline"
+                  size="sm"
+                  className="mt-6"
+                >
+                  <Navigation className="mr-2 h-4 w-4" />
+                  Nawiguj
+                </Button>
+              )}
+            </div>
           </div>
         </div>
 

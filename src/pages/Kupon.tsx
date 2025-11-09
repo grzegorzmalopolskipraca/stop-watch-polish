@@ -89,6 +89,34 @@ export default function Kupon() {
     setScanning(true);
 
     try {
+      // First, explicitly request camera permission
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        toast.error("Twoja przeglądarka nie obsługuje dostępu do kamery");
+        setScanning(false);
+        return;
+      }
+
+      // Request camera permission
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: "environment" } // Prefer back camera on mobile
+        });
+        // Stop the stream immediately - we just needed to get permission
+        stream.getTracks().forEach(track => track.stop());
+      } catch (permissionError: any) {
+        console.error("Permission error:", permissionError);
+        if (permissionError.name === "NotAllowedError" || permissionError.name === "PermissionDeniedError") {
+          toast.error("Dostęp do kamery został odrzucony. Zezwól na dostęp do kamery w ustawieniach przeglądarki.");
+        } else if (permissionError.name === "NotFoundError") {
+          toast.error("Nie znaleziono kamery na tym urządzeniu");
+        } else {
+          toast.error("Nie można uzyskać dostępu do kamery. Sprawdź uprawnienia.");
+        }
+        setScanning(false);
+        return;
+      }
+
+      // Now initialize the QR scanner
       if (!codeReaderRef.current) {
         codeReaderRef.current = new BrowserMultiFormatReader();
       }
@@ -123,7 +151,7 @@ export default function Kupon() {
       }
     } catch (err) {
       console.error("Error starting scanner:", err);
-      toast.error("Nie można uruchomić kamery. Sprawdź uprawnienia.");
+      toast.error("Wystąpił błąd podczas uruchamiania kamery");
       setScanning(false);
     }
   };

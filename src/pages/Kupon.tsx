@@ -73,8 +73,8 @@ export default function Kupon() {
           setLocation(locationData);
         }
 
-        // Check if coupon is active
-        if (couponData.status !== "active") {
+        // Check if coupon is active or redeemed
+        if (couponData.status !== "active" && couponData.status !== "redeemed") {
           setError("inactive");
         }
       } catch (err) {

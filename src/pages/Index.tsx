@@ -1907,10 +1907,6 @@ const Index = () => {
           >
             Wspieram rozwój strony
           </Button>
-          <div className="mt-6 space-y-4 text-sm">
-            <p className="font-semibold text-base text-center mb-4">Co dalej?</p>
-            <CarpoolingVoting />
-          </div>
         </div>
 
         <p>

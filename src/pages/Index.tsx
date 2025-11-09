@@ -45,7 +45,7 @@ import { CommuteOptimizer } from "@/components/CommuteOptimizer";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format, startOfDay } from "date-fns";
 import { pl } from "date-fns/locale";
-import { ArrowUp, ArrowDown, Bell, BellOff, ThumbsUp, Coffee, Pizza, Download, Share2, Printer, Users, Baby, Calendar, Activity, Upload, Bike, MessageSquare, HelpCircle } from "lucide-react";
+import { ArrowUp, ArrowDown, Bell, BellOff, ThumbsUp, Coffee, Pizza, Download, Share2, Printer, Users, Baby, Calendar, Activity, AlertTriangle, Bike, MessageSquare, HelpCircle } from "lucide-react";
 import { subscribeToOneSignal, unsubscribeFromOneSignal, isOneSignalSubscribed } from "@/utils/onesignal";
 
 const STREETS = [
@@ -2070,7 +2070,12 @@ const Index = () => {
             <button
               onClick={() => {
                 const element = document.getElementById('stan-ruchu');
-                element?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                const header = document.querySelector('header');
+                const headerHeight = header?.offsetHeight || 0;
+                const elementPosition = element?.getBoundingClientRect().top + window.pageYOffset;
+                if (elementPosition) {
+                  window.scrollTo({ top: elementPosition - headerHeight - 10, behavior: 'smooth' });
+                }
               }}
               className="flex flex-col items-center justify-center py-2 px-1 text-xs hover:bg-muted rounded-lg transition-colors"
             >
@@ -2080,17 +2085,27 @@ const Index = () => {
             <button
               onClick={() => {
                 const element = document.getElementById('zglos');
-                element?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                const header = document.querySelector('header');
+                const headerHeight = header?.offsetHeight || 0;
+                const elementPosition = element?.getBoundingClientRect().top + window.pageYOffset;
+                if (elementPosition) {
+                  window.scrollTo({ top: elementPosition - headerHeight - 10, behavior: 'smooth' });
+                }
               }}
               className="flex flex-col items-center justify-center py-2 px-1 text-xs hover:bg-muted rounded-lg transition-colors"
             >
-              <Upload className="w-5 h-5 mb-1" />
+              <AlertTriangle className="w-5 h-5 mb-1" />
               <span className="leading-tight text-center">Zgłoś</span>
             </button>
             <button
               onClick={() => {
                 const element = document.getElementById('na-rowerze');
-                element?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                const header = document.querySelector('header');
+                const headerHeight = header?.offsetHeight || 0;
+                const elementPosition = element?.getBoundingClientRect().top + window.pageYOffset;
+                if (elementPosition) {
+                  window.scrollTo({ top: elementPosition - headerHeight - 10, behavior: 'smooth' });
+                }
               }}
               className="flex flex-col items-center justify-center py-2 px-1 text-xs hover:bg-muted rounded-lg transition-colors"
             >
@@ -2100,7 +2115,12 @@ const Index = () => {
             <button
               onClick={() => {
                 const element = document.getElementById('cb-radio');
-                element?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                const header = document.querySelector('header');
+                const headerHeight = header?.offsetHeight || 0;
+                const elementPosition = element?.getBoundingClientRect().top + window.pageYOffset;
+                if (elementPosition) {
+                  window.scrollTo({ top: elementPosition - headerHeight - 10, behavior: 'smooth' });
+                }
               }}
               className="flex flex-col items-center justify-center py-2 px-1 text-xs hover:bg-muted rounded-lg transition-colors"
             >
@@ -2110,7 +2130,12 @@ const Index = () => {
             <button
               onClick={() => {
                 const element = document.getElementById('jak-korzystac');
-                element?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                const header = document.querySelector('header');
+                const headerHeight = header?.offsetHeight || 0;
+                const elementPosition = element?.getBoundingClientRect().top + window.pageYOffset;
+                if (elementPosition) {
+                  window.scrollTo({ top: elementPosition - headerHeight - 10, behavior: 'smooth' });
+                }
               }}
               className="flex flex-col items-center justify-center py-2 px-1 text-xs hover:bg-muted rounded-lg transition-colors"
             >

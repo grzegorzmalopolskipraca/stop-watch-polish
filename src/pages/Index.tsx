@@ -1506,7 +1506,7 @@ const Index = () => {
         {(nextGreenSlot || nextToczySlot || nextStoiSlot) && (
           <section className="bg-card rounded-lg p-5 border border-border space-y-3">
             <h3 className="text-base font-semibold">
-              Korzystaj! Wyjedź, gdy ruch jest mniejszy:
+              Planuj. Jedź, gdy ruch jest mniejszy:
             </h3>
             
             {nextGreenSlot && (
@@ -1586,6 +1586,9 @@ const Index = () => {
             )}
           </section>
         )}
+
+        {/* Green Wave */}
+        <GreenWave reports={weeklyReports} />
 
         {/* Today's Timeline */}
         <section className="bg-card rounded-lg p-5 border border-border space-y-4">
@@ -1678,9 +1681,6 @@ const Index = () => {
 
         {/* Weather Forecast */}
         <WeatherForecast street={selectedStreet} />
-
-        {/* Green Wave */}
-        <GreenWave reports={weeklyReports} />
 
         {/* Commute Optimizer */}
         <section className="bg-card rounded-lg p-5 border border-border">

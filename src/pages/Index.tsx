@@ -1311,6 +1311,7 @@ const Index = () => {
                   </SelectContent>
                 </Select>
                 <h1 className="text-xl font-bold whitespace-nowrap">stoi?</h1>
+                <span className="text-xs text-muted-foreground">...eJedzie.pl</span>
               </div>
 
               {/* Direction Buttons - shown on desktop only */}

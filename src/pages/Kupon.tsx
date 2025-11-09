@@ -332,7 +332,7 @@ export default function Kupon() {
       <div className="container max-w-2xl mx-auto p-4 space-y-6">
         {/* Header */}
         <div className="text-center">
-          <h1 className="text-2xl font-bold">Twój kupon zniżkowy od Patrona portalu eJedzie.pl za aktywne informowanie o korkach</h1>
+          <h1 className="text-2xl font-bold">Twój kupon zniżkowy od Patrona portalu eJedzie.pl za aktywne informowanie o korkach dzięki uprzejmości:</h1>
         </div>
 
         {/* Coupon Image */}

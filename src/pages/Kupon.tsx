@@ -151,9 +151,23 @@ export default function Kupon() {
                 return;
               }
 
+              // Immediately set flag and stop reader to prevent multiple callbacks
               isProcessingScanRef.current = true;
+
+              // Stop the decoder immediately to prevent further callbacks
+              if (codeReaderRef.current) {
+                try {
+                  codeReaderRef.current.reset();
+                  console.log("[CAMERA DEBUG] Reader reset successfully");
+                } catch (e) {
+                  console.error("[CAMERA DEBUG] Error resetting reader:", e);
+                }
+              }
+
               console.log("[CAMERA DEBUG] ✓ QR Code scanned successfully:", result.getText());
               const scannedText = result.getText();
+
+              // Now show UI updates and do database operations
               setScannedData(scannedText);
               stopScanning();
               toast.success("QR kod zeskanowany!");

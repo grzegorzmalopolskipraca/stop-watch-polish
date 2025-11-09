@@ -16,6 +16,7 @@ This is a Polish traffic monitoring web application ("Czy ulica stoi?") built wi
 - **Routing:** react-router-dom
 - **Charts:** recharts
 - **Notifications:** sonner
+- **QR Code Scanning:** @zxing/browser v0.1.5 (BrowserQRCodeReader)
 
 ## Development Commands
 
@@ -195,7 +196,19 @@ const relevantReports = weeklyReports.filter((r) => {
     16. Footer with support and usage sections
 - `src/pages/Push.tsx` - Push notification management and testing
 - `src/pages/Statystyki.tsx` - Traffic statistics
-- `src/pages/Coupons.tsx` - Coupons/rewards feature
+- `src/pages/Coupons.tsx` - Coupons/rewards management interface
+- `src/pages/Kupon.tsx` - Individual coupon redemption page (accessed via `/kupon?id=<coupon-id>`)
+  - **QR Code Scanning**: Uses @zxing/browser library for in-browser QR code scanning
+  - **Camera Management**: Properly handles camera stream cleanup to prevent multiple concurrent streams
+  - **Coupon Status Flow**:
+    - `active` or `redeemed` → Page loads successfully
+    - `used` → Shows "Kupon został już wykorzystany" warning
+    - After QR scan → Status updates to `used` in database
+  - **Key Implementation Details**:
+    - Uses `isProcessingScanRef` to prevent duplicate scan callbacks
+    - Stores active camera stream in `activeStreamRef` for proper cleanup
+    - Camera initialization happens in useEffect after video element is mounted (race condition fix)
+    - Google Maps integration for location navigation
 
 ## OneSignal Debugging
 
@@ -227,6 +240,29 @@ Primary table storing all traffic status reports:
 - Always filter by `street`, `direction`, and time range
 - Use `.gte("reported_at", date)` for historical data
 - Order by `reported_at` descending for most recent first
+
+### coupons Table
+Stores discount coupons for users:
+- `id` (string) - UUID primary key, used in `/kupon?id=` URL
+- `local_id` (string) - Foreign key to locations table
+- `local_name` (string) - Business/location name
+- `discount` (number) - Discount percentage
+- `status` (string) - Coupon status: "active", "redeemed", "used", "expired"
+- `time_from` (string/timestamp) - Coupon validity start time
+- `time_to` (string/timestamp, nullable) - Coupon expiry time (null = no expiry)
+- `image_link` (string, nullable) - URL to coupon image (stored in Supabase storage)
+
+**Status Meanings:**
+- `active` - Coupon is valid and can be used
+- `redeemed` - Coupon was claimed but not yet used (page still loads)
+- `used` - Coupon has been scanned and redeemed (blocks further use)
+- `expired` - Coupon has passed validity period
+
+### locations Table
+Stores business locations for coupons:
+- `id` (string) - UUID primary key
+- `name` (string) - Business name
+- `street` (string, nullable) - Street address in Wrocław, Poland
 
 ## Development Notes
 
@@ -297,7 +333,49 @@ Located in `supabase/functions/`:
 - `get-traffic-data` - Fetch traffic data
 - `get-weather-forecast` - Weather integration
 - `fetch-rss-feed` - RSS feed integration
+- `submit-chat-message` - Handle street chat messages with rate limiting
 - And more (see `supabase/functions/` for full list)
+
+### QR Code Scanning Implementation
+When implementing QR code scanning features:
+
+1. **Use BrowserQRCodeReader** from @zxing/browser (not BrowserMultiFormatReader)
+2. **Prevent race conditions**: Initialize camera in useEffect that triggers when video element is mounted
+3. **Prevent duplicate scans**: Use a ref flag (`isProcessingScanRef`) to block multiple callbacks
+4. **Clean up camera streams**: Store active MediaStream in ref and stop all tracks on unmount/stop
+5. **Camera permissions**: Let `decodeFromVideoDevice()` handle permission requests automatically
+
+**Example pattern:**
+```typescript
+const isProcessingScanRef = useRef(false);
+const activeStreamRef = useRef<MediaStream | null>(null);
+
+// Initialize camera after video element mounts
+useEffect(() => {
+  if (!scanning || !videoRef.current) return;
+
+  const reader = new BrowserQRCodeReader();
+  await reader.decodeFromVideoDevice(undefined, videoRef.current, (result) => {
+    if (result && !isProcessingScanRef.current) {
+      isProcessingScanRef.current = true;
+      // Process scan result once
+    }
+  });
+
+  // Store stream for cleanup
+  if (videoRef.current.srcObject) {
+    activeStreamRef.current = videoRef.current.srcObject as MediaStream;
+  }
+}, [scanning]);
+
+// Cleanup function
+const stopScanning = () => {
+  activeStreamRef.current?.getTracks().forEach(track => track.stop());
+  activeStreamRef.current = null;
+  if (videoRef.current) videoRef.current.srcObject = null;
+  isProcessingScanRef.current = false;
+};
+```
 
 ## Lovable Integration
 

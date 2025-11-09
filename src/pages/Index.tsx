@@ -2142,21 +2142,21 @@ const Index = () => {
 
       {/* Coupon Reward Dialog */}
       <Dialog open={showCouponDialog} onOpenChange={setShowCouponDialog}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-center text-xl">
+            <DialogTitle className="text-center text-lg pr-8">
               Twoje zaangażowanie zostało nagrodzone przez Patrona portalu eJedzie.pl
             </DialogTitle>
-            <DialogDescription className="text-center pt-2">
+            <DialogDescription className="text-center pt-1 text-sm">
               Otrzymujesz Kupon ze zniżką od 10 do {couponReward?.discount}%. Kupon jest ważny 3 dni
             </DialogDescription>
           </DialogHeader>
           
           {couponReward && (
-            <div className="space-y-4 py-4">
-              {/* Coupon Image */}
+            <div className="space-y-3 py-2">
+              {/* Coupon Image - 30% smaller */}
               {couponReward.image_link && (
-                <div className="rounded-lg overflow-hidden border border-border">
+                <div className="rounded-lg overflow-hidden border border-border w-[70%] mx-auto">
                   <img
                     src={couponReward.image_link}
                     alt="Kupon"
@@ -2167,19 +2167,27 @@ const Index = () => {
               
               {/* Location Details */}
               <div className="text-center space-y-1">
-                <p className="font-semibold text-lg">{couponReward.local_name}</p>
+                <p className="font-semibold">{couponReward.local_name}</p>
                 {couponReward.location_street && (
-                  <p className="text-sm text-muted-foreground">{couponReward.location_street}</p>
+                  <p className="text-xs text-muted-foreground">{couponReward.location_street}</p>
                 )}
               </div>
               
               {/* Copy Link Section */}
-              <div className="space-y-3 pt-2">
+              <div className="space-y-2 pt-2">
                 <p className="text-sm font-semibold text-center">
                   Skopiuj i zapisz swój link do kuponu. Otwórz link w lokalu
                 </p>
-                <div className="bg-muted p-3 rounded-lg">
-                  <p className="text-xs font-mono break-all text-center">
+                <div 
+                  className="bg-muted p-2 rounded-lg cursor-pointer hover:bg-muted/80 transition-colors"
+                  onClick={() => {
+                    const link = `https://ejedzie.pl/kupon?id=${couponReward.id}`;
+                    navigator.clipboard.writeText(link);
+                    toast.success("Link skopiowany!");
+                    window.open(link, '_blank');
+                  }}
+                >
+                  <p className="text-sm font-mono break-all text-center font-bold">
                     https://ejedzie.pl/kupon?id={couponReward.id}
                   </p>
                 </div>
@@ -2188,8 +2196,7 @@ const Index = () => {
                     navigator.clipboard.writeText(`https://ejedzie.pl/kupon?id=${couponReward.id}`);
                     toast.success("Link skopiowany do schowka!");
                   }}
-                  className="w-full"
-                  variant="outline"
+                  className="w-full bg-green-600 hover:bg-green-700 text-white"
                 >
                   Kopiuj link
                 </Button>
@@ -2198,7 +2205,8 @@ const Index = () => {
                     setShowCouponDialog(false);
                     setCouponReward(null);
                   }}
-                  className="w-full"
+                  className="w-full bg-white text-black hover:bg-gray-100 border border-border"
+                  variant="outline"
                 >
                   Skopiowane i zapisane, zamknij
                 </Button>

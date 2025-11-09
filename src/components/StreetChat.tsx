@@ -181,9 +181,7 @@ export const StreetChat = ({ street }: StreetChatProps) => {
             </h4>
           </div>
           <p className="text-muted-foreground leading-relaxed pl-11">
-            Ten chat służy do komunikacji między sąsiadami. Jeśli stoisz na
-            przystanku i czekasz na autobus, możesz napisać dokąd jedziesz, a ktoś
-            jadący samochodem może Cię zabrać, zmniejszając korki.
+            Czat dla sąsiadów. Napisz, dokąd jedziesz — ktoś może Cię zabrać i zmniejszyć korki
           </p>
         </div>
 

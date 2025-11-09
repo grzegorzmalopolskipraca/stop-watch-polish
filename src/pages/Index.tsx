@@ -2062,9 +2062,9 @@ const Index = () => {
               onClick={() => {
                 window.scrollTo({ top: 0, behavior: 'smooth' });
               }}
-              className="flex flex-col items-center justify-center py-2 px-1 text-xs hover:bg-muted rounded-lg transition-colors"
+              className="flex flex-col items-center pt-2 pb-1 px-1 text-xs hover:bg-muted rounded-lg transition-colors"
             >
-              <Calendar className="w-5 h-5 mb-1" />
+              <Calendar className="w-5 h-5 mb-1 flex-shrink-0" />
               <span className="leading-tight text-center">Kiedy jechać?</span>
             </button>
             <button
@@ -2077,9 +2077,9 @@ const Index = () => {
                   window.scrollTo({ top: elementPosition - headerHeight - 10, behavior: 'smooth' });
                 }
               }}
-              className="flex flex-col items-center justify-center py-2 px-1 text-xs hover:bg-muted rounded-lg transition-colors"
+              className="flex flex-col items-center pt-2 pb-1 px-1 text-xs hover:bg-muted rounded-lg transition-colors"
             >
-              <Activity className="w-5 h-5 mb-1" />
+              <Activity className="w-5 h-5 mb-1 flex-shrink-0" />
               <span className="leading-tight text-center">Stan ruchu</span>
             </button>
             <button
@@ -2092,9 +2092,9 @@ const Index = () => {
                   window.scrollTo({ top: elementPosition - headerHeight - 10, behavior: 'smooth' });
                 }
               }}
-              className="flex flex-col items-center justify-center py-2 px-1 text-xs hover:bg-muted rounded-lg transition-colors"
+              className="flex flex-col items-center pt-2 pb-1 px-1 text-xs hover:bg-muted rounded-lg transition-colors"
             >
-              <AlertTriangle className="w-5 h-5 mb-1" />
+              <AlertTriangle className="w-5 h-5 mb-1 flex-shrink-0" />
               <span className="leading-tight text-center">Zgłoś</span>
             </button>
             <button
@@ -2107,9 +2107,9 @@ const Index = () => {
                   window.scrollTo({ top: elementPosition - headerHeight - 10, behavior: 'smooth' });
                 }
               }}
-              className="flex flex-col items-center justify-center py-2 px-1 text-xs hover:bg-muted rounded-lg transition-colors"
+              className="flex flex-col items-center pt-2 pb-1 px-1 text-xs hover:bg-muted rounded-lg transition-colors"
             >
-              <Bike className="w-5 h-5 mb-1" />
+              <Bike className="w-5 h-5 mb-1 flex-shrink-0" />
               <span className="leading-tight text-center">Na rowerze</span>
             </button>
             <button
@@ -2122,9 +2122,9 @@ const Index = () => {
                   window.scrollTo({ top: elementPosition - headerHeight - 10, behavior: 'smooth' });
                 }
               }}
-              className="flex flex-col items-center justify-center py-2 px-1 text-xs hover:bg-muted rounded-lg transition-colors"
+              className="flex flex-col items-center pt-2 pb-1 px-1 text-xs hover:bg-muted rounded-lg transition-colors"
             >
-              <MessageSquare className="w-5 h-5 mb-1" />
+              <MessageSquare className="w-5 h-5 mb-1 flex-shrink-0" />
               <span className="leading-tight text-center">CB radio</span>
             </button>
             <button
@@ -2137,9 +2137,9 @@ const Index = () => {
                   window.scrollTo({ top: elementPosition - headerHeight - 10, behavior: 'smooth' });
                 }
               }}
-              className="flex flex-col items-center justify-center py-2 px-1 text-xs hover:bg-muted rounded-lg transition-colors"
+              className="flex flex-col items-center pt-2 pb-1 px-1 text-xs hover:bg-muted rounded-lg transition-colors"
             >
-              <HelpCircle className="w-5 h-5 mb-1" />
+              <HelpCircle className="w-5 h-5 mb-1 flex-shrink-0" />
               <span className="leading-tight text-center">Jak korzystać</span>
             </button>
           </div>

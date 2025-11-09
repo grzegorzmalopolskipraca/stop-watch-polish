@@ -86,46 +86,50 @@ export default function Kupon() {
     fetchCoupon();
   }, [couponId]);
 
-  const startScanning = async () => {
-    console.log("=== [CAMERA DEBUG] Starting camera scan ===");
-    setScanning(true);
-    setCameraError(null); // Clear previous errors
+  const startScanning = () => {
+    console.log("=== [CAMERA DEBUG] User clicked scan button ===");
 
-    try {
-      console.log("[CAMERA DEBUG] Step 1: Checking navigator.mediaDevices support");
-      // Check if browser supports media devices
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        const errorMsg = "Twoja przeglądarka nie obsługuje dostępu do kamery";
-        console.error("[CAMERA DEBUG] ERROR: Browser doesn't support media devices");
-        toast.error(errorMsg);
-        setCameraError(errorMsg);
-        setScanning(false);
+    // Check if browser supports media devices
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      const errorMsg = "Twoja przeglądarka nie obsługuje dostępu do kamery";
+      console.error("[CAMERA DEBUG] ERROR: Browser doesn't support media devices");
+      toast.error(errorMsg);
+      setCameraError(errorMsg);
+      return;
+    }
+
+    console.log("[CAMERA DEBUG] ✓ Browser supports media devices");
+    console.log("[CAMERA DEBUG] Setting scanning to true (will trigger video element mount)");
+    setCameraError(null);
+    setScanning(true);
+    // The actual camera initialization will happen in useEffect when video element is mounted
+  };
+
+  // Effect to initialize camera when video element becomes available
+  useEffect(() => {
+    const initCamera = async () => {
+      if (!scanning || !videoRef.current) {
+        console.log("[CAMERA DEBUG] Skipping camera init - scanning:", scanning, "videoRef:", !!videoRef.current);
         return;
       }
-      console.log("[CAMERA DEBUG] ✓ navigator.mediaDevices is supported");
 
-      console.log("[CAMERA DEBUG] Step 2: Initializing BrowserQRCodeReader");
-      console.log("[CAMERA DEBUG] Current codeReaderRef.current:", codeReaderRef.current);
+      console.log("[CAMERA DEBUG] === Initializing camera (video element is mounted) ===");
 
-      // Initialize the QR scanner
-      if (!codeReaderRef.current) {
-        console.log("[CAMERA DEBUG] Creating new BrowserQRCodeReader instance");
-        codeReaderRef.current = new BrowserQRCodeReader();
-        console.log("[CAMERA DEBUG] BrowserQRCodeReader created:", codeReaderRef.current);
-        console.log("[CAMERA DEBUG] Available methods:", Object.getOwnPropertyNames(Object.getPrototypeOf(codeReaderRef.current)));
-      } else {
-        console.log("[CAMERA DEBUG] Using existing BrowserQRCodeReader instance");
-      }
+      try {
+        console.log("[CAMERA DEBUG] Step 1: Initializing BrowserQRCodeReader");
 
-      console.log("[CAMERA DEBUG] Step 3: Checking videoRef.current");
-      console.log("[CAMERA DEBUG] videoRef.current:", videoRef.current);
+        if (!codeReaderRef.current) {
+          console.log("[CAMERA DEBUG] Creating new BrowserQRCodeReader instance");
+          codeReaderRef.current = new BrowserQRCodeReader();
+          console.log("[CAMERA DEBUG] BrowserQRCodeReader created:", codeReaderRef.current);
+        } else {
+          console.log("[CAMERA DEBUG] Using existing BrowserQRCodeReader instance");
+        }
 
-      if (videoRef.current) {
-        console.log("[CAMERA DEBUG] Step 4: Calling decodeFromVideoDevice");
-        console.log("[CAMERA DEBUG] Parameters: deviceId=undefined, videoElement=", videoRef.current);
+        console.log("[CAMERA DEBUG] Step 2: Starting camera on video element");
+        console.log("[CAMERA DEBUG] videoRef.current:", videoRef.current);
 
         // Use undefined for deviceId to let the browser select the best camera
-        // On mobile, it will typically prefer the back camera
         await codeReaderRef.current.decodeFromVideoDevice(
           undefined,
           videoRef.current,
@@ -142,36 +146,35 @@ export default function Kupon() {
             }
           }
         );
-        console.log("[CAMERA DEBUG] ✓ decodeFromVideoDevice called successfully");
-      } else {
-        console.error("[CAMERA DEBUG] ERROR: videoRef.current is null");
-        throw new Error("Video element reference is null");
+        console.log("[CAMERA DEBUG] ✓ Camera started successfully");
+      } catch (err: any) {
+        console.error("[CAMERA DEBUG] === EXCEPTION CAUGHT ===");
+        console.error("[CAMERA DEBUG] Error name:", err.name);
+        console.error("[CAMERA DEBUG] Error message:", err.message);
+        console.error("[CAMERA DEBUG] Error stack:", err.stack);
+        console.error("[CAMERA DEBUG] Full error object:", err);
+
+        let errorMsg = "";
+
+        if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
+          errorMsg = `Dostęp do kamery został odrzucony. Zezwól na dostęp do kamery w ustawieniach przeglądarki.\n\nTyp błędu: ${err.name}\nWiadomość: ${err.message}`;
+          toast.error("Dostęp do kamery został odrzucony. Zezwól na dostęp do kamery w ustawieniach przeglądarki.");
+        } else if (err.name === "NotFoundError") {
+          errorMsg = `Nie znaleziono kamery na tym urządzeniu.\n\nTyp błędu: ${err.name}\nWiadomość: ${err.message}`;
+          toast.error("Nie znaleziono kamery na tym urządzeniu");
+        } else {
+          errorMsg = `Wystąpił błąd podczas uruchamiania kamery.\n\nTyp: ${err.name || 'Unknown'}\nWiadomość: ${err.message || err.toString()}\nStack: ${err.stack || 'N/A'}`;
+          toast.error("Nie można uruchomić kamery. Sprawdź uprawnienia.");
+        }
+
+        setCameraError(errorMsg);
+        setScanning(false);
+        console.log("[CAMERA DEBUG] === Error handling complete ===");
       }
-    } catch (err: any) {
-      console.error("[CAMERA DEBUG] === EXCEPTION CAUGHT ===");
-      console.error("[CAMERA DEBUG] Error name:", err.name);
-      console.error("[CAMERA DEBUG] Error message:", err.message);
-      console.error("[CAMERA DEBUG] Error stack:", err.stack);
-      console.error("[CAMERA DEBUG] Full error object:", err);
+    };
 
-      let errorMsg = "";
-
-      if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
-        errorMsg = `Dostęp do kamery został odrzucony. Zezwól na dostęp do kamery w ustawieniach przeglądarki.\n\nTyp błędu: ${err.name}\nWiadomość: ${err.message}`;
-        toast.error("Dostęp do kamery został odrzucony. Zezwól na dostęp do kamery w ustawieniach przeglądarki.");
-      } else if (err.name === "NotFoundError") {
-        errorMsg = `Nie znaleziono kamery na tym urządzeniu.\n\nTyp błędu: ${err.name}\nWiadomość: ${err.message}`;
-        toast.error("Nie znaleziono kamery na tym urządzeniu");
-      } else {
-        errorMsg = `Wystąpił błąd podczas uruchamiania kamery.\n\nTyp: ${err.name || 'Unknown'}\nWiadomość: ${err.message || err.toString()}\nStack: ${err.stack || 'N/A'}`;
-        toast.error("Nie można uruchomić kamery. Sprawdź uprawnienia.");
-      }
-
-      setCameraError(errorMsg);
-      setScanning(false);
-      console.log("[CAMERA DEBUG] === Error handling complete ===");
-    }
-  };
+    initCamera();
+  }, [scanning]); // Run when scanning state changes
 
   const stopScanning = () => {
     if (codeReaderRef.current) {

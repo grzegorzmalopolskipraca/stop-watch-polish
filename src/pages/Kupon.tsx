@@ -331,8 +331,8 @@ export default function Kupon() {
     <div className="min-h-screen bg-background">
       <div className="container max-w-2xl mx-auto p-4 space-y-6">
         {/* Header */}
-        <div>
-          <h1 className="text-2xl font-bold">Kupon zniżkowy eJedzie.pl</h1>
+        <div className="text-center">
+          <h1 className="text-2xl font-bold">Twój kupon zniżkowy od Patrona portalu eJedzie.pl za aktywne informowanie o korkach</h1>
         </div>
 
         {/* Coupon Image */}
@@ -350,7 +350,7 @@ export default function Kupon() {
         {!scannedData && (
           <div className="bg-card rounded-lg p-6 border border-border space-y-4">
             <p className="text-lg leading-relaxed">
-              Zrealizuj kupon. Zeskanuj QR kod w lokalu z kartki z napisem "eJedzie.pl skanuj kod". Zobacz jaką zniżkę otrzymałeś i pokaż obsłudze. Smacznego :)
+              Zrealizuj kupon. Zeskanuj QR kod w lokalu z kartki z napisem "eJedzie.pl skanuj kod". Zobacz jaką zniżkę otrzymasz i pokaż obsłudze. Smacznego :)
             </p>
           </div>
         )}

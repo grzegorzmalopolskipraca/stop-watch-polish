@@ -37,6 +37,7 @@ export default function Kupon() {
   const codeReaderRef = useRef<BrowserQRCodeReader | null>(null);
   const isProcessingScanRef = useRef(false); // Prevent multiple scans
   const activeStreamRef = useRef<MediaStream | null>(null);
+  const lastScanTimeRef = useRef<number>(0); // Track last scan time to prevent duplicates
 
   useEffect(() => {
     const fetchCoupon = async () => {
@@ -145,14 +146,24 @@ export default function Kupon() {
           videoRef.current,
           (result, error) => {
             if (result) {
+              const now = Date.now();
+              const timeSinceLastScan = now - lastScanTimeRef.current;
+
               // Prevent processing the same scan multiple times
               if (isProcessingScanRef.current) {
                 console.log("[CAMERA DEBUG] Already processing a scan, ignoring duplicate");
                 return;
               }
 
-              // Immediately set flag and stop reader to prevent multiple callbacks
+              // Prevent processing if last scan was less than 2 seconds ago (prevent rapid duplicates)
+              if (timeSinceLastScan < 2000) {
+                console.log("[CAMERA DEBUG] Scan too soon after previous scan, ignoring (", timeSinceLastScan, "ms)");
+                return;
+              }
+
+              // Immediately set flag and timestamp
               isProcessingScanRef.current = true;
+              lastScanTimeRef.current = now;
 
               // Stop the decoder immediately to prevent further callbacks
               if (codeReaderRef.current) {
@@ -307,6 +318,7 @@ export default function Kupon() {
         videoRef.current.srcObject = null;
       }
       isProcessingScanRef.current = false;
+      lastScanTimeRef.current = 0;
     };
   }, []);
 
@@ -383,7 +395,9 @@ export default function Kupon() {
         {!scannedData && (
           <div className="bg-card rounded-lg p-6 border border-border space-y-4">
             <p className="text-lg leading-relaxed">
-              Zrealizuj kupon. Zeskanuj QR kod w lokalu z kartki z napisem "eJedzie.pl skanuj kod". Zobacz jaką zniżkę otrzymasz i pokaż obsłudze. Smacznego :)
+              Zrealizuj kupon. Zeskanuj QR kod w lokalu z kartki z napisem "eJedzie.pl skanuj kod". Zobacz jaką zniżkę otrzymasz i pokaż obsłudze.
+              <br />
+              Smacznego :)
             </p>
           </div>
         )}

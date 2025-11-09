@@ -177,10 +177,28 @@ export default function Kupon() {
   }, [scanning]); // Run when scanning state changes
 
   const stopScanning = () => {
+    console.log("[CAMERA DEBUG] Stopping camera...");
     if (codeReaderRef.current) {
-      codeReaderRef.current.reset();
+      try {
+        codeReaderRef.current.reset();
+        console.log("[CAMERA DEBUG] ✓ Camera stopped successfully");
+      } catch (err) {
+        console.error("[CAMERA DEBUG] Error stopping camera:", err);
+      }
     }
     setScanning(false);
+    setCameraError(null); // Clear any errors
+  };
+
+  const resetAndScanAgain = () => {
+    console.log("[CAMERA DEBUG] Reset and scan again clicked");
+    setScannedData(null);
+    setCameraError(null);
+    // This will automatically trigger startScanning when user clicks the button again
+    // Or we can auto-start:
+    setTimeout(() => {
+      startScanning();
+    }, 100);
   };
 
   useEffect(() => {
@@ -378,7 +396,7 @@ export default function Kupon() {
             </div>
 
             <Button
-              onClick={() => setScannedData(null)}
+              onClick={resetAndScanAgain}
               variant="outline"
               className="w-full"
             >

@@ -1369,7 +1369,7 @@ const Index = () => {
 
         {/* Current Status */}
         <section
-          className={`relative rounded-lg p-6 text-center transition-colors min-h-[200px] flex flex-col justify-center ${
+          className={`relative rounded-lg py-6 px-[19px] text-center transition-colors min-h-[200px] flex flex-col justify-center ${
             statusConfig ? statusConfig.color : "bg-muted"
           }`}
         >

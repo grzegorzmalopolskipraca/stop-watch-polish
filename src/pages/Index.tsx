@@ -45,7 +45,7 @@ import { CommuteOptimizer } from "@/components/CommuteOptimizer";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format, startOfDay } from "date-fns";
 import { pl } from "date-fns/locale";
-import { ArrowUp, ArrowDown, Bell, BellOff, ThumbsUp, Coffee, Pizza, Download, Share2, Printer, Users, Baby } from "lucide-react";
+import { ArrowUp, ArrowDown, Bell, BellOff, ThumbsUp, Coffee, Pizza, Download, Share2, Printer, Users, Baby, Calendar, Activity, Upload, Bike, MessageSquare, HelpCircle } from "lucide-react";
 import { subscribeToOneSignal, unsubscribeFromOneSignal, isOneSignalSubscribed } from "@/utils/onesignal";
 
 const STREETS = [
@@ -1500,7 +1500,9 @@ const Index = () => {
         </section>
 
         {/* Predicted Traffic */}
-        <PredictedTraffic reports={weeklyReports} direction={direction} />
+        <section>
+          <PredictedTraffic reports={weeklyReports} direction={direction} />
+        </section>
 
         {/* Next Green Slot */}
         {(nextGreenSlot || nextToczySlot || nextStoiSlot) && (
@@ -1596,7 +1598,7 @@ const Index = () => {
         </section>
 
         {/* Today's Timeline */}
-        <section className="bg-card rounded-lg p-5 border border-border space-y-4">
+        <section id="stan-ruchu" className="bg-card rounded-lg p-5 border border-border space-y-4">
           <TodayTimeline 
             reports={todayReports} 
             street={selectedStreet}
@@ -1629,7 +1631,7 @@ const Index = () => {
         </section>
 
         {/* Incident Reports */}
-        <section className="bg-card rounded-lg p-5 border-2 border-destructive shadow-lg shadow-destructive/20 space-y-4">
+        <section id="zglos" className="bg-card rounded-lg p-5 border-2 border-destructive shadow-lg shadow-destructive/20 space-y-4">
           <div className="flex items-center justify-between">
             <div className="flex-1">
               <h3 className="text-lg font-semibold text-center">
@@ -1685,10 +1687,12 @@ const Index = () => {
         </section>
 
         {/* Weather Forecast */}
-        <WeatherForecast street={selectedStreet} />
+        <section id="na-rowerze">
+          <WeatherForecast street={selectedStreet} />
+        </section>
 
         {/* Street Chat */}
-        <section>
+        <section id="cb-radio">
           <StreetChat street={selectedStreet} />
         </section>
 
@@ -1809,7 +1813,7 @@ const Index = () => {
       {/* Footer */}
       <footer className="container max-w-2xl mx-auto px-4 py-6 text-center text-sm text-muted-foreground space-y-3">
         {/* Support Section */}
-        <div className="bg-card rounded-lg p-6 border border-border space-y-4 mb-6">
+        <div id="jak-korzystac" className="bg-card rounded-lg p-6 border border-border space-y-4 mb-6">
           <h3 className="text-lg font-semibold text-foreground">
             Nie chcę tracić życia w korkach, dlatego
           </h3>
@@ -2049,6 +2053,73 @@ const Index = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Bottom Navigation Menu */}
+      <nav className="fixed bottom-0 left-0 right-0 bg-card border-t border-border shadow-lg z-50 pb-safe">
+        <div className="container max-w-2xl mx-auto">
+          <div className="grid grid-cols-6 gap-1 px-2 py-2">
+            <button
+              onClick={() => {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+              className="flex flex-col items-center justify-center py-2 px-1 text-xs hover:bg-muted rounded-lg transition-colors"
+            >
+              <Calendar className="w-5 h-5 mb-1" />
+              <span className="leading-tight text-center">Kiedy jechać?</span>
+            </button>
+            <button
+              onClick={() => {
+                const element = document.getElementById('stan-ruchu');
+                element?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              }}
+              className="flex flex-col items-center justify-center py-2 px-1 text-xs hover:bg-muted rounded-lg transition-colors"
+            >
+              <Activity className="w-5 h-5 mb-1" />
+              <span className="leading-tight text-center">Stan ruchu</span>
+            </button>
+            <button
+              onClick={() => {
+                const element = document.getElementById('zglos');
+                element?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              }}
+              className="flex flex-col items-center justify-center py-2 px-1 text-xs hover:bg-muted rounded-lg transition-colors"
+            >
+              <Upload className="w-5 h-5 mb-1" />
+              <span className="leading-tight text-center">Zgłoś</span>
+            </button>
+            <button
+              onClick={() => {
+                const element = document.getElementById('na-rowerze');
+                element?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              }}
+              className="flex flex-col items-center justify-center py-2 px-1 text-xs hover:bg-muted rounded-lg transition-colors"
+            >
+              <Bike className="w-5 h-5 mb-1" />
+              <span className="leading-tight text-center">Na rowerze</span>
+            </button>
+            <button
+              onClick={() => {
+                const element = document.getElementById('cb-radio');
+                element?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              }}
+              className="flex flex-col items-center justify-center py-2 px-1 text-xs hover:bg-muted rounded-lg transition-colors"
+            >
+              <MessageSquare className="w-5 h-5 mb-1" />
+              <span className="leading-tight text-center">CB radio</span>
+            </button>
+            <button
+              onClick={() => {
+                const element = document.getElementById('jak-korzystac');
+                element?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              }}
+              className="flex flex-col items-center justify-center py-2 px-1 text-xs hover:bg-muted rounded-lg transition-colors"
+            >
+              <HelpCircle className="w-5 h-5 mb-1" />
+              <span className="leading-tight text-center">Jak korzystać</span>
+            </button>
+          </div>
+        </div>
+      </nav>
     </div>
   );
 };

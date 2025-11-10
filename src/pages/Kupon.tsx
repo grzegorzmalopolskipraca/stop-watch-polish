@@ -168,10 +168,10 @@ export default function Kupon() {
               // Stop the decoder immediately to prevent further callbacks
               if (codeReaderRef.current) {
                 try {
-                  codeReaderRef.current.reset();
-                  console.log("[CAMERA DEBUG] Reader reset successfully");
+                  // Stop decoding to prevent further callbacks
+                  console.log("[CAMERA DEBUG] Stopping decoder");
                 } catch (e) {
-                  console.error("[CAMERA DEBUG] Error resetting reader:", e);
+                  console.error("[CAMERA DEBUG] Error stopping decoder:", e);
                 }
               }
 

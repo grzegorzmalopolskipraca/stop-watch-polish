@@ -1475,12 +1475,12 @@ const Index = () => {
           ) : statusConfig ? (
             <>
               <h2
-                className={`text-2xl font-bold mb-2 ${statusConfig.textColor}`}
+                className={`text-2xl font-bold mb-1.5 ${statusConfig.textColor}`}
               >
                 {selectedStreet} {statusConfig.label}
               </h2>
               <p
-                className={`text-lg font-semibold mt-2 mb-3 ${statusConfig.textColor}`}
+                className={`text-lg font-semibold mt-1.5 mb-2 ${statusConfig.textColor}`}
               >
                 {currentStatus === 'stoi' && 'Lepiej wyjedź później'}
                 {currentStatus === 'toczy_sie' && 'Jedź jeśli musisz'}
@@ -1488,7 +1488,7 @@ const Index = () => {
               </p>
               {Object.keys(lastTenStats).length > 0 && (
                 <>
-                  <p className={`text-sm font-bold mt-2 ${statusConfig.textColor} opacity-80`}>
+                  <p className={`text-sm font-bold mt-1.5 ${statusConfig.textColor} opacity-80`}>
                     {lastTenStats.stoi && `Stoi: ${lastTenStats.stoi}`}
                     {lastTenStats.toczy_sie && ` Toczy się: ${lastTenStats.toczy_sie}`}
                     {lastTenStats.jedzie && ` Jedzie: ${lastTenStats.jedzie}`}
@@ -1523,7 +1523,7 @@ const Index = () => {
           )}
           
           {!statusNotificationsEnabled && (
-            <div className="mt-4 pt-4 border-t border-border">
+            <div className="mt-3 pt-3 border-t border-border">
               <Button
                 onClick={handleStatusNotifications}
                 variant="outline"

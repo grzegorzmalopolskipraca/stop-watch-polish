@@ -33,59 +33,100 @@ export const PredictedTraffic = ({ reports, direction }: PredictedTrafficProps) 
     // Get today's day of week (0 = Sunday, 1 = Monday, etc.)
     const todayDayOfWeek = now.getDay();
 
+    // Check if today is a weekday (Monday = 1, Friday = 5)
+    const isWeekday = todayDayOfWeek >= 1 && todayDayOfWeek <= 5;
+
     // Filter reports to ALL historical data from the same day of week and direction
     // For example, if today is Monday, this includes ALL Mondays from the historical data (last 4 weeks)
     // This aggregates data from multiple weeks for better predictions
-    const relevantReports = reports.filter(r => {
+    const sameDayReports = reports.filter(r => {
       const reportDate = new Date(r.reported_at);
       return reportDate.getDay() === todayDayOfWeek && r.direction === direction;
     });
-    
+
+    // For weekdays, also prepare reports from all weekdays (Monday-Friday)
+    const weekdayReports = isWeekday ? reports.filter(r => {
+      const reportDate = new Date(r.reported_at);
+      const dayOfWeek = reportDate.getDay();
+      return dayOfWeek >= 1 && dayOfWeek <= 5 && r.direction === direction;
+    }) : [];
+
+    // Helper function to get status from reports
+    const getStatusFromReports = (reportsToCheck: Report[]) => {
+      if (reportsToCheck.length === 0) return null;
+
+      const statusCounts = {
+        stoi: 0,
+        toczy_sie: 0,
+        jedzie: 0,
+      };
+
+      reportsToCheck.forEach(r => {
+        if (r.status === 'stoi') statusCounts.stoi++;
+        else if (r.status === 'toczy_sie') statusCounts.toczy_sie++;
+        else if (r.status === 'jedzie') statusCounts.jedzie++;
+      });
+
+      // Find status with highest count (majority wins)
+      if (statusCounts.stoi >= statusCounts.toczy_sie && statusCounts.stoi >= statusCounts.jedzie) {
+        return 'stoi';
+      } else if (statusCounts.toczy_sie >= statusCounts.stoi && statusCounts.toczy_sie >= statusCounts.jedzie) {
+        return 'toczy_sie';
+      } else {
+        return 'jedzie';
+      }
+    };
+
     // Create 5-minute intervals for next hour (12 intervals)
     const intervals = [];
     for (let i = 0; i < 12; i++) {
       const intervalStart = addMinutes(startTime, i * 5);
       const intervalEnd = addMinutes(intervalStart, 5);
+      const intervalStartMinutes = intervalStart.getHours() * 60 + intervalStart.getMinutes();
+      const intervalEndMinutes = intervalEnd.getHours() * 60 + intervalEnd.getMinutes();
 
-      // Get ALL historical reports from this time window (from all matching days of week)
-      // For example, if interval is 10:00-10:05 on Monday, this includes reports from
-      // 10:00-10:05 on ALL previous Mondays in the historical data
-      const intervalReports = relevantReports.filter(r => {
+      // STEP 1: Try 5-minute window with same day-of-week
+      let intervalReports = sameDayReports.filter(r => {
         const reportDate = new Date(r.reported_at);
         const reportMinutes = reportDate.getHours() * 60 + reportDate.getMinutes();
-        const intervalStartMinutes = intervalStart.getHours() * 60 + intervalStart.getMinutes();
-        const intervalEndMinutes = intervalEnd.getHours() * 60 + intervalEnd.getMinutes();
-
         return reportMinutes >= intervalStartMinutes && reportMinutes < intervalEndMinutes;
       });
-      
-      // Determine majority status for this 5-minute interval
-      // If no reports exist for this specific time window, status remains 'neutral' (grey)
-      // This can happen if users didn't report during this exact 5-minute window
-      let status = 'neutral';
-      if (intervalReports.length > 0) {
-        const statusCounts = {
-          stoi: 0,
-          toczy_sie: 0,
-          jedzie: 0,
-        };
 
-        intervalReports.forEach(r => {
-          if (r.status === 'stoi') statusCounts.stoi++;
-          else if (r.status === 'toczy_sie') statusCounts.toczy_sie++;
-          else if (r.status === 'jedzie') statusCounts.jedzie++;
+      let status = getStatusFromReports(intervalReports);
+
+      // STEP 2: If no data, try 10-minute window (±5 minutes) with same day-of-week
+      if (status === null) {
+        const expandedStartMinutes = intervalStartMinutes - 5;
+        const expandedEndMinutes = intervalEndMinutes + 5;
+
+        intervalReports = sameDayReports.filter(r => {
+          const reportDate = new Date(r.reported_at);
+          const reportMinutes = reportDate.getHours() * 60 + reportDate.getMinutes();
+          return reportMinutes >= expandedStartMinutes && reportMinutes < expandedEndMinutes;
         });
 
-        // Find status with highest count (majority wins)
-        if (statusCounts.stoi >= statusCounts.toczy_sie && statusCounts.stoi >= statusCounts.jedzie) {
-          status = 'stoi';
-        } else if (statusCounts.toczy_sie >= statusCounts.stoi && statusCounts.toczy_sie >= statusCounts.jedzie) {
-          status = 'toczy_sie';
-        } else {
-          status = 'jedzie';
-        }
+        status = getStatusFromReports(intervalReports);
       }
-      
+
+      // STEP 3: If still no data AND it's a weekday, try 10-minute window with all weekdays
+      if (status === null && isWeekday) {
+        const expandedStartMinutes = intervalStartMinutes - 5;
+        const expandedEndMinutes = intervalEndMinutes + 5;
+
+        intervalReports = weekdayReports.filter(r => {
+          const reportDate = new Date(r.reported_at);
+          const reportMinutes = reportDate.getHours() * 60 + reportDate.getMinutes();
+          return reportMinutes >= expandedStartMinutes && reportMinutes < expandedEndMinutes;
+        });
+
+        status = getStatusFromReports(intervalReports);
+      }
+
+      // STEP 4: If still no data, default to 'jedzie' (optimistic)
+      if (status === null) {
+        status = 'jedzie';
+      }
+
       intervals.push({
         time: intervalStart,
         status,

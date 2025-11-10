@@ -21,6 +21,22 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 
+const STREETS = [
+  "Borowska",
+  "Buforowa",
+  "Grabiszyńska",
+  "Grota Roweckiego",
+  "Karkonoska",
+  "Ołtaszyńska",
+  "Opolska",
+  "Parafialna",
+  "Powstańców Śląskich",
+  "Radosna",
+  "Sudecka",
+  "Ślężna",
+  "Zwycięska",
+];
+
 interface Location {
   id: string;
   name: string;
@@ -38,6 +54,7 @@ interface Coupon {
   discount: number;
   status: "empty" | "active" | "used" | "redeemed";
   created_at: string;
+  show_on_streets: string | null;
 }
 
 const PASSWORD = "grzelazny";
@@ -67,6 +84,7 @@ export default function Coupons() {
   const [newCouponImagePreview, setNewCouponImagePreview] = useState<string>("");
   const [newCouponDiscount, setNewCouponDiscount] = useState("");
   const [newCouponStatus, setNewCouponStatus] = useState<Coupon["status"]>("empty");
+  const [newCouponShowOnStreets, setNewCouponShowOnStreets] = useState<string>("");
   const [isUploadingNew, setIsUploadingNew] = useState(false);
 
   // Edit coupon form
@@ -77,6 +95,7 @@ export default function Coupons() {
   const [editCouponTimeTo, setEditCouponTimeTo] = useState("");
   const [editCouponDiscount, setEditCouponDiscount] = useState("");
   const [editCouponStatus, setEditCouponStatus] = useState<Coupon["status"]>("empty");
+  const [editCouponShowOnStreets, setEditCouponShowOnStreets] = useState<string>("");
   const [isUploadingEdit, setIsUploadingEdit] = useState(false);
 
   useEffect(() => {
@@ -319,6 +338,7 @@ export default function Coupons() {
         image_link: imageUrl,
         discount,
         status: newCouponStatus,
+        show_on_streets: newCouponShowOnStreets || null,
       });
 
       if (error) {
@@ -337,6 +357,7 @@ export default function Coupons() {
         setNewCouponImagePreview("");
         setNewCouponDiscount("");
         setNewCouponStatus("empty");
+        setNewCouponShowOnStreets("");
         loadCoupons();
       }
     } catch (error: any) {
@@ -397,6 +418,7 @@ export default function Coupons() {
     setEditCouponTimeTo(coupon.time_to ? formatDateTimeLocal(coupon.time_to) : "");
     setEditCouponDiscount(coupon.discount.toString());
     setEditCouponStatus(coupon.status);
+    setEditCouponShowOnStreets(coupon.show_on_streets || "");
   };
 
   const cancelEditingCoupon = () => {
@@ -408,6 +430,7 @@ export default function Coupons() {
     setEditCouponTimeTo("");
     setEditCouponDiscount("");
     setEditCouponStatus("empty");
+    setEditCouponShowOnStreets("");
   };
 
   const saveCoupon = async (id: string) => {
@@ -439,6 +462,7 @@ export default function Coupons() {
           time_to: editCouponTimeTo || null,
           discount,
           status: editCouponStatus,
+          show_on_streets: editCouponShowOnStreets || null,
         })
         .eq("id", id);
 
@@ -707,7 +731,7 @@ export default function Coupons() {
                     </Button>
                   </div>
                 )}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div>
                     <Label htmlFor="newCouponDiscount">Discount (%)</Label>
                     <Input
@@ -739,7 +763,29 @@ export default function Coupons() {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="md:col-span-2 flex items-end">
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <Label htmlFor="newCouponShowOnStreets">Show on Street (leave empty for all streets)</Label>
+                    <Select 
+                      value={newCouponShowOnStreets} 
+                      onValueChange={setNewCouponShowOnStreets}
+                      disabled={isUploadingNew}
+                    >
+                      <SelectTrigger id="newCouponShowOnStreets">
+                        <SelectValue placeholder="All streets" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">All streets</SelectItem>
+                        {STREETS.map((street) => (
+                          <SelectItem key={street} value={street}>
+                            {street}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex items-end">
                     <Button 
                       onClick={addCoupon} 
                       className="w-full bg-green-600 hover:bg-green-700"
@@ -763,6 +809,7 @@ export default function Coupons() {
                   <TableHead>Time To</TableHead>
                   <TableHead>Discount</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead>Show on Street</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -849,6 +896,24 @@ export default function Coupons() {
                             </SelectContent>
                           </Select>
                         </TableCell>
+                        <TableCell>
+                          <Select 
+                            value={editCouponShowOnStreets} 
+                            onValueChange={setEditCouponShowOnStreets}
+                          >
+                            <SelectTrigger className="w-32">
+                              <SelectValue placeholder="All streets" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="">All streets</SelectItem>
+                              {STREETS.map((street) => (
+                                <SelectItem key={street} value={street}>
+                                  {street}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </TableCell>
                         <TableCell className="space-x-2">
                           <Button 
                             size="sm" 
@@ -886,6 +951,7 @@ export default function Coupons() {
                         <TableCell>{formatDateTime(coupon.time_to)}</TableCell>
                         <TableCell>{coupon.discount}%</TableCell>
                         <TableCell>{getStatusBadge(coupon.status)}</TableCell>
+                        <TableCell>{coupon.show_on_streets || "All streets"}</TableCell>
                         <TableCell className="space-x-2">
                           <Button size="sm" variant="outline" onClick={() => startEditingCoupon(coupon)}>
                             Edit

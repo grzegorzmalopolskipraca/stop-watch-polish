@@ -103,6 +103,7 @@ export type Database = {
           image_link: string | null
           local_id: string
           local_name: string
+          show_on_streets: string | null
           status: string
           time_from: string
           time_to: string | null
@@ -114,6 +115,7 @@ export type Database = {
           image_link?: string | null
           local_id: string
           local_name: string
+          show_on_streets?: string | null
           status?: string
           time_from?: string
           time_to?: string | null
@@ -125,6 +127,7 @@ export type Database = {
           image_link?: string | null
           local_id?: string
           local_name?: string
+          show_on_streets?: string | null
           status?: string
           time_from?: string
           time_to?: string | null

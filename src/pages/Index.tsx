@@ -1103,7 +1103,7 @@ const Index = () => {
         return;
       }
 
-      // Get first active coupon
+      // Get first active coupon that matches current street or has no street restriction
       const { data: coupons, error: couponError } = await supabase
         .from("coupons")
         .select(`
@@ -1111,18 +1111,28 @@ const Index = () => {
           local_name,
           discount,
           local_id,
-          image_link
+          image_link,
+          show_on_streets
         `)
         .eq("status", "active")
-        .order("created_at", { ascending: true })
-        .limit(1);
+        .order("created_at", { ascending: true });
 
       if (couponError || !coupons || coupons.length === 0) {
         console.log("[Coupon] No active coupons available");
         return;
       }
 
-      const coupon = coupons[0];
+      // Filter coupons: either show_on_streets is null/empty OR matches current street
+      const availableCoupons = coupons.filter(c => 
+        !c.show_on_streets || c.show_on_streets === selectedStreet
+      );
+
+      if (availableCoupons.length === 0) {
+        console.log("[Coupon] No coupons available for current street:", selectedStreet);
+        return;
+      }
+
+      const coupon = availableCoupons[0];
 
       // Get location details
       const { data: location } = await supabase

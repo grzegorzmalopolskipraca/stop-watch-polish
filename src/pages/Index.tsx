@@ -148,141 +148,39 @@ const Index = () => {
     return `${hours} ${hours === 1 ? 'godzina' : 'godziny'} ${remainingMinutes} minut`;
   };
 
-  // Calculate next green slot
-  const nextGreenSlot = useMemo(() => {
+  // Calculate next slots using the same algorithm as PredictedTraffic
+  const { nextGreenSlot, nextToczySlot, nextStoiSlot } = useMemo(() => {
     if (!weeklyReports || weeklyReports.length === 0) {
-      return null;
+      return { nextGreenSlot: null, nextToczySlot: null, nextStoiSlot: null };
     }
 
-    // Get today's day of week (0 = Sunday, 1 = Monday, etc.)
     const now = new Date();
-    const todayDayOfWeek = now.getDay();
+    const currentTotalMinutes = now.getHours() * 60 + now.getMinutes();
 
-    // Filter reports to same day of week and same direction only
-    // For example, if today is Monday and direction is "do centrum",
-    // only use reports from previous Mondays going "do centrum"
-    const relevantReports = weeklyReports.filter((r) => {
-      const reportDate = new Date(r.reported_at);
-      return reportDate.getDay() === todayDayOfWeek && r.direction === direction;
-    });
+    // Predict traffic for the rest of the day (until 22:00)
+    const hoursRemaining = 22 - now.getHours();
+    const intervalCount = Math.max(0, hoursRemaining * 12); // 12 intervals per hour (5-min each)
 
-    // Use 10-minute intervals
-    interface IntervalStatus {
-      time: string;
-      averageStatus: 'stoi' | 'toczy_sie' | 'jedzie';
-    }
+    // Import the prediction utility
+    const { predictTrafficIntervals, groupIntervalsIntoRanges } = require('@/utils/trafficPrediction');
     
-    const resultStatusList: IntervalStatus[] = [];
+    const intervals = predictTrafficIntervals(
+      weeklyReports,
+      direction,
+      now,
+      intervalCount
+    );
 
-    // Process each 10-minute interval
-    for (let totalMinutes = 0; totalMinutes < 24 * 60; totalMinutes += 10) {
-      const hour = Math.floor(totalMinutes / 60);
-      const minute = totalMinutes % 60;
-      const endMinutes = totalMinutes + 10;
+    const ranges = groupIntervalsIntoRanges(intervals);
 
-      // Count statuses in this 10-minute window
-      let countStatusStoi = 0;
-      let countStatusToczySie = 0;
-      let countStatusJedzie = 0;
-
-      relevantReports.forEach((r) => {
-        const reportDate = new Date(r.reported_at);
-        const reportTotalMinutes = reportDate.getHours() * 60 + reportDate.getMinutes();
-        
-        if (reportTotalMinutes >= totalMinutes && reportTotalMinutes < endMinutes) {
-          if (r.status === "stoi") {
-            countStatusStoi++;
-          } else if (r.status === "toczy_sie") {
-            countStatusToczySie++;
-          } else if (r.status === "jedzie") {
-            countStatusJedzie++;
-          }
-        }
-      });
-
-      // Determine average status
-      let averageStatus: 'stoi' | 'toczy_sie' | 'jedzie' = 'jedzie';
-      
-      if (countStatusStoi === 0 && countStatusToczySie === 0 && countStatusJedzie === 0) {
-        averageStatus = 'jedzie';
-      } else if (countStatusStoi >= countStatusToczySie && countStatusStoi >= countStatusJedzie) {
-        averageStatus = 'stoi';
-      } else if (countStatusToczySie >= countStatusStoi && countStatusToczySie >= countStatusJedzie) {
-        averageStatus = 'toczy_sie';
-      } else {
-        averageStatus = 'jedzie';
-      }
-
-      resultStatusList.push({
-        time: `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`,
-        averageStatus,
-      });
-    }
-
-    // Group consecutive periods of the same status
-    interface TimeRange {
-      start: string;
-      end: string;
-      durationMinutes: number;
-      status: 'stoi' | 'toczy_sie' | 'jedzie';
-    }
-
-    const ranges: TimeRange[] = [];
-    let rangeStart: string | null = null;
-    let rangeStartMinutes = 0;
-    let currentStatusInRange: 'stoi' | 'toczy_sie' | 'jedzie' | null = null;
-
-    resultStatusList.forEach((item, index) => {
-      if (rangeStart === null) {
-        rangeStart = item.time;
-        rangeStartMinutes = index * 10;
-        currentStatusInRange = item.averageStatus;
-      } else if (item.averageStatus !== currentStatusInRange) {
-        const endMinutes = index * 10;
-        const durationMinutes = endMinutes - rangeStartMinutes;
-        
-        ranges.push({
-          start: rangeStart,
-          end: item.time,
-          durationMinutes,
-          status: currentStatusInRange!,
-        });
-        
-        rangeStart = item.time;
-        rangeStartMinutes = index * 10;
-        currentStatusInRange = item.averageStatus;
-      }
-    });
-
-    // Handle the last range
-    if (rangeStart !== null && currentStatusInRange !== null) {
-      const endMinutes = 24 * 60;
-      const durationMinutes = endMinutes - rangeStartMinutes;
-      
-      ranges.push({
-        start: rangeStart,
-        end: '24:00',
-        durationMinutes,
-        status: currentStatusInRange,
-      });
-    }
-
-    // Find next green slot from current time
-    // Reuse 'now' from line 150
-    const currentHour = now.getHours();
-    const currentMinute = now.getMinutes();
-    const currentTotalMinutes = currentHour * 60 + currentMinute;
-
-    // Filter to green slots only and find next one after current time
+    // Find next green slot (jedzie)
     const greenSlots = ranges.filter(range => range.status === 'jedzie');
-    
+    let foundGreenSlot = null;
     for (const slot of greenSlots) {
       const [startHour, startMin] = slot.start.split(':').map(Number);
       const startMinutes = startHour * 60 + startMin;
       
-      // If this slot starts after current time and is between 5:00 and 22:00
       if (startMinutes > currentTotalMinutes && startMinutes >= 5 * 60 && startMinutes < 22 * 60) {
-        // Ensure end time is also within display window
         const [endHour, endMin] = slot.end.split(':').map(Number);
         const endMinutes = endHour * 60 + endMin;
         const adjustedEnd = Math.min(endMinutes, 22 * 60);
@@ -290,135 +188,18 @@ const Index = () => {
         const adjustedEndHour = Math.floor(adjustedEnd / 60);
         const adjustedEndMin = adjustedEnd % 60;
         
-        return {
+        foundGreenSlot = {
           ...slot,
           end: `${String(adjustedEndHour).padStart(2, '0')}:${String(adjustedEndMin).padStart(2, '0')}`,
           durationMinutes: adjustedEnd - startMinutes,
         };
+        break;
       }
     }
 
-    return null;
-  }, [weeklyReports, direction]);
-
-  // Calculate next toczy_sie slot
-  const nextToczySlot = useMemo(() => {
-    if (!weeklyReports || weeklyReports.length === 0) {
-      return null;
-    }
-
-    // Get today's day of week (0 = Sunday, 1 = Monday, etc.)
-    const now = new Date();
-    const todayDayOfWeek = now.getDay();
-
-    // Filter reports to same day of week and same direction only
-    const relevantReports = weeklyReports.filter((r) => {
-      const reportDate = new Date(r.reported_at);
-      return reportDate.getDay() === todayDayOfWeek && r.direction === direction;
-    });
-
-    interface IntervalStatus {
-      time: string;
-      averageStatus: 'stoi' | 'toczy_sie' | 'jedzie';
-    }
-    
-    const resultStatusList: IntervalStatus[] = [];
-
-    for (let totalMinutes = 0; totalMinutes < 24 * 60; totalMinutes += 10) {
-      const hour = Math.floor(totalMinutes / 60);
-      const minute = totalMinutes % 60;
-      const endMinutes = totalMinutes + 10;
-
-      let countStatusStoi = 0;
-      let countStatusToczySie = 0;
-      let countStatusJedzie = 0;
-
-      relevantReports.forEach((r) => {
-        const reportDate = new Date(r.reported_at);
-        const reportTotalMinutes = reportDate.getHours() * 60 + reportDate.getMinutes();
-        
-        if (reportTotalMinutes >= totalMinutes && reportTotalMinutes < endMinutes) {
-          if (r.status === "stoi") {
-            countStatusStoi++;
-          } else if (r.status === "toczy_sie") {
-            countStatusToczySie++;
-          } else if (r.status === "jedzie") {
-            countStatusJedzie++;
-          }
-        }
-      });
-
-      let averageStatus: 'stoi' | 'toczy_sie' | 'jedzie' = 'jedzie';
-      
-      if (countStatusStoi === 0 && countStatusToczySie === 0 && countStatusJedzie === 0) {
-        averageStatus = 'jedzie';
-      } else if (countStatusStoi >= countStatusToczySie && countStatusStoi >= countStatusJedzie) {
-        averageStatus = 'stoi';
-      } else if (countStatusToczySie >= countStatusStoi && countStatusToczySie >= countStatusJedzie) {
-        averageStatus = 'toczy_sie';
-      } else {
-        averageStatus = 'jedzie';
-      }
-
-      resultStatusList.push({
-        time: `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`,
-        averageStatus,
-      });
-    }
-
-    interface TimeRange {
-      start: string;
-      end: string;
-      durationMinutes: number;
-      status: 'stoi' | 'toczy_sie' | 'jedzie';
-    }
-
-    const ranges: TimeRange[] = [];
-    let rangeStart: string | null = null;
-    let rangeStartMinutes = 0;
-    let currentStatusInRange: 'stoi' | 'toczy_sie' | 'jedzie' | null = null;
-
-    resultStatusList.forEach((item, index) => {
-      if (rangeStart === null) {
-        rangeStart = item.time;
-        rangeStartMinutes = index * 10;
-        currentStatusInRange = item.averageStatus;
-      } else if (item.averageStatus !== currentStatusInRange) {
-        const endMinutes = index * 10;
-        const durationMinutes = endMinutes - rangeStartMinutes;
-        
-        ranges.push({
-          start: rangeStart,
-          end: item.time,
-          durationMinutes,
-          status: currentStatusInRange!,
-        });
-        
-        rangeStart = item.time;
-        rangeStartMinutes = index * 10;
-        currentStatusInRange = item.averageStatus;
-      }
-    });
-
-    if (rangeStart !== null && currentStatusInRange !== null) {
-      const endMinutes = 24 * 60;
-      const durationMinutes = endMinutes - rangeStartMinutes;
-      
-      ranges.push({
-        start: rangeStart,
-        end: '24:00',
-        durationMinutes,
-        status: currentStatusInRange,
-      });
-    }
-
-    // Reuse 'now' from line 303
-    const currentHour = now.getHours();
-    const currentMinute = now.getMinutes();
-    const currentTotalMinutes = currentHour * 60 + currentMinute;
-
+    // Find next toczy_sie slot
     const toczySlots = ranges.filter(range => range.status === 'toczy_sie');
-    
+    let foundToczySlot = null;
     for (const slot of toczySlots) {
       const [startHour, startMin] = slot.start.split(':').map(Number);
       const startMinutes = startHour * 60 + startMin;
@@ -431,135 +212,18 @@ const Index = () => {
         const adjustedEndHour = Math.floor(adjustedEnd / 60);
         const adjustedEndMin = adjustedEnd % 60;
         
-        return {
+        foundToczySlot = {
           ...slot,
           end: `${String(adjustedEndHour).padStart(2, '0')}:${String(adjustedEndMin).padStart(2, '0')}`,
           durationMinutes: adjustedEnd - startMinutes,
         };
+        break;
       }
     }
 
-    return null;
-  }, [weeklyReports, direction]);
-
-  // Calculate next stoi slot
-  const nextStoiSlot = useMemo(() => {
-    if (!weeklyReports || weeklyReports.length === 0) {
-      return null;
-    }
-
-    // Get today's day of week (0 = Sunday, 1 = Monday, etc.)
-    const now = new Date();
-    const todayDayOfWeek = now.getDay();
-
-    // Filter reports to same day of week and same direction only
-    const relevantReports = weeklyReports.filter((r) => {
-      const reportDate = new Date(r.reported_at);
-      return reportDate.getDay() === todayDayOfWeek && r.direction === direction;
-    });
-
-    interface IntervalStatus {
-      time: string;
-      averageStatus: 'stoi' | 'toczy_sie' | 'jedzie';
-    }
-    
-    const resultStatusList: IntervalStatus[] = [];
-
-    for (let totalMinutes = 0; totalMinutes < 24 * 60; totalMinutes += 10) {
-      const hour = Math.floor(totalMinutes / 60);
-      const minute = totalMinutes % 60;
-      const endMinutes = totalMinutes + 10;
-
-      let countStatusStoi = 0;
-      let countStatusToczySie = 0;
-      let countStatusJedzie = 0;
-
-      relevantReports.forEach((r) => {
-        const reportDate = new Date(r.reported_at);
-        const reportTotalMinutes = reportDate.getHours() * 60 + reportDate.getMinutes();
-        
-        if (reportTotalMinutes >= totalMinutes && reportTotalMinutes < endMinutes) {
-          if (r.status === "stoi") {
-            countStatusStoi++;
-          } else if (r.status === "toczy_sie") {
-            countStatusToczySie++;
-          } else if (r.status === "jedzie") {
-            countStatusJedzie++;
-          }
-        }
-      });
-
-      let averageStatus: 'stoi' | 'toczy_sie' | 'jedzie' = 'jedzie';
-      
-      if (countStatusStoi === 0 && countStatusToczySie === 0 && countStatusJedzie === 0) {
-        averageStatus = 'jedzie';
-      } else if (countStatusStoi >= countStatusToczySie && countStatusStoi >= countStatusJedzie) {
-        averageStatus = 'stoi';
-      } else if (countStatusToczySie >= countStatusStoi && countStatusToczySie >= countStatusJedzie) {
-        averageStatus = 'toczy_sie';
-      } else {
-        averageStatus = 'jedzie';
-      }
-
-      resultStatusList.push({
-        time: `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`,
-        averageStatus,
-      });
-    }
-
-    interface TimeRange {
-      start: string;
-      end: string;
-      durationMinutes: number;
-      status: 'stoi' | 'toczy_sie' | 'jedzie';
-    }
-
-    const ranges: TimeRange[] = [];
-    let rangeStart: string | null = null;
-    let rangeStartMinutes = 0;
-    let currentStatusInRange: 'stoi' | 'toczy_sie' | 'jedzie' | null = null;
-
-    resultStatusList.forEach((item, index) => {
-      if (rangeStart === null) {
-        rangeStart = item.time;
-        rangeStartMinutes = index * 10;
-        currentStatusInRange = item.averageStatus;
-      } else if (item.averageStatus !== currentStatusInRange) {
-        const endMinutes = index * 10;
-        const durationMinutes = endMinutes - rangeStartMinutes;
-        
-        ranges.push({
-          start: rangeStart,
-          end: item.time,
-          durationMinutes,
-          status: currentStatusInRange!,
-        });
-        
-        rangeStart = item.time;
-        rangeStartMinutes = index * 10;
-        currentStatusInRange = item.averageStatus;
-      }
-    });
-
-    if (rangeStart !== null && currentStatusInRange !== null) {
-      const endMinutes = 24 * 60;
-      const durationMinutes = endMinutes - rangeStartMinutes;
-      
-      ranges.push({
-        start: rangeStart,
-        end: '24:00',
-        durationMinutes,
-        status: currentStatusInRange,
-      });
-    }
-
-    // Reuse 'now' from line 444
-    const currentHour = now.getHours();
-    const currentMinute = now.getMinutes();
-    const currentTotalMinutes = currentHour * 60 + currentMinute;
-
+    // Find next stoi slot
     const stoiSlots = ranges.filter(range => range.status === 'stoi');
-    
+    let foundStoiSlot = null;
     for (const slot of stoiSlots) {
       const [startHour, startMin] = slot.start.split(':').map(Number);
       const startMinutes = startHour * 60 + startMin;
@@ -572,15 +236,20 @@ const Index = () => {
         const adjustedEndHour = Math.floor(adjustedEnd / 60);
         const adjustedEndMin = adjustedEnd % 60;
         
-        return {
+        foundStoiSlot = {
           ...slot,
           end: `${String(adjustedEndHour).padStart(2, '0')}:${String(adjustedEndMin).padStart(2, '0')}`,
           durationMinutes: adjustedEnd - startMinutes,
         };
+        break;
       }
     }
 
-    return null;
+    return {
+      nextGreenSlot: foundGreenSlot,
+      nextToczySlot: foundToczySlot,
+      nextStoiSlot: foundStoiSlot,
+    };
   }, [weeklyReports, direction]);
 
   // Save selected street to localStorage

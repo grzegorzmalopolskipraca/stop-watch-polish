@@ -47,6 +47,7 @@ import { format, startOfDay } from "date-fns";
 import { pl } from "date-fns/locale";
 import { ArrowUp, ArrowDown, Bell, BellOff, ThumbsUp, Coffee, Pizza, Download, Share2, Printer, Users, Baby, Calendar, Activity, AlertTriangle, Bike, MessageSquare, HelpCircle } from "lucide-react";
 import { subscribeToOneSignal, unsubscribeFromOneSignal, isOneSignalSubscribed } from "@/utils/onesignal";
+import { predictTrafficIntervals, groupIntervalsIntoRanges } from "@/utils/trafficPrediction";
 
 const STREETS = [
   "Borowska",
@@ -160,9 +161,6 @@ const Index = () => {
     // Predict traffic for the rest of the day (until 22:00)
     const hoursRemaining = 22 - now.getHours();
     const intervalCount = Math.max(0, hoursRemaining * 12); // 12 intervals per hour (5-min each)
-
-    // Import the prediction utility
-    const { predictTrafficIntervals, groupIntervalsIntoRanges } = require('@/utils/trafficPrediction');
     
     const intervals = predictTrafficIntervals(
       weeklyReports,

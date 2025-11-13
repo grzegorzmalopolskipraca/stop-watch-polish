@@ -16,6 +16,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Textarea } from "@/components/ui/textarea";
 import {
   AlertDialog,
@@ -132,6 +133,7 @@ const Index = () => {
     image_link: string | null;
   } | null>(null);
   const [showCouponDialog, setShowCouponDialog] = useState(false);
+  const [activeIncidents, setActiveIncidents] = useState<string[]>([]);
 
   // Format duration helper function
   const formatDuration = (minutes: number): string => {
@@ -1047,7 +1049,7 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <RssTicker />
+      <RssTicker onIncidentsChange={setActiveIncidents} />
       
       {/* Sticky Header */}
       <header className="sticky top-0 z-10 bg-card border-b border-border shadow-sm">
@@ -1127,8 +1129,20 @@ const Index = () => {
       {/* Main Content */}
       <main className="container max-w-2xl mx-auto px-4 py-6 space-y-8">
 
-        {/* Live traffic label */}
-        <p className="text-sm text-gray-400 text-center -mb-4">Korki na żywo na podstawie zgłoszeń mieszkańców</p>
+        {/* Live traffic label or incident alerts */}
+        {activeIncidents.length > 0 ? (
+          <div className="space-y-2">
+            {activeIncidents.map((incident, index) => (
+              <Alert key={index} variant="destructive" className="bg-white border-2 border-red-600">
+                <AlertDescription className="font-bold text-red-600 text-center">
+                  {incident}
+                </AlertDescription>
+              </Alert>
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm text-gray-400 text-center -mb-4">Korki na żywo na podstawie zgłoszeń mieszkańców</p>
+        )}
 
         {/* Current Status */}
         <section

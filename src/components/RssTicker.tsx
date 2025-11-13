@@ -14,7 +14,7 @@ interface IncidentReport {
   reported_at: string;
 }
 
-export const RssTicker = () => {
+export const RssTicker = ({ onIncidentsChange }: { onIncidentsChange?: (incidents: string[]) => void }) => {
   const [items, setItems] = useState<RssItem[]>([]);
   const [speed, setSpeed] = useState(60);
   const [incidentTexts, setIncidentTexts] = useState<string[]>([]);
@@ -106,11 +106,12 @@ export const RssTicker = () => {
       const texts: string[] = [];
       Object.entries(grouped).forEach(([street, incidents]) => {
         Object.entries(incidents).forEach(([incidentType, count]) => {
-          texts.push(`       ⚠️ Uwaga ${incidentType} na drodze ${street} liczba potwierdzeń zdarzenia ${count}       `);
+          texts.push(`⚠️ Uwaga ${incidentType} na drodze ${street} liczba potwierdzeń zdarzenia ${count}`);
         });
       });
       
       setIncidentTexts(texts);
+      onIncidentsChange?.(texts);
     };
 
     fetchIncidents();

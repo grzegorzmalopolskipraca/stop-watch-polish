@@ -106,7 +106,7 @@ export const RssTicker = ({ onIncidentsChange }: { onIncidentsChange?: (incident
       const texts: string[] = [];
       Object.entries(grouped).forEach(([street, incidents]) => {
         Object.entries(incidents).forEach(([incidentType, count]) => {
-          texts.push(`⚠️ Uwaga ${incidentType} na drodze ${street} liczba potwierdzeń zdarzenia ${count} Szczegóły na CB radio`);
+          texts.push(`⚠️ Uwaga ${incidentType} na drodze ${street} liczba potwierdzeń zdarzenia ${count} Opis na CB radio`);
         });
       });
       

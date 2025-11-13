@@ -1690,7 +1690,7 @@ const Index = () => {
           <StreetVoting existingStreets={STREETS} />
         </section>
 
-        <div className="flex flex-wrap justify-center gap-4 mt-6 pt-4 border-t border-border">
+        <div className="flex flex-wrap justify-center gap-4 mt-6 pt-4 pb-28 border-t border-border">
           <Link to="/o-projekcie" className="text-sm text-primary hover:underline">
             O projekcie
           </Link>

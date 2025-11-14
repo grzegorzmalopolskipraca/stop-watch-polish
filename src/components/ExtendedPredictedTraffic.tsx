@@ -25,8 +25,8 @@ export const ExtendedPredictedTraffic = ({ reports, direction }: ExtendedPredict
   const predictionData = useMemo(() => {
     const now = new Date();
     
-    // Start from the beginning of the next hour
-    const startTime = addHours(startOfHour(now), 1);
+    // Start from exactly 1 hour in the future from now
+    const startTime = addHours(now, 1);
     
     // Predict traffic for the next 10 hours (30 intervals of 20 minutes)
     const intervals = [];
@@ -46,7 +46,7 @@ export const ExtendedPredictedTraffic = ({ reports, direction }: ExtendedPredict
   // Generate legend times (every 2 hours)
   const legendTimes = useMemo(() => {
     const now = new Date();
-    const startTime = addHours(startOfHour(now), 1);
+    const startTime = addHours(now, 1);
     
     const times = [];
     for (let i = 0; i <= 10; i += 2) {

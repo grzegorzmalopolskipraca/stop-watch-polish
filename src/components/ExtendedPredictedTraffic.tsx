@@ -43,10 +43,15 @@ export const ExtendedPredictedTraffic = ({ reports, direction }: ExtendedPredict
     return intervals;
   }, [reports, direction]);
   
-  // Generate legend times (every hour)
+  // Generate legend times (every hour, rounded to 5-minute marks)
   const legendTimes = useMemo(() => {
     const now = new Date();
-    const startTime = addHours(now, 1);
+    const futureTime = addHours(now, 1);
+    
+    // Round to nearest 5 minutes
+    const currentMinute = futureTime.getMinutes();
+    const roundedMinute = Math.round(currentMinute / 5) * 5;
+    const startTime = new Date(futureTime.getFullYear(), futureTime.getMonth(), futureTime.getDate(), futureTime.getHours(), roundedMinute, 0);
     
     const times = [];
     for (let i = 0; i <= 10; i += 1) {

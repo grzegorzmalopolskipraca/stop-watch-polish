@@ -33,6 +33,7 @@ import { WeeklyTimeline } from "@/components/WeeklyTimeline";
 import { TodayTimeline } from "@/components/TodayTimeline";
 import { Legend } from "@/components/Legend";
 import { PredictedTraffic } from "@/components/PredictedTraffic";
+import { ExtendedPredictedTraffic } from "@/components/ExtendedPredictedTraffic";
 import { StreetChat } from "@/components/StreetChat";
 import { StreetVoting } from "@/components/StreetVoting";
 import { CityVoting } from "@/components/CityVoting";
@@ -1279,6 +1280,11 @@ const Index = () => {
         {/* Predicted Traffic */}
         <section>
           <PredictedTraffic reports={weeklyReports} direction={direction} />
+        </section>
+
+        {/* Extended Predicted Traffic */}
+        <section>
+          <ExtendedPredictedTraffic reports={weeklyReports} direction={direction} />
         </section>
 
         {/* Next Green Slot */}

@@ -43,13 +43,13 @@ export const ExtendedPredictedTraffic = ({ reports, direction }: ExtendedPredict
     return intervals;
   }, [reports, direction]);
   
-  // Generate legend times (every 2 hours)
+  // Generate legend times (every hour)
   const legendTimes = useMemo(() => {
     const now = new Date();
     const startTime = addHours(now, 1);
     
     const times = [];
-    for (let i = 0; i <= 10; i += 2) {
+    for (let i = 0; i <= 10; i += 1) {
       const time = addHours(startTime, i);
       times.push(format(time, "HH:mm", { locale: pl }));
     }
@@ -73,9 +73,9 @@ export const ExtendedPredictedTraffic = ({ reports, direction }: ExtendedPredict
 
             const isFirst = index === 0;
             const isLast = index === legendTimes.length - 1;
-            // Each legend item represents 2 hours out of 10 total hours
-            // Position: (index * 2 hours) / 10 hours = index / 5
-            const position = (index * 100) / 5;
+            // Each legend item represents 1 hour out of 10 total hours
+            // Position: (index * 1 hour) / 10 hours = index / 10
+            const position = (index * 100) / 10;
 
             return (
               <span
@@ -113,7 +113,7 @@ export const ExtendedPredictedTraffic = ({ reports, direction }: ExtendedPredict
 
             const isFirst = index === 0;
             const isLast = index === legendTimes.length - 1;
-            const position = (index * 100) / 5;
+            const position = (index * 100) / 10;
 
             return (
               <span

@@ -45,7 +45,7 @@ import { SmsSubscription } from "@/components/SmsSubscription";
 import { WeatherForecast } from "@/components/WeatherForecast";
 import { CommuteOptimizer } from "@/components/CommuteOptimizer";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { format, startOfDay } from "date-fns";
+import { format, startOfDay, addMinutes } from "date-fns";
 import { pl } from "date-fns/locale";
 import { ArrowUp, ArrowDown, Bell, BellOff, ThumbsUp, Coffee, Pizza, Download, Share2, Printer, Users, Baby, Calendar, Activity, AlertTriangle, Bike, MessageSquare, HelpCircle } from "lucide-react";
 import { subscribeToOneSignal, unsubscribeFromOneSignal, isOneSignalSubscribed } from "@/utils/onesignal";
@@ -152,96 +152,74 @@ const Index = () => {
     return `${hours} ${hours === 1 ? 'godzina' : 'godziny'} ${remainingMinutes} minut`;
   };
 
-  // Calculate next slots using the same algorithm as PredictedTraffic
+  // Calculate next slots using the same algorithm as ExtendedPredictedTraffic (10 hours from now)
   const { nextGreenSlot, nextToczySlot, nextStoiSlot } = useMemo(() => {
     if (!weeklyReports || weeklyReports.length === 0) {
       return { nextGreenSlot: null, nextToczySlot: null, nextStoiSlot: null };
     }
 
     const now = new Date();
-    const currentTotalMinutes = now.getHours() * 60 + now.getMinutes();
-
-    // Predict traffic for the rest of the day (until 22:00)
-    const hoursRemaining = 22 - now.getHours();
-    const intervalCount = Math.max(0, hoursRemaining * 12); // 12 intervals per hour (5-min each)
     
-    const intervals = predictTrafficIntervals(
-      weeklyReports,
-      direction,
-      now,
-      intervalCount
-    );
+    // Predict traffic for the next 10 hours (30 intervals of 20 minutes)
+    const intervals = [];
+    for (let i = 0; i < 30; i++) {
+      const intervalTime = addMinutes(now, i * 20);
+      const predictions = predictTrafficIntervals(weeklyReports, direction, intervalTime, 1);
+      intervals.push({
+        time: intervalTime,
+        status: predictions[0]?.status || 'neutral'
+      });
+    }
 
-    const ranges = groupIntervalsIntoRanges(intervals);
+    // Group consecutive intervals with the same status
+    const ranges = [];
+    let currentRange = null;
+    
+    for (const interval of intervals) {
+      if (!currentRange || currentRange.status !== interval.status) {
+        if (currentRange) {
+          ranges.push(currentRange);
+        }
+        currentRange = {
+          status: interval.status,
+          startTime: interval.time,
+          endTime: interval.time,
+        };
+      } else {
+        currentRange.endTime = interval.time;
+      }
+    }
+    if (currentRange) {
+      ranges.push(currentRange);
+    }
 
-    // Find next green slot (jedzie)
-    const greenSlots = ranges.filter(range => range.status === 'jedzie');
+    // Find first slot of each status type (starting from now)
     let foundGreenSlot = null;
-    for (const slot of greenSlots) {
-      const [startHour, startMin] = slot.start.split(':').map(Number);
-      const startMinutes = startHour * 60 + startMin;
-      
-      if (startMinutes > currentTotalMinutes && startMinutes >= 5 * 60 && startMinutes < 22 * 60) {
-        const [endHour, endMin] = slot.end.split(':').map(Number);
-        const endMinutes = endHour * 60 + endMin;
-        const adjustedEnd = Math.min(endMinutes, 22 * 60);
-        
-        const adjustedEndHour = Math.floor(adjustedEnd / 60);
-        const adjustedEndMin = adjustedEnd % 60;
-        
-        foundGreenSlot = {
-          ...slot,
-          end: `${String(adjustedEndHour).padStart(2, '0')}:${String(adjustedEndMin).padStart(2, '0')}`,
-          durationMinutes: adjustedEnd - startMinutes,
-        };
-        break;
-      }
-    }
-
-    // Find next toczy_sie slot
-    const toczySlots = ranges.filter(range => range.status === 'toczy_sie');
     let foundToczySlot = null;
-    for (const slot of toczySlots) {
-      const [startHour, startMin] = slot.start.split(':').map(Number);
-      const startMinutes = startHour * 60 + startMin;
-      
-      if (startMinutes > currentTotalMinutes && startMinutes >= 5 * 60 && startMinutes < 22 * 60) {
-        const [endHour, endMin] = slot.end.split(':').map(Number);
-        const endMinutes = endHour * 60 + endMin;
-        const adjustedEnd = Math.min(endMinutes, 22 * 60);
-        
-        const adjustedEndHour = Math.floor(adjustedEnd / 60);
-        const adjustedEndMin = adjustedEnd % 60;
-        
-        foundToczySlot = {
-          ...slot,
-          end: `${String(adjustedEndHour).padStart(2, '0')}:${String(adjustedEndMin).padStart(2, '0')}`,
-          durationMinutes: adjustedEnd - startMinutes,
-        };
-        break;
-      }
-    }
-
-    // Find next stoi slot
-    const stoiSlots = ranges.filter(range => range.status === 'stoi');
     let foundStoiSlot = null;
-    for (const slot of stoiSlots) {
-      const [startHour, startMin] = slot.start.split(':').map(Number);
-      const startMinutes = startHour * 60 + startMin;
+
+    for (const range of ranges) {
+      const start = range.startTime;
+      const end = addMinutes(range.endTime, 20); // Add 20 minutes to include the last interval
+      const durationMinutes = Math.round((end.getTime() - start.getTime()) / (1000 * 60));
       
-      if (startMinutes > currentTotalMinutes && startMinutes >= 5 * 60 && startMinutes < 22 * 60) {
-        const [endHour, endMin] = slot.end.split(':').map(Number);
-        const endMinutes = endHour * 60 + endMin;
-        const adjustedEnd = Math.min(endMinutes, 22 * 60);
-        
-        const adjustedEndHour = Math.floor(adjustedEnd / 60);
-        const adjustedEndMin = adjustedEnd % 60;
-        
-        foundStoiSlot = {
-          ...slot,
-          end: `${String(adjustedEndHour).padStart(2, '0')}:${String(adjustedEndMin).padStart(2, '0')}`,
-          durationMinutes: adjustedEnd - startMinutes,
-        };
+      const slot = {
+        start: format(start, 'HH:mm', { locale: pl }),
+        end: format(end, 'HH:mm', { locale: pl }),
+        durationMinutes,
+        status: range.status,
+      };
+
+      if (!foundGreenSlot && range.status === 'jedzie') {
+        foundGreenSlot = slot;
+      } else if (!foundToczySlot && range.status === 'toczy_sie') {
+        foundToczySlot = slot;
+      } else if (!foundStoiSlot && range.status === 'stoi') {
+        foundStoiSlot = slot;
+      }
+
+      // Stop once we have all three different status slots
+      if (foundGreenSlot && foundToczySlot && foundStoiSlot) {
         break;
       }
     }

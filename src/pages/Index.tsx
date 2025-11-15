@@ -152,7 +152,7 @@ const Index = () => {
     return `${hours} ${hours === 1 ? 'godzina' : 'godziny'} ${remainingMinutes} minut`;
   };
 
-  // Calculate next slots using the same 1-hour algorithm as PredictedTraffic
+  // Calculate next slots matching the extended 10-hour forecast view
   const { nextGreenSlot, nextToczySlot, nextStoiSlot } = useMemo(() => {
     if (!weeklyReports || weeklyReports.length === 0) {
       return { nextGreenSlot: null, nextToczySlot: null, nextStoiSlot: null };
@@ -160,11 +160,46 @@ const Index = () => {
 
     const now = new Date();
     
-    // Predict traffic for the next 1 hour (12 intervals of 5 minutes) - same as PredictedTraffic
-    const predictions = predictTrafficIntervals(weeklyReports, direction, now, 12);
+    // Predict traffic for the next 10 hours (30 intervals of 20 minutes) - same as ExtendedPredictedTraffic
+    const intervals = [];
+    for (let i = 0; i < 30; i++) {
+      const intervalTime = addMinutes(now, i * 20);
+      const predictions = predictTrafficIntervals(weeklyReports, direction, intervalTime, 1);
+      intervals.push({
+        time: intervalTime,
+        status: predictions[0]?.status || 'jedzie'
+      });
+    }
 
-    // Group consecutive intervals with the same status using the groupIntervalsIntoRanges function
-    const ranges = groupIntervalsIntoRanges(predictions);
+    // Group consecutive intervals with the same status
+    const ranges = [];
+    let rangeStart = intervals[0].time;
+    let currentStatus = intervals[0].status;
+
+    for (let i = 1; i < intervals.length; i++) {
+      if (intervals[i].status !== currentStatus) {
+        // End current range at the start of the next interval
+        ranges.push({
+          start: format(rangeStart, 'HH:mm', { locale: pl }),
+          end: format(intervals[i].time, 'HH:mm', { locale: pl }),
+          durationMinutes: Math.round((intervals[i].time.getTime() - rangeStart.getTime()) / (1000 * 60)),
+          status: currentStatus,
+        });
+
+        rangeStart = intervals[i].time;
+        currentStatus = intervals[i].status;
+      }
+    }
+
+    // Add final range (add 20 minutes to include the last interval)
+    const lastInterval = intervals[intervals.length - 1];
+    const endTime = addMinutes(lastInterval.time, 20);
+    ranges.push({
+      start: format(rangeStart, 'HH:mm', { locale: pl }),
+      end: format(endTime, 'HH:mm', { locale: pl }),
+      durationMinutes: Math.round((endTime.getTime() - rangeStart.getTime()) / (1000 * 60)),
+      status: currentStatus,
+    });
 
     // Find first slot of each status type (starting from now)
     let foundGreenSlot = null;
@@ -172,20 +207,12 @@ const Index = () => {
     let foundStoiSlot = null;
 
     for (const range of ranges) {
-      // range already has the correct format from groupIntervalsIntoRanges
-      const slot = {
-        start: range.start,
-        end: range.end,
-        durationMinutes: range.durationMinutes,
-        status: range.status,
-      };
-
       if (!foundGreenSlot && range.status === 'jedzie') {
-        foundGreenSlot = slot;
+        foundGreenSlot = range;
       } else if (!foundToczySlot && range.status === 'toczy_sie') {
-        foundToczySlot = slot;
+        foundToczySlot = range;
       } else if (!foundStoiSlot && range.status === 'stoi') {
-        foundStoiSlot = slot;
+        foundStoiSlot = range;
       }
 
       // Stop once we have all three different status slots

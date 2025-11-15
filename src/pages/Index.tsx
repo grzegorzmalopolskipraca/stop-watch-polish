@@ -152,7 +152,7 @@ const Index = () => {
     return `${hours} ${hours === 1 ? 'godzina' : 'godziny'} ${remainingMinutes} minut`;
   };
 
-  // Calculate next slots using the same algorithm as ExtendedPredictedTraffic (10 hours from now)
+  // Calculate next slots using the same 1-hour algorithm as PredictedTraffic
   const { nextGreenSlot, nextToczySlot, nextStoiSlot } = useMemo(() => {
     if (!weeklyReports || weeklyReports.length === 0) {
       return { nextGreenSlot: null, nextToczySlot: null, nextStoiSlot: null };
@@ -160,38 +160,11 @@ const Index = () => {
 
     const now = new Date();
     
-    // Predict traffic for the next 10 hours (30 intervals of 20 minutes)
-    const intervals = [];
-    for (let i = 0; i < 30; i++) {
-      const intervalTime = addMinutes(now, i * 20);
-      const predictions = predictTrafficIntervals(weeklyReports, direction, intervalTime, 1);
-      intervals.push({
-        time: intervalTime,
-        status: predictions[0]?.status || 'neutral'
-      });
-    }
+    // Predict traffic for the next 1 hour (12 intervals of 5 minutes) - same as PredictedTraffic
+    const predictions = predictTrafficIntervals(weeklyReports, direction, now, 12);
 
-    // Group consecutive intervals with the same status
-    const ranges = [];
-    let currentRange = null;
-    
-    for (const interval of intervals) {
-      if (!currentRange || currentRange.status !== interval.status) {
-        if (currentRange) {
-          ranges.push(currentRange);
-        }
-        currentRange = {
-          status: interval.status,
-          startTime: interval.time,
-          endTime: interval.time,
-        };
-      } else {
-        currentRange.endTime = interval.time;
-      }
-    }
-    if (currentRange) {
-      ranges.push(currentRange);
-    }
+    // Group consecutive intervals with the same status using the groupIntervalsIntoRanges function
+    const ranges = groupIntervalsIntoRanges(predictions);
 
     // Find first slot of each status type (starting from now)
     let foundGreenSlot = null;
@@ -199,14 +172,11 @@ const Index = () => {
     let foundStoiSlot = null;
 
     for (const range of ranges) {
-      const start = range.startTime;
-      const end = addMinutes(range.endTime, 20); // Add 20 minutes to include the last interval
-      const durationMinutes = Math.round((end.getTime() - start.getTime()) / (1000 * 60));
-      
+      // range already has the correct format from groupIntervalsIntoRanges
       const slot = {
-        start: format(start, 'HH:mm', { locale: pl }),
-        end: format(end, 'HH:mm', { locale: pl }),
-        durationMinutes,
+        start: range.start,
+        end: range.end,
+        durationMinutes: range.durationMinutes,
         status: range.status,
       };
 

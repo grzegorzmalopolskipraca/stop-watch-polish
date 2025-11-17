@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { format, differenceInMinutes } from "date-fns";
+import { format, addHours, startOfHour, addMinutes, differenceInMinutes } from "date-fns";
 import { pl } from "date-fns/locale";
 import { predictTrafficIntervals } from "@/utils/trafficPrediction";
 
@@ -9,7 +9,7 @@ interface Report {
   direction: string;
 }
 
-interface PredictedTrafficProps {
+interface ExtendedPredictedTrafficProps {
   reports: Report[];
   direction: string;
 }
@@ -21,41 +21,41 @@ const COLORS = {
   neutral: "bg-traffic-neutral",
 };
 
-export const PredictedTraffic = ({ reports, direction }: PredictedTrafficProps) => {
-  const { predictionData, minutesToNextStoi, currentIsStoi } = useMemo(() => {
+export const ExtendedPredictedTraffic = ({ reports, direction }: ExtendedPredictedTrafficProps) => {
+  const predictionData = useMemo(() => {
     const now = new Date();
-
-    // Predict traffic for the next hour (12 intervals of 5 minutes)
-    const intervals = predictTrafficIntervals(reports, direction, now, 12);
     
-    // Check if current status is 'stoi' (first interval)
-    const currentIsStoi = intervals[0]?.status === 'stoi';
+    // Start from exactly 1 hour in the future from now
+    const startTime = addHours(now, 1);
     
-    // Find minutes to next 'stoi' status
-    let minutesToNextStoi = null;
-    for (let i = 0; i < intervals.length; i++) {
-      if (intervals[i].status === 'stoi') {
-        minutesToNextStoi = differenceInMinutes(intervals[i].time, now);
-        break;
-      }
+    // Predict traffic for the next 10 hours (30 intervals of 20 minutes)
+    const intervals = [];
+    for (let i = 0; i < 30; i++) {
+      const intervalTime = addMinutes(startTime, i * 20);
+      // Use the prediction function with a midpoint check for each 20-minute interval
+      const predictions = predictTrafficIntervals(reports, direction, intervalTime, 1);
+      intervals.push({
+        time: intervalTime,
+        status: predictions[0]?.status || 'neutral'
+      });
     }
     
-    return { predictionData: intervals, minutesToNextStoi, currentIsStoi };
+    return intervals;
   }, [reports, direction]);
   
-  // Generate legend times (every 10 minutes)
+  // Generate legend times (every hour, rounded to 5-minute marks)
   const legendTimes = useMemo(() => {
     const now = new Date();
-    const currentMinute = now.getMinutes();
-    const currentHour = now.getHours();
+    const futureTime = addHours(now, 1);
     
     // Round to nearest 5 minutes
-    const roundedMinute = Math.floor(currentMinute / 5) * 5;
-    const startTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), currentHour, roundedMinute, 0);
+    const currentMinute = futureTime.getMinutes();
+    const roundedMinute = Math.round(currentMinute / 5) * 5;
+    const startTime = new Date(futureTime.getFullYear(), futureTime.getMonth(), futureTime.getDate(), futureTime.getHours(), roundedMinute, 0);
     
     const times = [];
-    for (let i = 0; i <= 60; i += 10) {
-      const time = new Date(startTime.getTime() + i * 60 * 1000);
+    for (let i = 0; i <= 10; i += 1) {
+      const time = addHours(startTime, i);
       times.push(format(time, "HH:mm", { locale: pl }));
     }
     
@@ -63,29 +63,24 @@ export const PredictedTraffic = ({ reports, direction }: PredictedTrafficProps) 
   }, []);
 
   return (
-    <div className="space-y-4 p-6 rounded-xl bg-gradient-to-br from-blue-50/50 via-white to-blue-50/30 dark:from-blue-950/20 dark:via-background dark:to-blue-900/10 border border-blue-200/50 dark:border-blue-800/30 shadow-lg">
+    <div className="space-y-4 p-6 rounded-xl bg-gradient-to-br from-purple-50/50 via-white to-purple-50/30 dark:from-purple-950/20 dark:via-background dark:to-purple-900/10 border border-purple-200/50 dark:border-purple-800/30 shadow-lg">
       <div>
-        <h2 className="text-lg font-semibold text-foreground">Prognoza na najbliższą godzinę</h2>
-        <p className="text-sm text-muted-foreground mt-1">Wyjedź, kiedy masz zielone</p>
-        {!currentIsStoi && minutesToNextStoi !== null && minutesToNextStoi > 0 && (
-          <p className="text-sm text-muted-foreground mt-1">
-            Następny korek za {minutesToNextStoi} minut
-          </p>
-        )}
+        <h2 className="text-lg font-semibold text-foreground">Prognoza na dalsze godziny</h2>
+        <p className="text-sm text-muted-foreground mt-1">Planuj swoją podróż z wyprzedzeniem</p>
       </div>
       
       <div className="relative">
         {/* Time legend - labels above (even indices) */}
         <div className="relative h-5 mb-1">
           {legendTimes.map((time, index) => {
-            // Only show even-indexed labels (0, 2, 4, 6) above
+            // Only show even-indexed labels (0, 2, 4) above
             if (index % 2 !== 0) return null;
 
             const isFirst = index === 0;
             const isLast = index === legendTimes.length - 1;
-            // Each legend item represents 10 minutes, rectangles are 5 minutes
-            // So legend index i should be at position (i * 10) / 60 = i / 6 of total width
-            const position = (index * 100) / 6;
+            // Each legend item represents 1 hour out of 10 total hours
+            // Position: (index * 1 hour) / 10 hours = index / 10
+            const position = (index * 100) / 10;
 
             return (
               <span
@@ -123,7 +118,7 @@ export const PredictedTraffic = ({ reports, direction }: PredictedTrafficProps) 
 
             const isFirst = index === 0;
             const isLast = index === legendTimes.length - 1;
-            const position = (index * 100) / 6;
+            const position = (index * 100) / 10;
 
             return (
               <span

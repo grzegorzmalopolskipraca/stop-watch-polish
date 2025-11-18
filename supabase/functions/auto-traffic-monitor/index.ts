@@ -177,6 +177,15 @@ Deno.serve(async (req) => {
 
     if (batchError) {
       console.error(`[Auto Traffic Monitor] ❌ Batch API error:`, batchError);
+      // Try to get more details from the error response
+      if (batchError.context && typeof batchError.context.json === 'function') {
+        try {
+          const errorBody = await batchError.context.json();
+          console.error(`[Auto Traffic Monitor] ❌ Batch API error body:`, JSON.stringify(errorBody));
+        } catch (e) {
+          console.error(`[Auto Traffic Monitor] Could not parse error body`);
+        }
+      }
       throw new Error(`Batch API failed: ${batchError.message}`);
     }
 

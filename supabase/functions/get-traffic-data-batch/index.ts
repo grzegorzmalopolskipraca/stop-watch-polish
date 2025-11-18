@@ -47,9 +47,13 @@ function getCacheDuration(): number {
   return 30 * 60 * 1000; // 30 minutes
 }
 
-// Distance Matrix API supports up to 25 origins × 25 destinations per request
-// Since we use diagonal elements (origin[i]→destination[i]), we can batch up to 50 routes safely
-const BATCH_SIZE = 50;
+// Distance Matrix API limit: 25 elements per request for free tier, 625 for pay-as-you-go
+// When we send N origins × N destinations, we get N² elements
+// To stay within limits, we need to batch carefully
+// For 25 element limit: sqrt(25) ≈ 5 routes per batch (5×5=25 elements)
+// For 625 element limit: sqrt(625) = 25 routes per batch (25×25=625 elements)
+// Using conservative batch size of 10 to stay well within limits (10×10=100 elements)
+const BATCH_SIZE = 10;
 
 // Create a cache key from route coordinates
 function createCacheKey(origin: { lat: number; lng: number }, destination: { lat: number; lng: number }): string {
@@ -154,11 +158,14 @@ serve(async (req) => {
     if (uncachedRoutes.length > 0) {
       const apiKey = Deno.env.get('GOOGLE_MAPS_API_KEY');
       if (!apiKey) {
+        console.error('[Batch] GOOGLE_MAPS_API_KEY not found in environment');
         throw new Error('Google Maps API key not configured');
       }
+      console.log(`[Batch] API key found, length: ${apiKey.length} chars`);
 
-      // Distance Matrix API supports up to 25 origins × 25 destinations = 625 elements per request
-      // We're using diagonal elements, so we can batch up to 50 routes per request
+      // Distance Matrix API creates N×N matrix (N origins × N destinations)
+      // With BATCH_SIZE=10: 10×10=100 elements per request (well within limits)
+      // We only use diagonal elements (origin[i]→dest[i]) but still pay for full matrix
 
       for (let i = 0; i < uncachedRoutes.length; i += BATCH_SIZE) {
         const batch = uncachedRoutes.slice(i, i + BATCH_SIZE);
@@ -299,8 +306,14 @@ serve(async (req) => {
     );
   } catch (error) {
     console.error('[Batch] Error:', error);
+    console.error('[Batch] Error stack:', (error as Error).stack);
+    console.error('[Batch] Error name:', (error as Error).name);
     return new Response(
-      JSON.stringify({ error: (error as Error).message }),
+      JSON.stringify({
+        error: (error as Error).message,
+        stack: (error as Error).stack,
+        name: (error as Error).name
+      }),
       {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }

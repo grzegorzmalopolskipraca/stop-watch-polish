@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Trash2, Edit2, ChevronUp, ChevronDown, Plus, Minus, Database, Clock } from "lucide-react";
+import { Trash2, Edit2, ChevronUp, ChevronDown, Plus, Minus, Database, Clock, RefreshCw, Copy } from "lucide-react";
 import { RssTicker } from "@/components/RssTicker";
 import { formatDistanceToNow } from "date-fns";
 
@@ -26,7 +26,17 @@ const Rss = () => {
   const [autoTrafficInterval, setAutoTrafficInterval] = useState(15);
   const [lastRunAt, setLastRunAt] = useState<string | null>(null);
   const [isMonitoring, setIsMonitoring] = useState(false);
+  const [showDeployInstructions, setShowDeployInstructions] = useState(false);
   const { toast } = useToast();
+
+  const handleCopyDeployCommand = () => {
+    const command = "npx supabase functions deploy --project-ref YOUR_PROJECT_REF";
+    navigator.clipboard.writeText(command);
+    toast({
+      title: "Copied",
+      description: "Deploy command copied to clipboard",
+    });
+  };
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -382,9 +392,51 @@ const Rss = () => {
   return (
     <div className="min-h-screen bg-background">
       <RssTicker />
-      
+
       <div className="p-8">
         <div className="max-w-4xl mx-auto space-y-6">
+          {/* Edge Functions Deployment Section */}
+          <div className="border rounded-lg p-4 bg-card space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold flex items-center gap-2">
+                <RefreshCw className="h-5 w-5" />
+                Edge Functions Deployment
+              </h3>
+              <Button
+                onClick={() => setShowDeployInstructions(!showDeployInstructions)}
+                variant="outline"
+                size="sm"
+              >
+                {showDeployInstructions ? "Hide" : "Show Instructions"}
+              </Button>
+            </div>
+            {showDeployInstructions && (
+              <div className="space-y-3 pt-2 border-t">
+                <p className="text-sm text-muted-foreground">
+                  To deploy all Edge Functions to Supabase, run this command in the project directory:
+                </p>
+                <div className="flex items-center gap-2">
+                  <code className="flex-1 bg-muted p-2 rounded text-sm font-mono">
+                    npx supabase functions deploy
+                  </code>
+                  <Button
+                    onClick={handleCopyDeployCommand}
+                    variant="outline"
+                    size="icon"
+                  >
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  This will deploy all functions: submit-traffic-report, auto-traffic-monitor, get-traffic-data, etc.
+                </p>
+                <div className="text-xs text-amber-600 bg-amber-50 p-2 rounded">
+                  <strong>Note:</strong> If speed values show 5/15/35 instead of actual GPS speed, the Edge Functions need redeployment.
+                </div>
+              </div>
+            )}
+          </div>
+
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <h1 className="text-3xl font-bold">RSS Ticker Management</h1>
             <div className="flex flex-col gap-4">

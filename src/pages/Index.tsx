@@ -123,6 +123,7 @@ const Index = () => {
   const [incidentNotificationsEnabled, setIncidentNotificationsEnabled] = useState(false);
   const [statusNotificationsEnabled, setStatusNotificationsEnabled] = useState(false);
   const [latestSpeed, setLatestSpeed] = useState<number | null>(null);
+  const [lastKnownSpeed, setLastKnownSpeed] = useState<number | null>(null); // Persists for manual submissions
   const [todayMinSpeed, setTodayMinSpeed] = useState<Record<string, number>>({});
   const [todayMaxSpeed, setTodayMaxSpeed] = useState<Record<string, number>>({});
   const [streetDistance, setStreetDistance] = useState<number | null>(null);
@@ -674,6 +675,9 @@ const Index = () => {
   const handleSpeedUpdate = async (speed: number | null) => {
     console.log(`[AutoSpeed] Speed updated: ${speed} km/h, currentStatus: ${currentStatus}`);
     setLatestSpeed(speed);
+    if (speed !== null) {
+      setLastKnownSpeed(speed); // Keep for manual submissions
+    }
     
     // Update min/max speeds for today per street+direction
     if (speed !== null && speed > 0) {
@@ -849,7 +853,9 @@ const Index = () => {
         localStorage.setItem('userFingerprint', userFingerprint);
       }
 
-      console.log(`[SubmitReport] Submitting: status=${status}, speed=${latestSpeed}, isAuto=${isAutoSubmit}`);
+      // Use lastKnownSpeed for submissions (persists after auto-submit resets latestSpeed)
+      const speedToSubmit = lastKnownSpeed;
+      console.log(`[SubmitReport] Submitting: status=${status}, speed=${speedToSubmit}, isAuto=${isAutoSubmit}`);
 
       const { data, error } = await supabase.functions.invoke('submit-traffic-report', {
         body: {
@@ -857,7 +863,7 @@ const Index = () => {
           status,
           userFingerprint,
           direction,
-          speed: latestSpeed, // Pass current speed from Google API
+          speed: speedToSubmit, // Pass current speed from Google API
         },
       });
 

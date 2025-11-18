@@ -64,6 +64,7 @@ const Statystyki = () => {
   const [selectedDirection, setSelectedDirection] = useState<string>("to_center");
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [trafficStatusScatterData, setTrafficStatusScatterData] = useState<any[]>([]);
+  const [speedLineData, setSpeedLineData] = useState<any[]>([]);
 
   // New state for date-filtered street/hour chart
   const [selectedHourChartDate, setSelectedHourChartDate] = useState<Date>(new Date());
@@ -619,7 +620,7 @@ const Statystyki = () => {
 
     const { data: trafficData } = await supabase
       .from("traffic_reports")
-      .select("status, reported_at, direction")
+      .select("status, reported_at, direction, speed")
       .eq("street", selectedStreet)
       .eq("direction", selectedDirection)
       .gte("reported_at", startOfDay.toISOString())
@@ -650,7 +651,8 @@ const Statystyki = () => {
           status: statusToY[t.status] ?? 0,
           statusLabel: statusToLabel[t.status] || 'Nieznany',
           time: format(parseISO(t.reported_at), "HH:mm", { locale: pl }),
-          rawStatus: t.status // For debugging
+          rawStatus: t.status, // For debugging
+          speed: t.speed || null
         };
       });
 
@@ -658,6 +660,28 @@ const Statystyki = () => {
       console.log('[Traffic Status Chart] Sample data:', scatterData.slice(0, 3));
 
       setTrafficStatusScatterData(scatterData);
+
+      // Calculate average speed per hour for line chart
+      const speedByHour: Record<number, { speeds: number[], count: number }> = {};
+      trafficData.forEach(t => {
+        if (t.speed) {
+          const hour = getHours(parseISO(t.reported_at));
+          if (!speedByHour[hour]) {
+            speedByHour[hour] = { speeds: [], count: 0 };
+          }
+          speedByHour[hour].speeds.push(t.speed);
+          speedByHour[hour].count++;
+        }
+      });
+
+      const speedLine = Object.entries(speedByHour).map(([hour, data]) => ({
+        hour: parseInt(hour),
+        avgSpeed: data.speeds.reduce((a, b) => a + b, 0) / data.count,
+        count: data.count
+      })).sort((a, b) => a.hour - b.hour);
+
+      console.log(`[Traffic Status Chart] Calculated ${speedLine.length} hourly speed averages`);
+      setSpeedLineData(speedLine);
     } else {
       setTrafficStatusScatterData([]);
     }
@@ -1360,7 +1384,7 @@ const Statystyki = () => {
           <Card className="lg:col-span-2 bg-gradient-to-br from-emerald-500/5 to-teal-500/5 border-emerald-200 dark:border-emerald-800">
             <CardHeader>
               <CardTitle className="text-emerald-700 dark:text-emerald-400">Status ruchu według godziny - wybrana ulica</CardTitle>
-              <CardDescription>Punkty pokazują status ruchu w ciągu dnia (1=jedzie, 0=toczy się, -1=stoi)</CardDescription>
+              <CardDescription>Punkty pokazują status ruchu, linia pokazuje średnią prędkość w km/h</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="flex flex-col sm:flex-row gap-4 mb-6">
@@ -1436,6 +1460,7 @@ const Statystyki = () => {
                     label={{ value: 'Godzina', position: 'insideBottom', offset: -5, fontSize: 12 }}
                   />
                   <YAxis
+                    yAxisId="left"
                     type="number"
                     dataKey="status"
                     name="Status"
@@ -1450,14 +1475,31 @@ const Statystyki = () => {
                     }}
                     label={{ value: 'Status ruchu', angle: -90, position: 'insideLeft', fontSize: 12 }}
                   />
+                  <YAxis
+                    yAxisId="right"
+                    orientation="right"
+                    domain={[0, 60]}
+                    fontSize={12}
+                    label={{ value: 'Prędkość (km/h)', angle: 90, position: 'insideRight', fontSize: 12 }}
+                  />
                   <Tooltip
                     cursor={{ strokeDasharray: '3 3' }}
                     content={({ active, payload }) => {
                       if (active && payload && payload.length) {
+                        const data = payload[0].payload;
                         return (
                           <div className="bg-background border border-border rounded p-2 shadow-lg">
-                            <p className="text-sm font-semibold">{payload[0].payload.statusLabel}</p>
-                            <p className="text-xs text-muted-foreground">Godzina: {payload[0].payload.time}</p>
+                            {data.statusLabel && <p className="text-sm font-semibold">{data.statusLabel}</p>}
+                            {data.time && <p className="text-xs text-muted-foreground">Godzina: {data.time}</p>}
+                            {data.speed !== null && data.speed !== undefined && (
+                              <p className="text-xs text-muted-foreground">Prędkość: {data.speed.toFixed(1)} km/h</p>
+                            )}
+                            {data.avgSpeed !== null && data.avgSpeed !== undefined && (
+                              <>
+                                <p className="text-xs font-semibold text-blue-600">Średnia prędkość: {data.avgSpeed.toFixed(1)} km/h</p>
+                                <p className="text-xs text-muted-foreground">Pomiarów: {data.count}</p>
+                              </>
+                            )}
                           </div>
                         );
                       }
@@ -1467,6 +1509,7 @@ const Statystyki = () => {
                   <Legend />
                   {/* Green dots for status 1 (Jedzie) */}
                   <Scatter
+                    yAxisId="left"
                     name="Jedzie"
                     data={trafficStatusScatterData.filter(d => d.status === 1)}
                     fill="#10b981"
@@ -1474,6 +1517,7 @@ const Statystyki = () => {
                   />
                   {/* Yellow dots for status 0 (Toczy się) */}
                   <Scatter
+                    yAxisId="left"
                     name="Toczy się"
                     data={trafficStatusScatterData.filter(d => d.status === 0)}
                     fill="#f59e0b"
@@ -1481,10 +1525,23 @@ const Statystyki = () => {
                   />
                   {/* Red dots for status -1 (Stoi) */}
                   <Scatter
+                    yAxisId="left"
                     name="Stoi"
                     data={trafficStatusScatterData.filter(d => d.status === -1)}
                     fill="#ef4444"
                     shape="circle"
+                  />
+                  {/* Speed line */}
+                  <Line
+                    yAxisId="right"
+                    type="monotone"
+                    data={speedLineData}
+                    dataKey="avgSpeed"
+                    stroke="#3b82f6"
+                    strokeWidth={2}
+                    dot={{ fill: '#3b82f6', r: 4 }}
+                    name="Średnia prędkość (km/h)"
+                    connectNulls
                   />
                 </ScatterChart>
               </ResponsiveContainer>

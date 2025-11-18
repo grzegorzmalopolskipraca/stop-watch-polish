@@ -21,6 +21,7 @@ const reportSchema = z.object({
   userFingerprint: z.string().min(1).max(100),
   direction: z.enum(VALID_DIRECTIONS as [string, ...string[]]),
   isAutoSubmit: z.boolean(),
+  speed: z.number().optional(),
 });
 
 Deno.serve(async (req) => {
@@ -50,7 +51,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    const { street, status, userFingerprint, direction } = validationResult.data;
+    const { street, status, userFingerprint, direction, speed } = validationResult.data;
 
     // Check for duplicate submission in last 10 seconds
     const tenSecondsAgo = new Date();
@@ -92,6 +93,7 @@ Deno.serve(async (req) => {
         user_fingerprint: userFingerprint,
         reported_at: new Date().toISOString(),
         direction,
+        speed: speed || null,
       });
 
     if (error) {

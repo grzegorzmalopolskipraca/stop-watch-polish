@@ -44,6 +44,9 @@ function getCacheDuration(): number {
   return 30 * 60 * 1000; // 30 minutes
 }
 
+// Distance Matrix API batch size limit
+const BATCH_SIZE = 25;
+
 // Create a cache key from route coordinates
 function createCacheKey(origin: { lat: number; lng: number }, destination: { lat: number; lng: number }): string {
   return `route_${origin.lat.toFixed(6)}_${origin.lng.toFixed(6)}_to_${destination.lat.toFixed(6)}_${destination.lng.toFixed(6)}`;
@@ -152,7 +155,6 @@ serve(async (req) => {
 
       // Distance Matrix API supports up to 25 origins × 25 destinations = 625 elements per request
       // We'll batch in groups of 25 routes to stay within limits
-      const BATCH_SIZE = 25;
 
       for (let i = 0; i < uncachedRoutes.length; i += BATCH_SIZE) {
         const batch = uncachedRoutes.slice(i, i + BATCH_SIZE);

@@ -855,6 +855,7 @@ const Index = () => {
           status,
           userFingerprint,
           direction,
+          speed: latestSpeed, // Pass current speed from Google API
         },
       });
 

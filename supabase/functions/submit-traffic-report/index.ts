@@ -20,17 +20,8 @@ const reportSchema = z.object({
   status: z.enum(VALID_STATUSES as [string, ...string[]]),
   userFingerprint: z.string().min(1).max(100),
   direction: z.enum(VALID_DIRECTIONS as [string, ...string[]]),
+  speed: z.number().nullable().optional(), // Real speed from Google API passed from frontend
 });
-
-// Map status to representative speed (km/h)
-function getRepresentativeSpeed(status: string): number {
-  switch (status) {
-    case 'jedzie': return 35; // Free-flowing, above 25 km/h threshold
-    case 'toczy_sie': return 15; // Moderate, between 8-25 km/h
-    case 'stoi': return 5; // Congested, below 8 km/h
-    default: return 15;
-  }
-}
 
 // Rate limiting: max 1 report per user per street per direction per 1 minute
 const RATE_LIMIT_WINDOW = 1 * 60 * 1000; // 1 minute in milliseconds
@@ -135,11 +126,11 @@ Deno.serve(async (req) => {
       );
     }
 
-    const { street, status, userFingerprint, direction } = validationResult.data;
+    const { street, status, userFingerprint, direction, speed } = validationResult.data;
 
     // Check user-street-direction rate limit (1 report per minute)
     const canSubmit = await checkUserStreetRateLimit(supabase, userFingerprint, street, direction);
-    
+
     if (canSubmit) {
       // Record this IP request after successful submission
       await supabase.from('rate_limits').insert({
@@ -148,6 +139,8 @@ Deno.serve(async (req) => {
         action_count: 1,
         last_action_at: new Date().toISOString(),
       });
+
+      console.log(`[submit-traffic-report] Speed for ${street} (${direction}): ${speed ? speed.toFixed(1) + ' km/h' : 'null'}`);
 
       // Insert the traffic report only if rate limit allows
       const { error } = await supabase
@@ -158,7 +151,7 @@ Deno.serve(async (req) => {
           user_fingerprint: userFingerprint,
           reported_at: new Date().toISOString(),
           direction,
-          speed: getRepresentativeSpeed(status),
+          speed: speed ?? null, // Use real speed from Google API passed from frontend, or null if not available
         });
 
       if (error) {

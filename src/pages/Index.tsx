@@ -848,7 +848,9 @@ const Index = () => {
         userFingerprint = `user_${Math.random().toString(36).substring(2, 15)}_${Date.now()}`;
         localStorage.setItem('userFingerprint', userFingerprint);
       }
-      
+
+      console.log(`[SubmitReport] Submitting: status=${status}, speed=${latestSpeed}, isAuto=${isAutoSubmit}`);
+
       const { data, error } = await supabase.functions.invoke('submit-traffic-report', {
         body: {
           street: selectedStreet,

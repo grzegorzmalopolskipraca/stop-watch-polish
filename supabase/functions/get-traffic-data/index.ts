@@ -15,14 +15,17 @@ interface TrafficRequest {
 // Rush hours: shorter cache for fresh data
 // Off-peak: longer cache to save costs
 function getCacheDuration(): number {
-  const hour = new Date().getHours();
+  const now = new Date();
+  const hour = now.getHours();
+  const minutes = now.getMinutes();
+  const timeInMinutes = hour * 60 + minutes;
 
-  // Rush hours: 7-10 AM, 4-7 PM - fresh data matters
-  if ((hour >= 7 && hour <= 10) || (hour >= 16 && hour <= 19)) {
+  // Rush hours: 6:30 AM (390 min) - 8:00 PM (1200 min) - fresh data matters
+  if (timeInMinutes >= 390 && timeInMinutes < 1200) {
     return 10 * 60 * 1000; // 10 minutes
   }
 
-  // Mid-day / evening - slower traffic changes
+  // Off-peak: 8:00 PM - 6:30 AM - slower traffic changes
   return 30 * 60 * 1000; // 30 minutes
 }
 

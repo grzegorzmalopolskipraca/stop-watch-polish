@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { ArrowLeft, Calendar as CalendarIcon } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, AreaChart, Area, ScatterChart, Scatter } from "recharts";
+import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, AreaChart, Area, ScatterChart, Scatter, ComposedChart } from "recharts";
 import { format, parseISO, getHours, getDay } from "date-fns";
 import { pl } from "date-fns/locale";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -1448,7 +1448,7 @@ const Statystyki = () => {
               </div>
 
               <ResponsiveContainer width="100%" height={400}>
-                <ScatterChart>
+                <ComposedChart>
                   <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                   <XAxis
                     type="number"
@@ -1496,7 +1496,7 @@ const Statystyki = () => {
                             )}
                             {data.avgSpeed !== null && data.avgSpeed !== undefined && (
                               <>
-                                <p className="text-xs font-semibold text-blue-600">Średnia prędkość: {data.avgSpeed.toFixed(1)} km/h</p>
+                                <p className="text-xs font-semibold text-black">Średnia prędkość: {data.avgSpeed.toFixed(1)} km/h</p>
                                 <p className="text-xs text-muted-foreground">Pomiarów: {data.count}</p>
                               </>
                             )}
@@ -1531,19 +1531,19 @@ const Statystyki = () => {
                     fill="#ef4444"
                     shape="circle"
                   />
-                  {/* Speed line */}
+                  {/* Speed line with black dots */}
                   <Line
                     yAxisId="right"
                     type="monotone"
                     data={speedLineData}
                     dataKey="avgSpeed"
-                    stroke="#3b82f6"
+                    stroke="#000000"
                     strokeWidth={2}
-                    dot={{ fill: '#3b82f6', r: 4 }}
+                    dot={{ fill: '#000000', r: 4 }}
                     name="Średnia prędkość (km/h)"
                     connectNulls
                   />
-                </ScatterChart>
+                </ComposedChart>
               </ResponsiveContainer>
 
               {trafficStatusScatterData.length === 0 && (

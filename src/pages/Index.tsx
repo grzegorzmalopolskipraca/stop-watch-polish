@@ -837,14 +837,14 @@ const Index = () => {
       } else {
         autoStatus = 'jedzie';
       }
-      
+
       console.log(`[AutoSpeed] Auto-submitting: ${autoStatus} (speed: ${latestSpeed} km/h)`);
-      submitReport(autoStatus, true); // Pass true to indicate auto-submission
+      submitReport(autoStatus, true, latestSpeed); // Pass speed directly to avoid stale closure
       setLatestSpeed(null); // Reset to prevent duplicate submissions
     }
   }, [currentStatus, latestSpeed]);
 
-  const submitReport = async (status: string, isAutoSubmit: boolean = false) => {
+  const submitReport = async (status: string, isAutoSubmit: boolean = false, speedOverride?: number | null) => {
     try {
       // Get or create persistent user fingerprint
       let userFingerprint = localStorage.getItem('userFingerprint');
@@ -853,8 +853,8 @@ const Index = () => {
         localStorage.setItem('userFingerprint', userFingerprint);
       }
 
-      // Use lastKnownSpeed for submissions (persists after auto-submit resets latestSpeed)
-      const speedToSubmit = lastKnownSpeed;
+      // Use speedOverride if provided (for auto-submit), otherwise use lastKnownSpeed
+      const speedToSubmit = speedOverride !== undefined ? speedOverride : lastKnownSpeed;
       console.log(`[SubmitReport] Submitting: status=${status}, speed=${speedToSubmit}, isAuto=${isAutoSubmit}`);
 
       const { data, error } = await supabase.functions.invoke('submit-traffic-report', {

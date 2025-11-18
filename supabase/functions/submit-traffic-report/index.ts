@@ -116,10 +116,12 @@ Deno.serve(async (req) => {
     }
     
     const body = await req.json();
-    
+    console.log(`[SpeedFlow-Backend] 1. Received body:`, JSON.stringify(body));
+
     // Validate input
     const validationResult = reportSchema.safeParse(body);
     if (!validationResult.success) {
+      console.log(`[SpeedFlow-Backend] 2. Validation failed:`, JSON.stringify(validationResult.error.issues));
       return new Response(
         JSON.stringify({ error: 'Nieprawidłowe dane wejściowe', details: validationResult.error.issues }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -127,6 +129,7 @@ Deno.serve(async (req) => {
     }
 
     const { street, status, userFingerprint, direction, speed } = validationResult.data;
+    console.log(`[SpeedFlow-Backend] 3. Validated data: street=${street}, status=${status}, direction=${direction}, speed=${speed}`);
 
     // Check user-street-direction rate limit (1 report per minute)
     const canSubmit = await checkUserStreetRateLimit(supabase, userFingerprint, street, direction);
@@ -142,22 +145,27 @@ Deno.serve(async (req) => {
 
       // Round speed to 1 decimal place for cleaner data
       const roundedSpeed = speed ? Math.round(speed * 10) / 10 : null;
-      console.log(`[submit-traffic-report] Speed for ${street} (${direction}): ${roundedSpeed ? roundedSpeed + ' km/h' : 'null'}`);
+      console.log(`[SpeedFlow-Backend] 4. Processing speed: raw=${speed}, rounded=${roundedSpeed}`);
 
       // Insert the traffic report only if rate limit allows
+      const insertData = {
+        street,
+        status,
+        user_fingerprint: userFingerprint,
+        reported_at: new Date().toISOString(),
+        direction,
+        speed: roundedSpeed,
+      };
+      console.log(`[SpeedFlow-Backend] 5. Inserting to DB:`, JSON.stringify(insertData));
+
       const { error } = await supabase
         .from('traffic_reports')
-        .insert({
-          street,
-          status,
-          user_fingerprint: userFingerprint,
-          reported_at: new Date().toISOString(),
-          direction,
-          speed: roundedSpeed, // Use real speed from Google API passed from frontend, or null if not available
-        });
+        .insert(insertData);
 
       if (error) {
-        console.error('Insert error:', error);
+        console.error(`[SpeedFlow-Backend] 6. Insert error:`, error);
+      } else {
+        console.log(`[SpeedFlow-Backend] 6. Insert SUCCESS - speed=${roundedSpeed} saved to database`);
       }
     } else {
       console.log(`Rate limit: User ${userFingerprint} tried to submit again for ${street} (${direction}) within 1 minute`);

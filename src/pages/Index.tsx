@@ -673,10 +673,11 @@ const Index = () => {
   }, [selectedStreet, direction]);
 
   const handleSpeedUpdate = async (speed: number | null) => {
-    console.log(`[AutoSpeed] Speed updated: ${speed} km/h, currentStatus: ${currentStatus}`);
+    console.log(`[SpeedFlow] 1. handleSpeedUpdate called: speed=${speed} km/h, currentStatus=${currentStatus}, lastKnownSpeed=${lastKnownSpeed}`);
     setLatestSpeed(speed);
     if (speed !== null) {
       setLastKnownSpeed(speed); // Keep for manual submissions
+      console.log(`[SpeedFlow] 2. Setting lastKnownSpeed to ${speed}`);
     }
     
     // Update min/max speeds for today per street+direction
@@ -828,6 +829,7 @@ const Index = () => {
 
   // Auto-submit when status becomes null and we have valid speed
   useEffect(() => {
+    console.log(`[SpeedFlow] 3. Auto-submit useEffect triggered: currentStatus=${currentStatus}, latestSpeed=${latestSpeed}, lastKnownSpeed=${lastKnownSpeed}`);
     if (currentStatus === null && latestSpeed !== null && latestSpeed > 0) {
       let autoStatus: string;
       if (latestSpeed < 10) {
@@ -838,7 +840,7 @@ const Index = () => {
         autoStatus = 'jedzie';
       }
 
-      console.log(`[AutoSpeed] Auto-submitting: ${autoStatus} (speed: ${latestSpeed} km/h)`);
+      console.log(`[SpeedFlow] 4. Auto-submitting: autoStatus=${autoStatus}, latestSpeed=${latestSpeed} km/h`);
       submitReport(autoStatus, true, latestSpeed); // Pass speed directly to avoid stale closure
       setLatestSpeed(null); // Reset to prevent duplicate submissions
     }
@@ -855,17 +857,22 @@ const Index = () => {
 
       // Use speedOverride if provided (for auto-submit), otherwise use lastKnownSpeed
       const speedToSubmit = speedOverride !== undefined ? speedOverride : lastKnownSpeed;
-      console.log(`[SubmitReport] Submitting: status=${status}, speed=${speedToSubmit}, isAuto=${isAutoSubmit}`);
+      console.log(`[SpeedFlow] 5. submitReport called: status=${status}, speedOverride=${speedOverride}, lastKnownSpeed=${lastKnownSpeed}, speedToSubmit=${speedToSubmit}, isAuto=${isAutoSubmit}`);
+
+      const requestBody = {
+        street: selectedStreet,
+        status,
+        userFingerprint,
+        direction,
+        speed: speedToSubmit,
+      };
+      console.log(`[SpeedFlow] 6. Request body to backend:`, JSON.stringify(requestBody));
 
       const { data, error } = await supabase.functions.invoke('submit-traffic-report', {
-        body: {
-          street: selectedStreet,
-          status,
-          userFingerprint,
-          direction,
-          speed: speedToSubmit, // Pass current speed from Google API
-        },
+        body: requestBody,
       });
+
+      console.log(`[SpeedFlow] 7. Backend response:`, JSON.stringify(data), error ? `Error: ${error.message}` : 'No error');
 
       if (error) {
         throw new Error(error.message || 'Failed to submit report');

@@ -140,7 +140,9 @@ Deno.serve(async (req) => {
         last_action_at: new Date().toISOString(),
       });
 
-      console.log(`[submit-traffic-report] Speed for ${street} (${direction}): ${speed ? speed.toFixed(1) + ' km/h' : 'null'}`);
+      // Round speed to 1 decimal place for cleaner data
+      const roundedSpeed = speed ? Math.round(speed * 10) / 10 : null;
+      console.log(`[submit-traffic-report] Speed for ${street} (${direction}): ${roundedSpeed ? roundedSpeed + ' km/h' : 'null'}`);
 
       // Insert the traffic report only if rate limit allows
       const { error } = await supabase
@@ -151,7 +153,7 @@ Deno.serve(async (req) => {
           user_fingerprint: userFingerprint,
           reported_at: new Date().toISOString(),
           direction,
-          speed: speed ?? null, // Use real speed from Google API passed from frontend, or null if not available
+          speed: roundedSpeed, // Use real speed from Google API passed from frontend, or null if not available
         });
 
       if (error) {

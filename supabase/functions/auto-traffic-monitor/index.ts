@@ -187,8 +187,10 @@ Deno.serve(async (req) => {
 
     console.log(`[Auto Traffic Monitor] Batch stats:`, batchData.stats);
     console.log(`[Auto Traffic Monitor] Cache hit rate: ${batchData.stats.cache_hit_rate}`);
+    console.log(`[Auto Traffic Monitor] Total routes from batch: ${batchData.results.length}`);
 
     // Process each result and submit traffic reports
+    const processedStreets = new Set();
     for (const result of batchData.results) {
       const { street, direction, distance, duration_in_traffic, status } = result;
 
@@ -238,11 +240,14 @@ Deno.serve(async (req) => {
         errorCount++;
       } else {
         console.log(`[Auto Traffic Monitor] ✅ Report submitted for ${street} (${direction})`);
+        processedStreets.add(street);
         successCount++;
       }
     }
 
-    console.log(`[Auto Traffic Monitor] Completed. Success: ${successCount}, Skipped: ${skipCount}, Errors: ${errorCount}`);
+    const streetList = Array.from(processedStreets).join(', ');
+    console.log(`[Auto Traffic Monitor] Completed. Success: ${successCount}/${batchData.results.length}, Skipped: ${skipCount}, Errors: ${errorCount}`);
+    console.log(`[Auto Traffic Monitor] Streets processed: ${streetList}`);
 
     return new Response(
       JSON.stringify({ 

@@ -47,8 +47,9 @@ function getCacheDuration(): number {
   return 30 * 60 * 1000; // 30 minutes
 }
 
-// Distance Matrix API batch size limit
-const BATCH_SIZE = 25;
+// Distance Matrix API supports up to 25 origins × 25 destinations per request
+// Since we use diagonal elements (origin[i]→destination[i]), we can batch up to 50 routes safely
+const BATCH_SIZE = 50;
 
 // Create a cache key from route coordinates
 function createCacheKey(origin: { lat: number; lng: number }, destination: { lat: number; lng: number }): string {
@@ -157,16 +158,19 @@ serve(async (req) => {
       }
 
       // Distance Matrix API supports up to 25 origins × 25 destinations = 625 elements per request
-      // We'll batch in groups of 25 routes to stay within limits
+      // We're using diagonal elements, so we can batch up to 50 routes per request
 
       for (let i = 0; i < uncachedRoutes.length; i += BATCH_SIZE) {
         const batch = uncachedRoutes.slice(i, i + BATCH_SIZE);
+        const batchNumber = Math.floor(i / BATCH_SIZE) + 1;
+        const totalBatches = Math.ceil(uncachedRoutes.length / BATCH_SIZE);
 
         // Build origins and destinations strings
         const origins = batch.map(r => `${r.origin.lat},${r.origin.lng}`).join('|');
         const destinations = batch.map(r => `${r.destination.lat},${r.destination.lng}`).join('|');
 
-        console.log(`[Batch] Calling Distance Matrix API for ${batch.length} routes (batch ${Math.floor(i / BATCH_SIZE) + 1})`);
+        console.log(`[Batch ${batchNumber}/${totalBatches}] Calling Distance Matrix API for ${batch.length} routes`);
+        console.log(`[Batch ${batchNumber}/${totalBatches}] Streets: ${batch.map(r => r.street).join(', ')}`);
 
         const url = 'https://maps.googleapis.com/maps/api/distancematrix/json';
         const params = new URLSearchParams({
@@ -181,20 +185,22 @@ serve(async (req) => {
         const response = await fetch(`${url}?${params.toString()}`);
         const gEnd = Date.now();
 
-        console.log(`[Batch] Distance Matrix API response: ${response.status}, latency: ${gEnd - gStart}ms`);
+        console.log(`[Batch ${batchNumber}/${totalBatches}] Distance Matrix API response: ${response.status}, latency: ${gEnd - gStart}ms`);
 
         if (!response.ok) {
           const errorText = await response.text();
-          console.error('[Batch] Google Maps API error:', response.status, errorText);
+          console.error(`[Batch ${batchNumber}/${totalBatches}] ❌ Google Maps API error:`, response.status, errorText);
           throw new Error(`Google Maps API error: ${response.status}`);
         }
 
         const data = await response.json();
 
         if (data.status !== 'OK') {
-          console.error('[Batch] Distance Matrix API error:', data.status, data.error_message);
+          console.error(`[Batch ${batchNumber}/${totalBatches}] ❌ Distance Matrix API error:`, data.status, data.error_message);
           throw new Error(`Distance Matrix API error: ${data.status}`);
         }
+
+        console.log(`[Batch ${batchNumber}/${totalBatches}] ✅ Received ${data.rows?.length || 0} rows with ${data.rows?.[0]?.elements?.length || 0} elements each`);
 
         // Process each result (Distance Matrix returns a matrix, we need diagonal elements)
         for (let j = 0; j < batch.length; j++) {
@@ -243,9 +249,9 @@ serve(async (req) => {
                 onConflict: 'route_key'
               });
 
-            console.log(`[Batch] Cached result for ${route.street || 'route'} (${route.direction || ''})`);
+            console.log(`[Batch ${batchNumber}/${totalBatches}] ✅ Cached result for ${route.street} (${route.direction})`);
           } else {
-            console.warn(`[Batch] No data for route ${j}:`, element?.status);
+            console.warn(`[Batch ${batchNumber}/${totalBatches}] ⚠️ No data for ${route.street} (${route.direction}):`, element?.status);
             apiResults.push({
               origin: route.origin,
               destination: route.destination,
@@ -271,19 +277,20 @@ serve(async (req) => {
       .lt('cached_at', cacheExpiryCutoff);
 
     const totalTime = Date.now() - funcStart;
+    const apiCalls = Math.ceil(uncachedRoutes.length / BATCH_SIZE);
     console.log(`[Batch] Completed in ${totalTime}ms. Total: ${allResults.length}, Cached: ${cachedResults.length}, API: ${apiResults.length}`);
-    console.log(`[Batch] Cost saved: $${(cachedResults.length * 0.005).toFixed(3)}, API cost: $${(Math.ceil(uncachedRoutes.length / BATCH_SIZE) * 0.005).toFixed(3)}`);
+    console.log(`[Batch] API calls made: ${apiCalls}, Cost saved: $${(cachedResults.length * 0.005).toFixed(3)}, API cost: $${(apiCalls * 0.005).toFixed(3)}`);
 
     return new Response(
       JSON.stringify({
         results: allResults,
-        stats: {
-          total: allResults.length,
-          cached: cachedResults.length,
-          api_calls: Math.ceil(uncachedRoutes.length / 25),
-          cache_hit_rate: ((cachedResults.length / allResults.length) * 100).toFixed(1) + '%',
-          total_time_ms: totalTime,
-        }
+          stats: {
+            total: allResults.length,
+            cached: cachedResults.length,
+            api_calls: Math.ceil(uncachedRoutes.length / BATCH_SIZE),
+            cache_hit_rate: ((cachedResults.length / allResults.length) * 100).toFixed(1) + '%',
+            total_time_ms: totalTime,
+          }
       }),
       {
         status: 200,

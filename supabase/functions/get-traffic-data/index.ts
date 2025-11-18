@@ -73,11 +73,17 @@ serve(async (req) => {
   try {
     const funcStart = Date.now();
     // Get client IP for rate limiting
-    const clientIP = req.headers.get('x-forwarded-for')?.split(',')[0].trim() || 
-                     req.headers.get('x-real-ip') || 
+    const clientIP = req.headers.get('x-forwarded-for')?.split(',')[0].trim() ||
+                     req.headers.get('x-real-ip') ||
                      'unknown';
-    
-    console.log(`Traffic data request from IP: ${clientIP}`);
+
+    // Check if this is an internal/system call (from other edge functions)
+    const isInternalCall = req.headers.get('x-internal-call') === 'true' ||
+                          clientIP === 'unknown' ||
+                          clientIP.includes('127.0.0.1') ||
+                          clientIP.includes('::1');
+
+    console.log(`Traffic data request from IP: ${clientIP}${isInternalCall ? ' (internal)' : ''}`);
 
     // Initialize Supabase client
     const supabase = createClient(
@@ -122,17 +128,21 @@ serve(async (req) => {
       console.log('[get-traffic-data] Cache MISS for route');
     }
 
-    // Enforce rate limit only for cache misses/refreshes
-    const allowed = await checkIPRateLimit(supabase, clientIP);
-    if (!allowed) {
-      console.log(`Rate limit exceeded for IP: ${clientIP}`);
-      return new Response(
-        JSON.stringify({ error: 'Too many requests. Please try again later.' }),
-        { 
-          status: 429, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        }
-      );
+    // Enforce rate limit only for cache misses/refreshes (skip for internal calls)
+    if (!isInternalCall) {
+      const allowed = await checkIPRateLimit(supabase, clientIP);
+      if (!allowed) {
+        console.log(`Rate limit exceeded for IP: ${clientIP}`);
+        return new Response(
+          JSON.stringify({ error: 'Too many requests. Please try again later.' }),
+          {
+            status: 429,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          }
+        );
+      }
+    } else {
+      console.log(`[get-traffic-data] Skipping rate limit for internal call`);
     }
     
     const apiKey = Deno.env.get('GOOGLE_MAPS_API_KEY');

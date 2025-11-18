@@ -227,7 +227,8 @@ Deno.serve(async (req) => {
             status: trafficStatus,
             userFingerprint: 'auto-monitor-system',
             direction,
-            isAutoSubmit: true
+            isAutoSubmit: true,
+            speed: avgSpeed
           }
         }
       );

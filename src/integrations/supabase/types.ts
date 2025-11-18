@@ -517,6 +517,7 @@ export type Database = {
           direction: string
           id: string
           reported_at: string
+          speed: number | null
           status: string
           street: string
           user_fingerprint: string | null
@@ -526,6 +527,7 @@ export type Database = {
           direction?: string
           id?: string
           reported_at?: string
+          speed?: number | null
           status: string
           street: string
           user_fingerprint?: string | null
@@ -535,6 +537,7 @@ export type Database = {
           direction?: string
           id?: string
           reported_at?: string
+          speed?: number | null
           status?: string
           street?: string
           user_fingerprint?: string | null

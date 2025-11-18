@@ -22,6 +22,16 @@ const reportSchema = z.object({
   direction: z.enum(VALID_DIRECTIONS as [string, ...string[]]),
 });
 
+// Map status to representative speed (km/h)
+function getRepresentativeSpeed(status: string): number {
+  switch (status) {
+    case 'jedzie': return 35; // Free-flowing, above 25 km/h threshold
+    case 'toczy_sie': return 15; // Moderate, between 8-25 km/h
+    case 'stoi': return 5; // Congested, below 8 km/h
+    default: return 15;
+  }
+}
+
 // Rate limiting: max 1 report per user per street per direction per 1 minute
 const RATE_LIMIT_WINDOW = 1 * 60 * 1000; // 1 minute in milliseconds
 
@@ -148,6 +158,7 @@ Deno.serve(async (req) => {
           user_fingerprint: userFingerprint,
           reported_at: new Date().toISOString(),
           direction,
+          speed: getRepresentativeSpeed(status),
         });
 
       if (error) {

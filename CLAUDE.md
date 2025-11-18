@@ -194,9 +194,14 @@ const relevantReports = weeklyReports.filter((r) => {
     14. WeatherForecast
     15. StreetChat
     16. Footer with support and usage sections
-- `src/pages/Push.tsx` - Push notification management and testing
-- `src/pages/Statystyki.tsx` - Traffic statistics
-- `src/pages/Coupons.tsx` - Coupons/rewards management interface
+- `src/pages/About.tsx` - About page (`/o-projekcie`)
+- `src/pages/Contact.tsx` - Contact page (`/kontakt`)
+- `src/pages/TermsAndPrivacy.tsx` - Terms and privacy (`/regulamin`)
+- `src/pages/Push.tsx` - Push notification management and testing (`/push`)
+- `src/pages/Statystyki.tsx` - Traffic statistics (`/statystyki`)
+- `src/pages/Rss.tsx` - RSS feed page (`/rss`)
+- `src/pages/Coupons.tsx` - Coupons/rewards management interface (`/coupons`)
+- `src/pages/NotFound.tsx` - 404 error page
 - `src/pages/Kupon.tsx` - Individual coupon redemption page (accessed via `/kupon?id=<coupon-id>`)
   - **QR Code Scanning**: Uses @zxing/browser library for in-browser QR code scanning
   - **Camera Management**: Properly handles camera stream cleanup to prevent multiple concurrent streams
@@ -223,6 +228,62 @@ Key debugging steps:
 3. Ensure user has both tags: `test_device` and `street_test_device`
 4. Filter OneSignal dashboard by tags to find subscriptions
 5. Use `/push` page "Sprawdź pełny status" button to auto-fix missing tags
+
+## Speed Data Flow
+
+### Overview
+The app displays real-time traffic speed from Google Routes API and allows users to submit traffic reports. The current speed should be included when submitting reports to the database.
+
+### Components Involved
+1. **TrafficLine.tsx** (`src/components/TrafficLine.tsx`)
+   - Fetches traffic data from Google Routes API via `get-traffic-data` Edge Function
+   - Calculates average speed: `speed = (distance / trafficDuration) * 3.6` (km/h)
+   - Displays speed in gauge: "Średnia prędkość: XX km/h"
+   - Notifies parent via `onSpeedUpdate` callback
+
+2. **Index.tsx** (`src/pages/Index.tsx`)
+   - State: `lastKnownSpeed` - persists speed for manual button submissions
+   - State: `latestSpeed` - used for auto-submit feature
+   - `handleSpeedUpdate(speed)` - called by TrafficLine, updates both states
+   - `submitReport(status, isAutoSubmit, speedOverride)` - sends report to backend
+
+3. **submit-traffic-report Edge Function** (`supabase/functions/submit-traffic-report/index.ts`)
+   - Validates input including optional `speed` field
+   - Inserts speed into `traffic_reports.speed` column
+
+### Data Flow Sequence
+```
+1. TrafficLine mounts → fetches Google Routes API
+2. API returns route with duration_in_traffic and distance
+3. TrafficLine calculates: avgSpeed = (distance/1000) / (duration/3600)
+4. TrafficLine calls onSpeedUpdate(speed)
+5. Index.tsx handleSpeedUpdate sets lastKnownSpeed = speed
+6. User clicks "Stoi"/"Toczy się"/"Jedzie" button
+7. submitReport(status) called → uses lastKnownSpeed
+8. Request sent to Edge Function with speed value
+9. Edge Function inserts to traffic_reports table
+```
+
+### Speed Insertion Fix
+To ensure current speed is always submitted with traffic reports:
+
+1. **Use Ref for Immediate Access**: `currentSpeedRef` stores latest speed value
+2. **Updated in handleSpeedUpdate**: When TrafficLine reports speed, both state and ref are updated
+3. **Used in submitReport**: Button clicks read from `currentSpeedRef.current` instead of state
+
+This avoids stale closure issues where state might not be updated yet when the button click handler runs.
+
+### Debug Logging
+The flow includes `[SpeedFlow]` prefixed console logs:
+- `[SpeedFlow] 1.` - handleSpeedUpdate called
+- `[SpeedFlow] 2.` - lastKnownSpeed updated
+- `[SpeedFlow] 3.` - Auto-submit triggered
+- `[SpeedFlow] 4.` - Auto-submitting with speed
+- `[SpeedFlow] 5.` - submitReport called with values
+- `[SpeedFlow] 6.` - Request body sent to backend
+- `[SpeedFlow] 7.` - Backend response
+
+Backend logs with `[SpeedFlow-Backend]` prefix.
 
 ## Database Schema
 
@@ -330,11 +391,18 @@ Required in `.env` file:
 Located in `supabase/functions/`:
 - `send-push-notifications` - Send notifications to subscribed users
 - `submit-traffic-report` - Process traffic reports
-- `get-traffic-data` - Fetch traffic data
+- `auto-submit-traffic-report` - Automated traffic report submission
+- `auto-traffic-monitor` - Automated traffic monitoring
+- `get-traffic-data` - Fetch traffic data for single street
+- `get-traffic-data-batch` - Fetch traffic data for multiple streets
 - `get-weather-forecast` - Weather integration
 - `fetch-rss-feed` - RSS feed integration
 - `submit-chat-message` - Handle street chat messages with rate limiting
-- And more (see `supabase/functions/` for full list)
+- `submit-incident-report` - Process incident reports
+- `submit-street-vote` - Handle street voting
+- `submit-carpooling-vote` - Handle carpooling feature voting
+- `create-donation-payment` - Payment processing for donations
+- `record-visit` - Analytics and visit tracking
 
 ### QR Code Scanning Implementation
 When implementing QR code scanning features:

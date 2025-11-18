@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -124,6 +124,7 @@ const Index = () => {
   const [statusNotificationsEnabled, setStatusNotificationsEnabled] = useState(false);
   const [latestSpeed, setLatestSpeed] = useState<number | null>(null);
   const [lastKnownSpeed, setLastKnownSpeed] = useState<number | null>(null); // Persists for manual submissions
+  const currentSpeedRef = useRef<number | null>(null); // Ref to always have latest speed for button clicks
   const [todayMinSpeed, setTodayMinSpeed] = useState<Record<string, number>>({});
   const [todayMaxSpeed, setTodayMaxSpeed] = useState<Record<string, number>>({});
   const [streetDistance, setStreetDistance] = useState<number | null>(null);
@@ -677,7 +678,8 @@ const Index = () => {
     setLatestSpeed(speed);
     if (speed !== null) {
       setLastKnownSpeed(speed); // Keep for manual submissions
-      console.log(`[SpeedFlow] 2. Setting lastKnownSpeed to ${speed}`);
+      currentSpeedRef.current = speed; // Update ref for immediate access in button clicks
+      console.log(`[SpeedFlow] 2. Setting lastKnownSpeed and currentSpeedRef to ${speed}`);
     }
     
     // Update min/max speeds for today per street+direction
@@ -855,9 +857,9 @@ const Index = () => {
         localStorage.setItem('userFingerprint', userFingerprint);
       }
 
-      // Use speedOverride if provided (for auto-submit), otherwise use lastKnownSpeed
-      const speedToSubmit = speedOverride !== undefined ? speedOverride : lastKnownSpeed;
-      console.log(`[SpeedFlow] 5. submitReport called: status=${status}, speedOverride=${speedOverride}, lastKnownSpeed=${lastKnownSpeed}, speedToSubmit=${speedToSubmit}, isAuto=${isAutoSubmit}`);
+      // Use speedOverride if provided (for auto-submit), otherwise use ref for immediate access
+      const speedToSubmit = speedOverride !== undefined ? speedOverride : currentSpeedRef.current;
+      console.log(`[SpeedFlow] 5. submitReport called: status=${status}, speedOverride=${speedOverride}, currentSpeedRef=${currentSpeedRef.current}, lastKnownSpeed=${lastKnownSpeed}, speedToSubmit=${speedToSubmit}, isAuto=${isAutoSubmit}`);
 
       const requestBody = {
         street: selectedStreet,

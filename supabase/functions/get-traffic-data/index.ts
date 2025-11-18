@@ -11,8 +11,20 @@ interface TrafficRequest {
   destination: { lat: number; lng: number };
 }
 
-// Cache duration: 15 minutes - reduces API calls significantly
-const CACHE_DURATION_MS = 15 * 60 * 1000;
+// Dynamic cache duration based on time of day
+// Rush hours: shorter cache for fresh data
+// Off-peak: longer cache to save costs
+function getCacheDuration(): number {
+  const hour = new Date().getHours();
+
+  // Rush hours: 7-10 AM, 4-7 PM - fresh data matters
+  if ((hour >= 7 && hour <= 10) || (hour >= 16 && hour <= 19)) {
+    return 10 * 60 * 1000; // 10 minutes
+  }
+
+  // Mid-day / evening - slower traffic changes
+  return 30 * 60 * 1000; // 30 minutes
+}
 
 // Create a cache key from route coordinates
 function createCacheKey(origin: { lat: number; lng: number }, destination: { lat: number; lng: number }): string {
@@ -77,6 +89,9 @@ serve(async (req) => {
 
     // Check route-based cache first (serve without touching rate limits)
     const cacheKey = createCacheKey(origin, destination);
+    const cacheDuration = getCacheDuration();
+    const cacheDurationMinutes = Math.floor(cacheDuration / (60 * 1000));
+
     const { data: cachedData, error: cacheError } = await supabase
       .from('traffic_cache')
       .select('traffic_data, cached_at')
@@ -88,17 +103,17 @@ serve(async (req) => {
       const nowTs = Date.now();
       const cacheAge = (nowTs - cachedAt) / 1000; // in seconds
 
-      if ((nowTs - cachedAt) < CACHE_DURATION_MS) {
-        console.log(`[get-traffic-data] Cache HIT for route (age: ${cacheAge.toFixed(0)}s)`);
+      if ((nowTs - cachedAt) < cacheDuration) {
+        console.log(`[get-traffic-data] Cache HIT for route (age: ${cacheAge.toFixed(0)}s, max: ${cacheDurationMinutes}min)`);
         return new Response(
           JSON.stringify(cachedData.traffic_data),
-          { 
-            status: 200, 
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          {
+            status: 200,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
           }
         );
       } else {
-        console.log(`[get-traffic-data] Cache EXPIRED for route (age: ${cacheAge.toFixed(0)}s)`);
+        console.log(`[get-traffic-data] Cache EXPIRED for route (age: ${cacheAge.toFixed(0)}s, max: ${cacheDurationMinutes}min)`);
       }
     } else {
       console.log('[get-traffic-data] Cache MISS for route');
@@ -190,8 +205,9 @@ serve(async (req) => {
       console.log('[get-traffic-data] Response cached successfully');
     }
 
-    // Clean old cache entries (older than cache duration)
-    const cacheExpiryCutoff = new Date(Date.now() - CACHE_DURATION_MS).toISOString();
+    // Clean old cache entries (older than max cache duration - use 60 min to be safe)
+    const maxCacheDuration = 60 * 60 * 1000; // 60 minutes
+    const cacheExpiryCutoff = new Date(Date.now() - maxCacheDuration).toISOString();
     await supabase
       .from('traffic_cache')
       .delete()

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 import { format, addHours, startOfHour, addMinutes, differenceInMinutes } from "date-fns";
 import { pl } from "date-fns/locale";
 import { predictTrafficIntervals } from "@/utils/trafficPrediction";
@@ -24,6 +24,23 @@ const COLORS = {
 
 export const ExtendedPredictedTraffic = ({ reports, direction }: ExtendedPredictedTrafficProps) => {
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Close tooltip when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent | TouchEvent) => {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setSelectedIndex(null);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+    };
+  }, []);
 
   const predictionData = useMemo(() => {
     const now = new Date();
@@ -100,7 +117,7 @@ export const ExtendedPredictedTraffic = ({ reports, direction }: ExtendedPredict
 
         {/* Timeline with tooltips */}
         <TooltipProvider>
-          <div className="flex gap-0.5">
+          <div className="flex gap-0.5 relative" ref={containerRef}>
             {predictionData.map((interval, index) => (
               <Tooltip key={index} delayDuration={0}>
                 <TooltipTrigger asChild>
@@ -121,16 +138,22 @@ export const ExtendedPredictedTraffic = ({ reports, direction }: ExtendedPredict
                 </TooltipContent>
               </Tooltip>
             ))}
+
+            {/* Mobile tooltip display - positioned above */}
+            {selectedIndex !== null && predictionData[selectedIndex] && (
+              <div
+                className="absolute bottom-full mb-2 p-2 bg-background border border-border rounded shadow-lg text-center sm:hidden w-auto whitespace-nowrap"
+                style={{
+                  left: `${(selectedIndex / predictionData.length) * 100}%`,
+                  transform: 'translateX(-50%)'
+                }}
+              >
+                <p className="font-medium">{format(predictionData[selectedIndex].time, "HH:mm", { locale: pl })}</p>
+                <p className="text-xs text-muted-foreground">{predictionData[selectedIndex].status}</p>
+              </div>
+            )}
           </div>
         </TooltipProvider>
-
-        {/* Mobile tooltip display */}
-        {selectedIndex !== null && predictionData[selectedIndex] && (
-          <div className="mt-2 p-2 bg-background border border-border rounded shadow-lg text-center sm:hidden">
-            <p className="font-medium">{format(predictionData[selectedIndex].time, "HH:mm", { locale: pl })}</p>
-            <p className="text-xs text-muted-foreground">{predictionData[selectedIndex].status}</p>
-          </div>
-        )}
 
         {/* Time legend - labels below (odd indices) */}
         <div className="relative h-5 mt-1">

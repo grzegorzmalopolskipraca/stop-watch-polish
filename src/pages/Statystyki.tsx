@@ -661,26 +661,23 @@ const Statystyki = () => {
 
       setTrafficStatusScatterData(scatterData);
 
-      // Calculate average speed per hour for line chart
-      const speedByHour: Record<number, { speeds: number[], count: number }> = {};
-      trafficData.forEach(t => {
-        if (t.speed) {
+      // Create speed line data with all individual data points
+      const speedLine = trafficData
+        .filter(t => t.speed !== null && t.speed !== undefined)
+        .map(t => {
           const hour = getHours(parseISO(t.reported_at));
-          if (!speedByHour[hour]) {
-            speedByHour[hour] = { speeds: [], count: 0 };
-          }
-          speedByHour[hour].speeds.push(t.speed);
-          speedByHour[hour].count++;
-        }
-      });
+          const minutes = parseISO(t.reported_at).getMinutes();
+          const hourDecimal = hour + (minutes / 60);
 
-      const speedLine = Object.entries(speedByHour).map(([hour, data]) => ({
-        hour: parseInt(hour),
-        avgSpeed: data.speeds.reduce((a, b) => a + b, 0) / data.count,
-        count: data.count
-      })).sort((a, b) => a.hour - b.hour);
+          return {
+            hour: hourDecimal,
+            speed: t.speed,
+            time: format(parseISO(t.reported_at), "HH:mm", { locale: pl })
+          };
+        })
+        .sort((a, b) => a.hour - b.hour);
 
-      console.log(`[Traffic Status Chart] Calculated ${speedLine.length} hourly speed averages`);
+      console.log(`[Traffic Status Chart] Created ${speedLine.length} individual speed data points`);
       setSpeedLineData(speedLine);
     } else {
       setTrafficStatusScatterData([]);
@@ -1492,13 +1489,7 @@ const Statystyki = () => {
                             {data.statusLabel && <p className="text-sm font-semibold">{data.statusLabel}</p>}
                             {data.time && <p className="text-xs text-muted-foreground">Godzina: {data.time}</p>}
                             {data.speed !== null && data.speed !== undefined && (
-                              <p className="text-xs text-muted-foreground">Prędkość: {data.speed.toFixed(1)} km/h</p>
-                            )}
-                            {data.avgSpeed !== null && data.avgSpeed !== undefined && (
-                              <>
-                                <p className="text-xs font-semibold text-black">Średnia prędkość: {data.avgSpeed.toFixed(1)} km/h</p>
-                                <p className="text-xs text-muted-foreground">Pomiarów: {data.count}</p>
-                              </>
+                              <p className="text-xs font-semibold text-black">Prędkość: {data.speed.toFixed(1)} km/h</p>
                             )}
                           </div>
                         );
@@ -1531,16 +1522,16 @@ const Statystyki = () => {
                     fill="#ef4444"
                     shape="circle"
                   />
-                  {/* Speed line with black dots */}
+                  {/* Speed line with black dots - all individual data points */}
                   <Line
                     yAxisId="right"
                     type="monotone"
                     data={speedLineData}
-                    dataKey="avgSpeed"
+                    dataKey="speed"
                     stroke="#000000"
                     strokeWidth={2}
                     dot={{ fill: '#000000', r: 4 }}
-                    name="Średnia prędkość (km/h)"
+                    name="Prędkość (km/h)"
                     connectNulls
                   />
                 </ComposedChart>

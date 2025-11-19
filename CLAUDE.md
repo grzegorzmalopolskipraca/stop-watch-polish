@@ -125,11 +125,7 @@ const relevantReports = weeklyReports.filter((r) => {
 });
 ```
 
-**Common Mistake to Avoid:**
-- ❌ Don't use all 7 days of the week for predictions (different traffic patterns)
-- ❌ Don't ignore direction filter (traffic varies by direction)
-- ❌ Don't declare duplicate `const now` variables in same scope
-- ✅ All prediction useMemo hooks must include `direction` in dependency array
+**Important:** All prediction useMemo hooks must include `direction` in dependency array.
 
 ### Traffic Calculation Intervals
 - **PredictedTraffic:** 5-minute intervals (12 per hour) for next hour forecast
@@ -145,75 +141,24 @@ const relevantReports = weeklyReports.filter((r) => {
 - `tsconfig.json` - TypeScript config with relaxed rules (noImplicitAny: false, strictNullChecks: false)
 - `index.html` - OneSignal initialization, Google Analytics, AdSense
 
-### Components
-- `src/components/TrafficLine.tsx` - Visual traffic status line
-- `src/components/TodayTimeline.tsx` - Today's traffic timeline (1-hour intervals, 24 hours)
-- `src/components/WeeklyTimeline.tsx` - Weekly traffic patterns (30-min blocks, 5:00-22:00, last 7 days)
+### Key Components
+- `src/components/TrafficLine.tsx` - Visual traffic status line with Google Routes API integration
+- `src/components/TodayTimeline.tsx` - Today's traffic timeline (1-hour intervals)
+- `src/components/WeeklyTimeline.tsx` - Weekly traffic patterns (30-min blocks, 5:00-22:00)
 - `src/components/PredictedTraffic.tsx` - Traffic predictions (5-min intervals, next 60 minutes)
-  - Uses **alternating legend layout**: time labels alternate above/below colored rectangles for better mobile spacing
-  - Title: "Prognoza na najbliższą godzinę"
-  - Subtitle: "Wyjedź, kiedy masz zielone"
 - `src/components/GreenWave.tsx` - Optimal departure time recommendations (10-min intervals)
-  - Title: "Zielona fala"
-- `src/components/CommuteOptimizer.tsx` - Commute planning ("Jeździsz do pracy tylko kilka razy w tygodniu?")
-- `src/components/WeatherForecast.tsx` - Weather for cyclists/motorcyclists
-  - Title: "Jeździsz rowerem lub motocyklem?"
-  - Metadata hidden: location, timestamp, source
-- `src/components/StreetVoting.tsx` - Street improvement voting ("Głosuj którą ulicę dodać")
-- `src/components/StreetChat.tsx` - Street-specific chat
-  - Title: "Czat / cb radio"
-  - Description: "Czat dla sąsiadów. Napisz, dokąd jedziesz — ktoś może Cię zabrać i zmniejszyć korki"
-- `src/components/SmsSubscription.tsx` - SMS subscription feature
+- `src/components/StreetChat.tsx` - Street-specific chat with rate limiting
 
 ### Pages
 - `src/pages/Index.tsx` - Main traffic reporting page
-  - **Bottom Navigation Menu**: Fixed bottom menu with 6 items for mobile navigation
-    - Icons aligned horizontally using fixed text height (`h-8 flex items-center`)
-    - Smooth scrolling with header offset compensation
-    - Menu items: "Kiedy jechać?", "Stan ruchu", "Zgłoś", "Na rowerze", "CB radio", "Jak korzystać"
-  - **Section IDs for Navigation**:
-    - `#stan-ruchu` - Today's Timeline ("Dziś: stan ruchu")
-    - `#zglos` - Incident Reports ("Zgłoś zdarzenie na drodze")
-    - `#na-rowerze` - Weather Forecast
-    - `#cb-radio` - Street Chat
-    - `#jak-korzystac` - Support Section ("Nie chcę tracić życia w korkach, dlatego")
-  - **Page Structure Order** (from top to bottom):
-    1. Sticky header with street selector and direction filters
-    2. Live traffic label: "Korki na żywo na podstawie zgłoszeń mieszkańców"
-    3. Current status box with advice ("Możesz ruszać :)", "Jedź jeśli musisz", "Lepiej wyjedź później")
-    4. Report buttons (Stoi, Toczy się, Jedzie)
-    5. PredictedTraffic (5-min intervals)
-    6. "Planuj. Jedź, gdy ruch jest mniejszy:" section
-    7. GreenWave
-    8. CommuteOptimizer
-    9. TodayTimeline
-    10. WeeklyTimeline
-    11. Last update info
-    12. Incident reports
-    13. SMS subscription
-    14. WeatherForecast
-    15. StreetChat
-    16. Footer with support and usage sections
-- `src/pages/About.tsx` - About page (`/o-projekcie`)
-- `src/pages/Contact.tsx` - Contact page (`/kontakt`)
-- `src/pages/TermsAndPrivacy.tsx` - Terms and privacy (`/regulamin`)
+  - **Section IDs for Navigation**: `#stan-ruchu`, `#zglos`, `#na-rowerze`, `#cb-radio`, `#jak-korzystac`
+  - **Bottom Navigation Menu**: Fixed bottom menu with smooth scrolling and header offset compensation
+  - Sticky header with street selector and direction filters
 - `src/pages/Push.tsx` - Push notification management and testing (`/push`)
 - `src/pages/Statystyki.tsx` - Traffic statistics (`/statystyki`)
-- `src/pages/Rss.tsx` - RSS feed page (`/rss`)
-- `src/pages/Coupons.tsx` - Coupons/rewards management interface (`/coupons`)
-- `src/pages/NotFound.tsx` - 404 error page
-- `src/pages/Kupon.tsx` - Individual coupon redemption page (accessed via `/kupon?id=<coupon-id>`)
-  - **QR Code Scanning**: Uses @zxing/browser library for in-browser QR code scanning
-  - **Camera Management**: Properly handles camera stream cleanup to prevent multiple concurrent streams
-  - **Coupon Status Flow**:
-    - `active` or `redeemed` → Page loads successfully
-    - `used` → Shows "Kupon został już wykorzystany" warning
-    - After QR scan → Status updates to `used` in database
-  - **Key Implementation Details**:
-    - Uses `isProcessingScanRef` to prevent duplicate scan callbacks
-    - Stores active camera stream in `activeStreamRef` for proper cleanup
-    - Camera initialization happens in useEffect after video element is mounted (race condition fix)
-    - Google Maps integration for location navigation
+- `src/pages/Kupon.tsx` - Coupon redemption with QR scanning (`/kupon?id=<coupon-id>`)
+- `src/pages/Coupons.tsx` - Coupons management interface (`/coupons`)
+- Other pages: About (`/o-projekcie`), Contact (`/kontakt`), Terms (`/regulamin`), RSS (`/rss`)
 
 ## OneSignal Debugging
 
@@ -293,6 +238,7 @@ Primary table storing all traffic status reports:
 - `street` (string) - Street name
 - `status` (string) - Traffic status: "stoi", "toczy_sie", "jedzie"
 - `direction` (string) - Traffic direction: "do centrum", "od centrum"
+- `speed` (number, nullable) - Traffic speed in km/h from Google Routes API
 - `reported_at` (string/timestamp) - When report was created
 - `created_at` (string/timestamp) - Database insert time
 - `user_fingerprint` (string, nullable) - Anonymous user identifier
@@ -389,20 +335,10 @@ Required in `.env` file:
 
 ### Supabase Edge Functions
 Located in `supabase/functions/`:
-- `send-push-notifications` - Send notifications to subscribed users
-- `submit-traffic-report` - Process traffic reports
-- `auto-submit-traffic-report` - Automated traffic report submission
-- `auto-traffic-monitor` - Automated traffic monitoring
-- `get-traffic-data` - Fetch traffic data for single street
-- `get-traffic-data-batch` - Fetch traffic data for multiple streets
-- `get-weather-forecast` - Weather integration
-- `fetch-rss-feed` - RSS feed integration
-- `submit-chat-message` - Handle street chat messages with rate limiting
-- `submit-incident-report` - Process incident reports
-- `submit-street-vote` - Handle street voting
-- `submit-carpooling-vote` - Handle carpooling feature voting
-- `create-donation-payment` - Payment processing for donations
-- `record-visit` - Analytics and visit tracking
+- **Traffic:** `submit-traffic-report`, `auto-submit-traffic-report`, `auto-traffic-monitor`, `get-traffic-data`, `get-traffic-data-batch`
+- **Notifications:** `send-push-notifications`
+- **Community:** `submit-chat-message`, `submit-incident-report`, `submit-street-vote`, `submit-carpooling-vote`
+- **Other:** `get-weather-forecast`, `fetch-rss-feed`, `create-donation-payment`, `record-visit`
 
 ### QR Code Scanning Implementation
 When implementing QR code scanning features:
@@ -422,18 +358,21 @@ const activeStreamRef = useRef<MediaStream | null>(null);
 useEffect(() => {
   if (!scanning || !videoRef.current) return;
 
-  const reader = new BrowserQRCodeReader();
-  await reader.decodeFromVideoDevice(undefined, videoRef.current, (result) => {
-    if (result && !isProcessingScanRef.current) {
-      isProcessingScanRef.current = true;
-      // Process scan result once
-    }
-  });
+  const initCamera = async () => {
+    const reader = new BrowserQRCodeReader();
+    await reader.decodeFromVideoDevice(undefined, videoRef.current, (result) => {
+      if (result && !isProcessingScanRef.current) {
+        isProcessingScanRef.current = true;
+        // Process scan result once
+      }
+    });
 
-  // Store stream for cleanup
-  if (videoRef.current.srcObject) {
-    activeStreamRef.current = videoRef.current.srcObject as MediaStream;
-  }
+    // Store stream for cleanup
+    if (videoRef.current?.srcObject) {
+      activeStreamRef.current = videoRef.current.srcObject as MediaStream;
+    }
+  };
+  initCamera();
 }, [scanning]);
 
 // Cleanup function

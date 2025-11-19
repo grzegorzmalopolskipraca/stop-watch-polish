@@ -53,6 +53,21 @@
             serviceWorkerPath: '/OneSignalSDKWorker.js',
             notifyButton: { enable: false },
             allowLocalhostAsSecureOrigin: true,
+            promptOptions: {
+              slidedown: {
+                prompts: [
+                  {
+                    type: "push",
+                    autoPrompt: false,
+                    text: {
+                      actionMessage: "Chcesz otrzymywać powiadomienia o korkach na Twojej ulicy?",
+                      acceptButton: "Tak, włącz",
+                      cancelButton: "Nie teraz"
+                    }
+                  }
+                ]
+              }
+            }
           });
 
           console.log('[OneSignal] ✅ OneSignal initialized successfully');
@@ -153,6 +168,30 @@
           console.log('[OneSignal] - permission change');
           console.log('[OneSignal] - notification click');
           console.log('[OneSignal] ================================================================');
+
+          // Check if user is not subscribed and show slidedown prompt
+          console.log('[OneSignal] Checking subscription status for auto-prompt...');
+
+          const permission = Notification.permission;
+          const isOptedIn = OneSignal.User.PushSubscription.optedIn;
+
+          console.log('[OneSignal] Browser permission:', permission);
+          console.log('[OneSignal] OneSignal optedIn:', isOptedIn);
+
+          // Show slidedown if user hasn't granted permission or isn't opted in
+          if (permission === 'default' || (permission === 'granted' && !isOptedIn)) {
+            console.log('[OneSignal] User not subscribed - showing slidedown prompt...');
+            try {
+              await OneSignal.Slidedown.promptPush();
+              console.log('[OneSignal] ✅ Slidedown prompt displayed');
+            } catch (promptError) {
+              console.log('[OneSignal] Slidedown prompt error (may be dismissed previously):', promptError.message);
+            }
+          } else if (permission === 'denied') {
+            console.log('[OneSignal] User has blocked notifications - cannot show prompt');
+          } else {
+            console.log('[OneSignal] User already subscribed - no prompt needed');
+          }
 
         } catch (error) {
           console.error('❌ [OneSignal] Initialization error:', error);

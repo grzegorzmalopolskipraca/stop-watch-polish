@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowLeft, Calendar as CalendarIcon } from "lucide-react";
+import { ArrowLeft, Calendar as CalendarIcon, ZoomIn, ZoomOut } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, AreaChart, Area, ScatterChart, Scatter, ComposedChart } from "recharts";
@@ -76,6 +76,9 @@ const Statystyki = () => {
   const [indexPageStreet, setIndexPageStreet] = useState<string>("");
   const [indexPageDirection, setIndexPageDirection] = useState<string>("to_center");
   const [indexPageScatterData, setIndexPageScatterData] = useState<any[]>([]);
+
+  // Zoom state for traffic status scatter chart
+  const [zoomRange, setZoomRange] = useState<[number, number]>([0, 24]);
 
   useEffect(() => {
     fetchAllStatistics();
@@ -1444,6 +1447,59 @@ const Statystyki = () => {
                 </div>
               </div>
 
+              {/* Zoom controls */}
+              <div className="flex items-center justify-center gap-2 mb-4">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const [start, end] = zoomRange;
+                    const range = end - start;
+                    if (range > 4) {
+                      const center = (start + end) / 2;
+                      const newRange = range / 2;
+                      setZoomRange([
+                        Math.max(0, center - newRange / 2),
+                        Math.min(24, center + newRange / 2)
+                      ]);
+                    }
+                  }}
+                  disabled={zoomRange[1] - zoomRange[0] <= 4}
+                >
+                  <ZoomIn className="w-4 h-4 mr-1" />
+                  Przybliż
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const [start, end] = zoomRange;
+                    const range = end - start;
+                    const center = (start + end) / 2;
+                    const newRange = Math.min(24, range * 2);
+                    setZoomRange([
+                      Math.max(0, center - newRange / 2),
+                      Math.min(24, center + newRange / 2)
+                    ]);
+                  }}
+                  disabled={zoomRange[0] === 0 && zoomRange[1] === 24}
+                >
+                  <ZoomOut className="w-4 h-4 mr-1" />
+                  Oddal
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setZoomRange([0, 24])}
+                  disabled={zoomRange[0] === 0 && zoomRange[1] === 24}
+                >
+                  Reset
+                </Button>
+                <span className="text-xs text-muted-foreground ml-2">
+                  {Math.floor(zoomRange[0])}:00 - {Math.floor(zoomRange[1])}:00
+                </span>
+              </div>
+
               <ResponsiveContainer width="100%" height={400}>
                 <ComposedChart>
                   <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
@@ -1451,8 +1507,8 @@ const Statystyki = () => {
                     type="number"
                     dataKey="hour"
                     name="Godzina"
-                    domain={[0, 24]}
-                    ticks={[0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]}
+                    domain={zoomRange}
+                    ticks={Array.from({ length: Math.ceil((zoomRange[1] - zoomRange[0]) / 2) + 1 }, (_, i) => Math.floor(zoomRange[0]) + i * 2).filter(t => t <= zoomRange[1])}
                     fontSize={12}
                     label={{ value: 'Godzina', position: 'insideBottom', offset: -5, fontSize: 12 }}
                   />
@@ -1502,7 +1558,7 @@ const Statystyki = () => {
                   <Scatter
                     yAxisId="left"
                     name="Jedzie"
-                    data={trafficStatusScatterData.filter(d => d.status === 1)}
+                    data={trafficStatusScatterData.filter(d => d.status === 1 && d.hour >= zoomRange[0] && d.hour <= zoomRange[1])}
                     fill="#10b981"
                     shape="circle"
                   />
@@ -1510,7 +1566,7 @@ const Statystyki = () => {
                   <Scatter
                     yAxisId="left"
                     name="Toczy się"
-                    data={trafficStatusScatterData.filter(d => d.status === 0)}
+                    data={trafficStatusScatterData.filter(d => d.status === 0 && d.hour >= zoomRange[0] && d.hour <= zoomRange[1])}
                     fill="#f59e0b"
                     shape="circle"
                   />
@@ -1518,15 +1574,15 @@ const Statystyki = () => {
                   <Scatter
                     yAxisId="left"
                     name="Stoi"
-                    data={trafficStatusScatterData.filter(d => d.status === -1)}
+                    data={trafficStatusScatterData.filter(d => d.status === -1 && d.hour >= zoomRange[0] && d.hour <= zoomRange[1])}
                     fill="#ef4444"
                     shape="circle"
                   />
                   {/* Speed line with black dots - all individual data points */}
                   <Line
                     yAxisId="right"
-                    type="natural"
-                    data={speedLineData}
+                    type="basis"
+                    data={speedLineData.filter(d => d.hour >= zoomRange[0] && d.hour <= zoomRange[1])}
                     dataKey="speed"
                     stroke="#000000"
                     strokeWidth={1.5}

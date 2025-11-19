@@ -2,7 +2,6 @@ import { useMemo } from "react";
 import { format } from "date-fns";
 import { pl } from "date-fns/locale";
 import { Activity } from "lucide-react";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface Report {
   status: string;
@@ -76,49 +75,26 @@ export const TodayTimeline = ({ reports, street, minSpeed, maxSpeed }: TodayTime
       </div>
       
       <div className="space-y-2">
-        {/* Enhanced time ruler with more precise markers */}
-        <div className="relative h-6 border-b border-muted-foreground/20">
-          {Array.from({ length: 25 }, (_, i) => i).map((hour) => {
-            const isMainMark = hour % 3 === 0;
-            return (
-              <div
-                key={hour}
-                className="absolute bottom-0"
-                style={{ left: `${(hour / 24) * 100}%` }}
-              >
-                <div className={`${isMainMark ? 'h-3 w-0.5' : 'h-2 w-px'} bg-muted-foreground/40`} />
-                {isMainMark && (
-                  <span className="absolute top-3 text-xs text-muted-foreground -translate-x-1/2 whitespace-nowrap">
-                    {hour === 24 ? '23:59' : `${hour}:00`}
-                  </span>
-                )}
-              </div>
-            );
-          })}
+        <div className="flex justify-between text-xs text-muted-foreground px-1">
+          <span>0:00</span>
+          <span>12:00</span>
+          <span>23:59</span>
         </div>
-        <TooltipProvider>
-          <div className="flex gap-0.5">
-            {todayData.map((status, hour) => (
-              <Tooltip key={hour} delayDuration={0}>
-                <TooltipTrigger asChild>
-                  <div
-                    className={`flex-1 h-8 rounded transition-all duration-300 hover:scale-110 hover:shadow-md relative cursor-pointer ${
-                      COLORS[status as keyof typeof COLORS]
-                    } ${hour === currentHour ? "ring-2 ring-primary ring-offset-1" : ""}`}
-                  >
-                    {hour === currentHour && (
-                      <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-b-4 border-transparent border-b-primary" />
-                    )}
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p className="font-medium">{hour}:00 - {hour}:59</p>
-                  <p className="text-xs text-muted-foreground">{status}</p>
-                </TooltipContent>
-              </Tooltip>
-            ))}
-          </div>
-        </TooltipProvider>
+        <div className="flex gap-0.5">
+          {todayData.map((status, hour) => (
+            <div
+              key={hour}
+              className={`flex-1 h-8 rounded transition-all duration-300 hover:scale-110 hover:shadow-md relative ${
+                COLORS[status as keyof typeof COLORS]
+              } ${hour === currentHour ? "ring-2 ring-primary ring-offset-1" : ""}`}
+              title={`${hour}:00 - ${status}`}
+            >
+              {hour === currentHour && (
+                <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-b-4 border-transparent border-b-primary" />
+              )}
+            </div>
+          ))}
+        </div>
       </div>
       
       {(minSpeed || maxSpeed) && (

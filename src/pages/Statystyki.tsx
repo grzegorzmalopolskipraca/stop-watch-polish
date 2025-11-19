@@ -1495,9 +1495,36 @@ const Statystyki = () => {
                 >
                   Reset
                 </Button>
-                <span className="text-xs text-muted-foreground ml-2">
+                <span className="text-xs text-muted-foreground mx-2">|</span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const [start, end] = zoomRange;
+                    if (start > 0) {
+                      setZoomRange([start - 1, end - 1]);
+                    }
+                  }}
+                  disabled={zoomRange[0] <= 0}
+                >
+                  ← 1h
+                </Button>
+                <span className="text-xs text-muted-foreground mx-1">
                   {Math.floor(zoomRange[0])}:00 - {Math.floor(zoomRange[1])}:00
                 </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const [start, end] = zoomRange;
+                    if (end < 24) {
+                      setZoomRange([start + 1, end + 1]);
+                    }
+                  }}
+                  disabled={zoomRange[1] >= 24}
+                >
+                  1h →
+                </Button>
               </div>
 
               <ResponsiveContainer width="100%" height={400}>

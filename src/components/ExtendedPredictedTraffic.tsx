@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { format, addHours, startOfHour, addMinutes, differenceInMinutes } from "date-fns";
 import { pl } from "date-fns/locale";
 import { predictTrafficIntervals } from "@/utils/trafficPrediction";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface Report {
   status: string;
@@ -70,70 +71,48 @@ export const ExtendedPredictedTraffic = ({ reports, direction }: ExtendedPredict
       </div>
       
       <div className="relative">
-        {/* Time legend - labels above (even indices) */}
-        <div className="relative h-5 mb-1">
+        {/* Enhanced time ruler with precise markers */}
+        <div className="relative h-6 mb-2 border-b border-muted-foreground/20">
           {legendTimes.map((time, index) => {
-            // Only show even-indexed labels (0, 2, 4) above
-            if (index % 2 !== 0) return null;
-
-            const isFirst = index === 0;
-            const isLast = index === legendTimes.length - 1;
-            // Each legend item represents 1 hour out of 10 total hours
-            // Position: (index * 1 hour) / 10 hours = index / 10
             const position = (index * 100) / 10;
-
+            const isMainMark = index % 2 === 0;
             return (
-              <span
+              <div
                 key={index}
-                className="text-xs text-muted-foreground absolute bottom-0"
-                style={{
-                  left: `${position}%`,
-                  transform: isFirst ? 'translateX(0)' : isLast ? 'translateX(-100%)' : 'translateX(-50%)'
-                }}
+                className="absolute bottom-0"
+                style={{ left: `${position}%` }}
               >
-                {time}
-              </span>
+                <div className={`${isMainMark ? 'h-3 w-0.5' : 'h-2 w-px'} bg-muted-foreground/40`} />
+                {isMainMark && (
+                  <span className="absolute top-3 text-xs text-muted-foreground -translate-x-1/2 whitespace-nowrap">
+                    {time}
+                  </span>
+                )}
+              </div>
             );
           })}
         </div>
 
-        {/* Timeline */}
-        <div className="flex gap-0.5">
-          {predictionData.map((interval, index) => (
-            <div
-              key={index}
-              className={`flex-1 h-6 rounded-sm transition-all duration-300 hover:scale-110 hover:shadow-md ${
-                COLORS[interval.status as keyof typeof COLORS]
-              }`}
-              title={`${format(interval.time, "HH:mm", { locale: pl })} - ${interval.status}`}
-            />
-          ))}
-        </div>
-
-        {/* Time legend - labels below (odd indices) */}
-        <div className="relative h-5 mt-1">
-          {legendTimes.map((time, index) => {
-            // Only show odd-indexed labels (1, 3, 5) below
-            if (index % 2 === 0) return null;
-
-            const isFirst = index === 0;
-            const isLast = index === legendTimes.length - 1;
-            const position = (index * 100) / 10;
-
-            return (
-              <span
-                key={index}
-                className="text-xs text-muted-foreground absolute top-0"
-                style={{
-                  left: `${position}%`,
-                  transform: isFirst ? 'translateX(0)' : isLast ? 'translateX(-100%)' : 'translateX(-50%)'
-                }}
-              >
-                {time}
-              </span>
-            );
-          })}
-        </div>
+        {/* Timeline with tooltips */}
+        <TooltipProvider>
+          <div className="flex gap-0.5">
+            {predictionData.map((interval, index) => (
+              <Tooltip key={index} delayDuration={0}>
+                <TooltipTrigger asChild>
+                  <div
+                    className={`flex-1 h-6 rounded-sm transition-all duration-300 hover:scale-110 hover:shadow-md cursor-pointer ${
+                      COLORS[interval.status as keyof typeof COLORS]
+                    }`}
+                  />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p className="font-medium">{format(interval.time, "HH:mm", { locale: pl })}</p>
+                  <p className="text-xs text-muted-foreground">{interval.status}</p>
+                </TooltipContent>
+              </Tooltip>
+            ))}
+          </div>
+        </TooltipProvider>
       </div>
     </div>
   );

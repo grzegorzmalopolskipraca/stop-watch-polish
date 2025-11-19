@@ -1525,12 +1525,12 @@ const Statystyki = () => {
                   {/* Speed line with black dots - all individual data points */}
                   <Line
                     yAxisId="right"
-                    type="monotone"
+                    type="natural"
                     data={speedLineData}
                     dataKey="speed"
                     stroke="#000000"
-                    strokeWidth={2}
-                    dot={{ fill: '#000000', r: 4 }}
+                    strokeWidth={1.5}
+                    dot={{ fill: '#000000', r: 2 }}
                     name="Prędkość (km/h)"
                     connectNulls
                   />

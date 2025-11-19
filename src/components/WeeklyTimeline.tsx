@@ -3,6 +3,7 @@ import { format, addDays, subDays } from "date-fns";
 import { pl } from "date-fns/locale";
 import { calculateWeeklyTrafficBlocks } from "@/utils/trafficCalculations";
 import { Calendar } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface Report {
   status: string;
@@ -50,34 +51,59 @@ export const WeeklyTimeline = ({ reports }: WeeklyTimelineProps) => {
       </div>
       
       <div className="space-y-1">
-        {weekData.map(({ day, hours }, dayIndex) => (
-          <div key={dayIndex} className="flex items-center gap-2">
-            <div className="w-8 text-xs text-muted-foreground">
-              {dayIndex === 6 ? "dziś" : format(day, "EEE", { locale: pl })}
+        <TooltipProvider>
+          {weekData.map(({ day, hours }, dayIndex) => (
+            <div key={dayIndex} className="flex items-center gap-2">
+              <div className="w-8 text-xs text-muted-foreground">
+                {dayIndex === 6 ? "dziś" : format(day, "EEE", { locale: pl })}
+              </div>
+              <div className="flex-1 flex gap-0.5">
+                {hours.map((status, hourIndex) => {
+                  const hour = 5 + Math.floor(hourIndex / 2);
+                  const minute = (hourIndex % 2) * 30;
+                  return (
+                    <Tooltip key={hourIndex} delayDuration={0}>
+                      <TooltipTrigger asChild>
+                        <div
+                          className={`flex-1 h-4 rounded-sm transition-all duration-300 hover:scale-110 hover:shadow-md cursor-pointer ${
+                            COLORS[status as keyof typeof COLORS]
+                          }`}
+                        />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className="font-medium">{format(day, "dd.MM")} {hour}:{minute === 0 ? '00' : minute}</p>
+                        <p className="text-xs text-muted-foreground">{status}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  );
+                })}
+              </div>
             </div>
-            <div className="flex-1 flex gap-0.5">
-              {hours.map((status, hourIndex) => (
-                <div
-                  key={hourIndex}
-                  className={`flex-1 h-4 rounded-sm transition-all duration-300 hover:scale-110 hover:shadow-md ${
-                    COLORS[status as keyof typeof COLORS]
-                  }`}
-                  title={`${format(day, "dd.MM")} ${5 + Math.floor(hourIndex / 2)}:${(hourIndex % 2) * 30 === 0 ? '00' : '30'} - ${status}`}
-                />
-              ))}
-            </div>
-          </div>
-        ))}
+          ))}
+        </TooltipProvider>
         
-        {/* Hour scale */}
-        <div className="flex items-center gap-2 pt-1">
+        {/* Enhanced hour scale ruler */}
+        <div className="flex items-center gap-2 pt-2">
           <div className="w-8" />
-          <div className="flex-1 flex justify-between text-xs text-muted-foreground">
-            {[5, 8, 11, 14, 17, 20, 22].map((hour) => (
-              <span key={hour} className="text-center" style={{ width: '1ch' }}>
-                {hour}
-              </span>
-            ))}
+          <div className="flex-1 relative h-6 border-t border-muted-foreground/20">
+            {[5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23].map((hour, idx) => {
+              const position = ((hour - 5) / 18) * 100;
+              const isMainMark = hour % 3 === 5 || hour % 3 === 2;
+              return (
+                <div
+                  key={hour}
+                  className="absolute top-0"
+                  style={{ left: `${position}%` }}
+                >
+                  <div className={`${isMainMark ? 'h-3 w-0.5' : 'h-2 w-px'} bg-muted-foreground/40`} />
+                  {isMainMark && (
+                    <span className="absolute top-3 text-xs text-muted-foreground -translate-x-1/2 whitespace-nowrap">
+                      {hour}:00
+                    </span>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>

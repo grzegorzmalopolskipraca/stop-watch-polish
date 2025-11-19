@@ -199,7 +199,7 @@ export const StreetChat = ({ street }: StreetChatProps) => {
                 className="bg-muted/30 rounded-lg p-3 space-y-1"
               >
                 <div className="text-xs text-muted-foreground">
-                  {format(new Date(msg.created_at), "HH:mm", { locale: pl })}
+                  {format(new Date(msg.created_at), "dd.MM HH:mm", { locale: pl })}
                 </div>
                 <div className="text-sm break-words">{msg.message}</div>
               </div>

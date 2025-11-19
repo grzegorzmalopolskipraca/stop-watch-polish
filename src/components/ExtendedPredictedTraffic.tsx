@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { format, addHours, startOfHour, addMinutes, differenceInMinutes } from "date-fns";
 import { pl } from "date-fns/locale";
 import { predictTrafficIntervals } from "@/utils/trafficPrediction";
@@ -23,6 +23,8 @@ const COLORS = {
 };
 
 export const ExtendedPredictedTraffic = ({ reports, direction }: ExtendedPredictedTrafficProps) => {
+  const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+
   const predictionData = useMemo(() => {
     const now = new Date();
     
@@ -105,7 +107,12 @@ export const ExtendedPredictedTraffic = ({ reports, direction }: ExtendedPredict
                   <div
                     className={`flex-1 h-6 rounded-sm transition-all duration-300 hover:scale-110 hover:shadow-md cursor-pointer ${
                       COLORS[interval.status as keyof typeof COLORS]
-                    }`}
+                    } ${selectedIndex === index ? 'scale-110 shadow-md ring-2 ring-primary' : ''}`}
+                    onClick={() => setSelectedIndex(selectedIndex === index ? null : index)}
+                    onTouchEnd={(e) => {
+                      e.preventDefault();
+                      setSelectedIndex(selectedIndex === index ? null : index);
+                    }}
                   />
                 </TooltipTrigger>
                 <TooltipContent>
@@ -116,6 +123,14 @@ export const ExtendedPredictedTraffic = ({ reports, direction }: ExtendedPredict
             ))}
           </div>
         </TooltipProvider>
+
+        {/* Mobile tooltip display */}
+        {selectedIndex !== null && predictionData[selectedIndex] && (
+          <div className="mt-2 p-2 bg-background border border-border rounded shadow-lg text-center sm:hidden">
+            <p className="font-medium">{format(predictionData[selectedIndex].time, "HH:mm", { locale: pl })}</p>
+            <p className="text-xs text-muted-foreground">{predictionData[selectedIndex].status}</p>
+          </div>
+        )}
 
         {/* Time legend - labels below (odd indices) */}
         <div className="relative h-5 mt-1">

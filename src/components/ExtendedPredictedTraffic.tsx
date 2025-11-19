@@ -71,24 +71,27 @@ export const ExtendedPredictedTraffic = ({ reports, direction }: ExtendedPredict
       </div>
       
       <div className="relative">
-        {/* Enhanced time ruler with precise markers */}
-        <div className="relative h-6 mb-2 border-b border-muted-foreground/20">
+        {/* Time legend - labels above (even indices) */}
+        <div className="relative h-5 mb-1">
           {legendTimes.map((time, index) => {
+            // Only show even-indexed labels (0, 2, 4) above
+            if (index % 2 !== 0) return null;
+
+            const isFirst = index === 0;
+            const isLast = index === legendTimes.length - 1;
             const position = (index * 100) / 10;
-            const isMainMark = index % 2 === 0;
+
             return (
-              <div
+              <span
                 key={index}
-                className="absolute bottom-0"
-                style={{ left: `${position}%` }}
+                className="text-xs text-muted-foreground absolute bottom-0"
+                style={{
+                  left: `${position}%`,
+                  transform: isFirst ? 'translateX(0)' : isLast ? 'translateX(-100%)' : 'translateX(-50%)'
+                }}
               >
-                <div className={`${isMainMark ? 'h-3 w-0.5' : 'h-2 w-px'} bg-muted-foreground/40`} />
-                {isMainMark && (
-                  <span className="absolute top-3 text-xs text-muted-foreground -translate-x-1/2 whitespace-nowrap">
-                    {time}
-                  </span>
-                )}
-              </div>
+                {time}
+              </span>
             );
           })}
         </div>
@@ -113,6 +116,31 @@ export const ExtendedPredictedTraffic = ({ reports, direction }: ExtendedPredict
             ))}
           </div>
         </TooltipProvider>
+
+        {/* Time legend - labels below (odd indices) */}
+        <div className="relative h-5 mt-1">
+          {legendTimes.map((time, index) => {
+            // Only show odd-indexed labels (1, 3, 5) below
+            if (index % 2 === 0) return null;
+
+            const isFirst = index === 0;
+            const isLast = index === legendTimes.length - 1;
+            const position = (index * 100) / 10;
+
+            return (
+              <span
+                key={index}
+                className="text-xs text-muted-foreground absolute top-0"
+                style={{
+                  left: `${position}%`,
+                  transform: isFirst ? 'translateX(0)' : isLast ? 'translateX(-100%)' : 'translateX(-50%)'
+                }}
+              >
+                {time}
+              </span>
+            );
+          })}
+        </div>
       </div>
     </div>
   );

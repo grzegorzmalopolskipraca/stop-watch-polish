@@ -163,112 +163,151 @@ serve(async (req) => {
       }
       console.log(`[Batch] API key found, length: ${apiKey.length} chars`);
 
-      // Distance Matrix API creates N×N matrix (N origins × N destinations)
-      // With BATCH_SIZE=10: 10×10=100 elements per request (well within limits)
-      // We only use diagonal elements (origin[i]→dest[i]) but still pay for full matrix
+      // Process routes individually using new Routes API
+      // The new API doesn't support batch requests like Distance Matrix did
 
-      for (let i = 0; i < uncachedRoutes.length; i += BATCH_SIZE) {
-        const batch = uncachedRoutes.slice(i, i + BATCH_SIZE);
-        const batchNumber = Math.floor(i / BATCH_SIZE) + 1;
-        const totalBatches = Math.ceil(uncachedRoutes.length / BATCH_SIZE);
+      for (let i = 0; i < uncachedRoutes.length; i++) {
+        const route = uncachedRoutes[i];
+        const routeNumber = i + 1;
+        const totalRoutes = uncachedRoutes.length;
 
-        // Build origins and destinations strings
-        const origins = batch.map(r => `${r.origin.lat},${r.origin.lng}`).join('|');
-        const destinations = batch.map(r => `${r.destination.lat},${r.destination.lng}`).join('|');
+        console.log(`[Batch ${routeNumber}/${totalRoutes}] Calling Routes API for ${route.street || 'route'} (${route.direction || ''})`);
 
-        console.log(`[Batch ${batchNumber}/${totalBatches}] Calling Distance Matrix API for ${batch.length} routes`);
-        console.log(`[Batch ${batchNumber}/${totalBatches}] Streets: ${batch.map(r => r.street).join(', ')}`);
-
-        const url = 'https://maps.googleapis.com/maps/api/distancematrix/json';
-        const params = new URLSearchParams({
-          origins,
-          destinations,
-          departure_time: 'now',
-          traffic_model: 'best_guess',
-          key: apiKey
-        });
+        const url = 'https://routes.googleapis.com/directions/v2:computeRoutes';
+        
+        const requestBody = {
+          origin: {
+            location: {
+              latLng: {
+                latitude: route.origin.lat,
+                longitude: route.origin.lng
+              }
+            }
+          },
+          destination: {
+            location: {
+              latLng: {
+                latitude: route.destination.lat,
+                longitude: route.destination.lng
+              }
+            }
+          },
+          travelMode: 'DRIVE',
+          routingPreference: 'TRAFFIC_AWARE',
+          computeAlternativeRoutes: false,
+          routeModifiers: {
+            avoidTolls: false,
+            avoidHighways: false,
+            avoidFerries: false
+          },
+          languageCode: 'pl',
+          units: 'METRIC'
+        };
 
         const gStart = Date.now();
-        const response = await fetch(`${url}?${params.toString()}`);
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Goog-Api-Key': apiKey,
+            'X-Goog-FieldMask': 'routes.duration,routes.distanceMeters,routes.staticDuration'
+          },
+          body: JSON.stringify(requestBody)
+        });
         const gEnd = Date.now();
 
-        console.log(`[Batch ${batchNumber}/${totalBatches}] Distance Matrix API response: ${response.status}, latency: ${gEnd - gStart}ms`);
+        console.log(`[Batch ${routeNumber}/${totalRoutes}] Routes API response: ${response.status}, latency: ${gEnd - gStart}ms`);
 
         if (!response.ok) {
           const errorText = await response.text();
-          console.error(`[Batch ${batchNumber}/${totalBatches}] ❌ Google Maps API error:`, response.status, errorText);
-          throw new Error(`Google Maps API error: ${response.status}`);
+          console.error(`[Batch ${routeNumber}/${totalRoutes}] ❌ Google Routes API error:`, response.status, errorText);
+          // Continue with next route instead of throwing
+          apiResults.push({
+            origin: route.origin,
+            destination: route.destination,
+            street: route.street,
+            direction: route.direction,
+            status: 'ERROR',
+            cached: false,
+          });
+          continue;
         }
 
         const data = await response.json();
 
-        if (data.status !== 'OK') {
-          console.error(`[Batch ${batchNumber}/${totalBatches}] ❌ Distance Matrix API error:`, data.status, data.error_message);
-          throw new Error(`Distance Matrix API error: ${data.status}`);
+        if (!data.routes || data.routes.length === 0) {
+          console.error(`[Batch ${routeNumber}/${totalRoutes}] ❌ No routes returned`);
+          apiResults.push({
+            origin: route.origin,
+            destination: route.destination,
+            street: route.street,
+            direction: route.direction,
+            status: 'NO_ROUTES',
+            cached: false,
+          });
+          continue;
         }
 
-        console.log(`[Batch ${batchNumber}/${totalBatches}] ✅ Received ${data.rows?.length || 0} rows with ${data.rows?.[0]?.elements?.length || 0} elements each`);
+        console.log(`[Batch ${routeNumber}/${totalRoutes}] ✅ Received route data`);
 
-        // Process each result (Distance Matrix returns a matrix, we need diagonal elements)
-        for (let j = 0; j < batch.length; j++) {
-          const route = batch[j];
-          const element = data.rows[j]?.elements[j];
+        // Process route data from new Routes API
+        const routeData = data.routes[0];
+        
+        const distanceMeters = routeData.distanceMeters;
+        const durationSeconds = parseInt(routeData.duration?.replace('s', '') || '0');
+        const staticDurationSeconds = parseInt(routeData.staticDuration?.replace('s', '') || '0');
+        
+        const result: RouteResult = {
+          origin: route.origin,
+          destination: route.destination,
+          street: route.street,
+          direction: route.direction,
+          distance: distanceMeters,
+          duration: staticDurationSeconds,
+          duration_in_traffic: durationSeconds,
+          status: 'OK',
+          cached: false,
+        };
 
-          if (element && element.status === 'OK') {
-            const result: RouteResult = {
-              origin: route.origin,
-              destination: route.destination,
-              street: route.street,
-              direction: route.direction,
-              distance: element.distance?.value,
-              duration: element.duration?.value,
-              duration_in_traffic: element.duration_in_traffic?.value || element.duration?.value,
-              status: 'OK',
-              cached: false,
-            };
+        apiResults.push(result);
 
-            apiResults.push(result);
+        // Cache the result (convert to legacy Directions API format for compatibility)
+        const cacheKey = createCacheKey(route.origin, route.destination);
+        const directionsCompatibleData = {
+          routes: [{
+            legs: [{
+              distance: {
+                value: distanceMeters,
+                text: `${(distanceMeters / 1000).toFixed(1)} km`
+              },
+              duration: {
+                value: staticDurationSeconds,
+                text: `${Math.round(staticDurationSeconds / 60)} min`
+              },
+              duration_in_traffic: {
+                value: durationSeconds,
+                text: `${Math.round(durationSeconds / 60)} min`
+              }
+            }]
+          }],
+          status: 'OK'
+        };
 
-            // Cache the result (convert to Directions API format for compatibility)
-            const cacheKey = createCacheKey(route.origin, route.destination);
-            const directionsCompatibleData = {
-              routes: [{
-                legs: [{
-                  distance: element.distance,
-                  duration: element.duration,
-                  duration_in_traffic: element.duration_in_traffic || element.duration,
-                }]
-              }],
-              status: 'OK'
-            };
+        await supabase
+          .from('traffic_cache')
+          .upsert({
+            route_key: cacheKey,
+            origin_lat: route.origin.lat,
+            origin_lng: route.origin.lng,
+            destination_lat: route.destination.lat,
+            destination_lng: route.destination.lng,
+            traffic_data: directionsCompatibleData,
+            cached_at: new Date().toISOString(),
+          }, {
+            onConflict: 'route_key'
+          });
 
-            await supabase
-              .from('traffic_cache')
-              .upsert({
-                route_key: cacheKey,
-                origin_lat: route.origin.lat,
-                origin_lng: route.origin.lng,
-                destination_lat: route.destination.lat,
-                destination_lng: route.destination.lng,
-                traffic_data: directionsCompatibleData,
-                cached_at: new Date().toISOString(),
-              }, {
-                onConflict: 'route_key'
-              });
-
-            console.log(`[Batch ${batchNumber}/${totalBatches}] ✅ Cached result for ${route.street} (${route.direction})`);
-          } else {
-            console.warn(`[Batch ${batchNumber}/${totalBatches}] ⚠️ No data for ${route.street} (${route.direction}):`, element?.status);
-            apiResults.push({
-              origin: route.origin,
-              destination: route.destination,
-              street: route.street,
-              direction: route.direction,
-              status: element?.status || 'ERROR',
-              cached: false,
-            });
-          }
-        }
+        console.log(`[Batch ${routeNumber}/${totalRoutes}] ✅ Cached result for ${route.street} (${route.direction})`);
       }
     }
 
@@ -284,7 +323,7 @@ serve(async (req) => {
       .lt('cached_at', cacheExpiryCutoff);
 
     const totalTime = Date.now() - funcStart;
-    const apiCalls = Math.ceil(uncachedRoutes.length / BATCH_SIZE);
+    const apiCalls = uncachedRoutes.length; // Each route is now a separate API call
     console.log(`[Batch] Completed in ${totalTime}ms. Total: ${allResults.length}, Cached: ${cachedResults.length}, API: ${apiResults.length}`);
     console.log(`[Batch] API calls made: ${apiCalls}, Cost saved: $${(cachedResults.length * 0.005).toFixed(3)}, API cost: $${(apiCalls * 0.005).toFixed(3)}`);
 
@@ -294,7 +333,7 @@ serve(async (req) => {
           stats: {
             total: allResults.length,
             cached: cachedResults.length,
-            api_calls: Math.ceil(uncachedRoutes.length / BATCH_SIZE),
+            api_calls: uncachedRoutes.length,
             cache_hit_rate: ((cachedResults.length / allResults.length) * 100).toFixed(1) + '%',
             total_time_ms: totalTime,
           }

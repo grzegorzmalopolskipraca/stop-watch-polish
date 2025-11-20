@@ -151,52 +151,100 @@ serve(async (req) => {
       throw new Error('Google Maps API key not configured');
     }
 
-    console.log('[get-traffic-data] Calling Google Directions API for route:', { origin, destination });
+    console.log('[get-traffic-data] Calling Google Routes API for route:', { origin, destination });
 
-    // Use Directions API for real-time traffic data
-    const url = 'https://maps.googleapis.com/maps/api/directions/json';
-    const params = new URLSearchParams({
-      origin: `${origin.lat},${origin.lng}`,
-      destination: `${destination.lat},${destination.lng}`,
-      departure_time: 'now', // Use 'now' for real-time traffic
-      traffic_model: 'best_guess',
-      key: apiKey
-    });
+    // Use new Routes API (replaces deprecated Directions API)
+    const url = 'https://routes.googleapis.com/directions/v2:computeRoutes';
+    
+    const requestBody = {
+      origin: {
+        location: {
+          latLng: {
+            latitude: origin.lat,
+            longitude: origin.lng
+          }
+        }
+      },
+      destination: {
+        location: {
+          latLng: {
+            latitude: destination.lat,
+            longitude: destination.lng
+          }
+        }
+      },
+      travelMode: 'DRIVE',
+      routingPreference: 'TRAFFIC_AWARE',
+      computeAlternativeRoutes: false,
+      routeModifiers: {
+        avoidTolls: false,
+        avoidHighways: false,
+        avoidFerries: false
+      },
+      languageCode: 'pl',
+      units: 'METRIC'
+    };
 
     const gStart = Date.now();
-    const response = await fetch(`${url}?${params.toString()}`);
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Goog-Api-Key': apiKey,
+        'X-Goog-FieldMask': 'routes.duration,routes.distanceMeters,routes.staticDuration,routes.legs'
+      },
+      body: JSON.stringify(requestBody)
+    });
     const gEnd = Date.now();
-    console.log('[get-traffic-data] Google API HTTP status:', response.status, `latency: ${gEnd - gStart}ms`);
+    console.log('[get-traffic-data] Google Routes API HTTP status:', response.status, `latency: ${gEnd - gStart}ms`);
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('[get-traffic-data] Google Maps API error:', response.status, errorText);
-      throw new Error(`Google Maps API error: ${response.status} - ${errorText}`);
+      console.error('[get-traffic-data] Google Routes API error:', response.status, errorText);
+      throw new Error(`Google Routes API error: ${response.status} - ${errorText}`);
     }
 
     const data = await response.json();
-    console.log('[get-traffic-data] Google Directions API response received');
+    console.log('[get-traffic-data] Google Routes API response received');
+
+    // Convert new Routes API format to legacy format for cache compatibility
+    const routesCount = Array.isArray(data?.routes) ? data.routes.length : 0;
     
-    if (data.status !== 'OK') {
-      console.error('[get-traffic-data] Directions API error:', data.status, data.error_message);
-      throw new Error(`Directions API error: ${data.status} - ${data.error_message || 'Unknown error'}`);
+    if (routesCount === 0) {
+      console.warn('[get-traffic-data] No routes returned by Google Routes API');
+      throw new Error('No routes found');
     }
 
-    const routesCount = Array.isArray(data?.routes) ? data.routes.length : 0;
-    const route = routesCount > 0 ? data.routes[0] : null;
+    const route = data.routes[0];
+    console.log('[get-traffic-data] Summary -> routes:', routesCount, 
+      'distance:', route.distanceMeters, 
+      'duration:', route.duration,
+      'static_duration:', route.staticDuration);
+
+    // Convert to legacy Directions API format for backward compatibility
+    const legacyFormat = {
+      routes: [{
+        legs: [{
+          distance: {
+            value: route.distanceMeters,
+            text: `${(route.distanceMeters / 1000).toFixed(1)} km`
+          },
+          duration: {
+            value: parseInt(route.staticDuration?.replace('s', '') || '0'),
+            text: `${Math.round(parseInt(route.staticDuration?.replace('s', '') || '0') / 60)} min`
+          },
+          duration_in_traffic: {
+            value: parseInt(route.duration?.replace('s', '') || '0'),
+            text: `${Math.round(parseInt(route.duration?.replace('s', '') || '0') / 60)} min`
+          }
+        }]
+      }],
+      status: 'OK'
+    };
     
-    if (route && route.legs && route.legs.length > 0) {
-      const leg = route.legs[0];
-      console.log('[get-traffic-data] Summary -> routes:', routesCount, 
-        'distance:', leg.distance?.value, 
-        'duration:', leg.duration?.value,
-        'duration_in_traffic:', leg.duration_in_traffic?.value);
-    } else {
-      console.warn('[get-traffic-data] No routes returned by Google.');
-    }
     console.log('[get-traffic-data] Function total time:', `${Date.now() - funcStart}ms`);
 
-    // Cache the response
+    // Cache the response (using legacy format for compatibility)
     const { error: upsertError } = await supabase
       .from('traffic_cache')
       .upsert({
@@ -205,7 +253,7 @@ serve(async (req) => {
         origin_lng: origin.lng,
         destination_lat: destination.lat,
         destination_lng: destination.lng,
-        traffic_data: data,
+        traffic_data: legacyFormat,
         cached_at: new Date().toISOString(),
       }, {
         onConflict: 'route_key'
@@ -227,7 +275,7 @@ serve(async (req) => {
       .lt('cached_at', cacheExpiryCutoff);
 
     return new Response(
-      JSON.stringify(data),
+      JSON.stringify(legacyFormat),
       { 
         status: 200, 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 

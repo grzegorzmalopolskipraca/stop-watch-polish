@@ -72,12 +72,10 @@ serve(async (req) => {
 
   try {
     const funcStart = Date.now();
-    // Get client IP for rate limiting
     const clientIP = req.headers.get('x-forwarded-for')?.split(',')[0].trim() ||
                      req.headers.get('x-real-ip') ||
                      'unknown';
 
-    // Check if this is an internal/system call (from other edge functions)
     const isInternalCall = req.headers.get('x-internal-call') === 'true' ||
                           clientIP === 'unknown' ||
                           clientIP.includes('127.0.0.1') ||
@@ -85,22 +83,31 @@ serve(async (req) => {
 
     console.log(`Traffic data request from IP: ${clientIP}${isInternalCall ? ' (internal)' : ''}`);
 
-    // Initialize Supabase client
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Parse request body
     const { origin, destination }: TrafficRequest = await req.json();
-
     console.log('[get-traffic-data] Request body:', { origin, destination });
 
-    // Check route-based cache first (serve without touching rate limits)
     const cacheKey = createCacheKey(origin, destination);
     const cacheDuration = getCacheDuration();
     const cacheDurationMinutes = Math.floor(cacheDuration / (60 * 1000));
 
+    // Check for cached distance (permanent)
+    const { data: distanceData } = await supabase
+      .from('street_distances')
+      .select('distance_meters')
+      .eq('route_key', cacheKey)
+      .single();
+
+    let cachedDistance: number | null = distanceData?.distance_meters || null;
+    if (cachedDistance) {
+      console.log(`[get-traffic-data] Using cached distance: ${cachedDistance}m`);
+    }
+
+    // Check traffic cache for duration
     const { data: cachedData, error: cacheError } = await supabase
       .from('traffic_cache')
       .select('traffic_data, cached_at')
@@ -110,10 +117,10 @@ serve(async (req) => {
     if (!cacheError && cachedData) {
       const cachedAt = new Date(cachedData.cached_at).getTime();
       const nowTs = Date.now();
-      const cacheAge = (nowTs - cachedAt) / 1000; // in seconds
+      const cacheAge = (nowTs - cachedAt) / 1000;
 
       if ((nowTs - cachedAt) < cacheDuration) {
-        console.log(`[get-traffic-data] Cache HIT for route (age: ${cacheAge.toFixed(0)}s, max: ${cacheDurationMinutes}min)`);
+        console.log(`[get-traffic-data] Cache HIT (age: ${cacheAge.toFixed(0)}s, max: ${cacheDurationMinutes}min)`);
         return new Response(
           JSON.stringify(cachedData.traffic_data),
           {
@@ -122,13 +129,12 @@ serve(async (req) => {
           }
         );
       } else {
-        console.log(`[get-traffic-data] Cache EXPIRED for route (age: ${cacheAge.toFixed(0)}s, max: ${cacheDurationMinutes}min)`);
+        console.log(`[get-traffic-data] Cache EXPIRED (age: ${cacheAge.toFixed(0)}s)`);
       }
     } else {
-      console.log('[get-traffic-data] Cache MISS for route');
+      console.log('[get-traffic-data] Cache MISS');
     }
 
-    // Enforce rate limit only for cache misses/refreshes (skip for internal calls)
     if (!isInternalCall) {
       const allowed = await checkIPRateLimit(supabase, clientIP);
       if (!allowed) {
@@ -151,9 +157,8 @@ serve(async (req) => {
       throw new Error('Google Maps API key not configured');
     }
 
-    console.log('[get-traffic-data] Calling Google Routes API for route:', { origin, destination });
+    console.log('[get-traffic-data] Calling Google Routes API');
 
-    // Use new Routes API (replaces deprecated Directions API)
     const url = 'https://routes.googleapis.com/directions/v2:computeRoutes';
     
     const requestBody = {
@@ -191,61 +196,74 @@ serve(async (req) => {
       headers: {
         'Content-Type': 'application/json',
         'X-Goog-Api-Key': apiKey,
-        'X-Goog-FieldMask': 'routes.duration,routes.distanceMeters,routes.staticDuration,routes.legs'
+        'X-Goog-FieldMask': 'routes.duration,routes.distanceMeters,routes.staticDuration'
       },
       body: JSON.stringify(requestBody)
     });
     const gEnd = Date.now();
-    console.log('[get-traffic-data] Google Routes API HTTP status:', response.status, `latency: ${gEnd - gStart}ms`);
+    console.log('[get-traffic-data] Routes API status:', response.status, `latency: ${gEnd - gStart}ms`);
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('[get-traffic-data] Google Routes API error:', response.status, errorText);
+      console.error('[get-traffic-data] Routes API error:', response.status, errorText);
       throw new Error(`Google Routes API error: ${response.status} - ${errorText}`);
     }
 
     const data = await response.json();
-    console.log('[get-traffic-data] Google Routes API response received');
-
-    // Convert new Routes API format to legacy format for cache compatibility
-    const routesCount = Array.isArray(data?.routes) ? data.routes.length : 0;
     
-    if (routesCount === 0) {
-      console.warn('[get-traffic-data] No routes returned by Google Routes API');
+    if (!data.routes || data.routes.length === 0) {
+      console.warn('[get-traffic-data] No routes returned');
       throw new Error('No routes found');
     }
 
     const route = data.routes[0];
-    console.log('[get-traffic-data] Summary -> routes:', routesCount, 
-      'distance:', route.distanceMeters, 
-      'duration:', route.duration,
-      'static_duration:', route.staticDuration);
+    const distanceMeters = route.distanceMeters;
+    const durationSeconds = parseInt(route.duration?.replace('s', '') || '0');
+    const staticDurationSeconds = parseInt(route.staticDuration?.replace('s', '') || '0');
 
-    // Convert to legacy Directions API format for backward compatibility
+    console.log('[get-traffic-data] API data -> distance:', distanceMeters, 'duration:', durationSeconds);
+
+    // Cache distance permanently if not already cached
+    if (!cachedDistance) {
+      console.log('[get-traffic-data] Caching distance permanently:', distanceMeters);
+      await supabase
+        .from('street_distances')
+        .upsert({
+          route_key: cacheKey,
+          origin_lat: origin.lat,
+          origin_lng: origin.lng,
+          destination_lat: destination.lat,
+          destination_lng: destination.lng,
+          distance_meters: distanceMeters,
+        }, {
+          onConflict: 'route_key'
+        });
+    }
+
     const legacyFormat = {
       routes: [{
         legs: [{
           distance: {
-            value: route.distanceMeters,
-            text: `${(route.distanceMeters / 1000).toFixed(1)} km`
+            value: distanceMeters,
+            text: `${(distanceMeters / 1000).toFixed(1)} km`
           },
           duration: {
-            value: parseInt(route.staticDuration?.replace('s', '') || '0'),
-            text: `${Math.round(parseInt(route.staticDuration?.replace('s', '') || '0') / 60)} min`
+            value: staticDurationSeconds,
+            text: `${Math.round(staticDurationSeconds / 60)} min`
           },
           duration_in_traffic: {
-            value: parseInt(route.duration?.replace('s', '') || '0'),
-            text: `${Math.round(parseInt(route.duration?.replace('s', '') || '0') / 60)} min`
+            value: durationSeconds,
+            text: `${Math.round(durationSeconds / 60)} min`
           }
         }]
       }],
       status: 'OK'
     };
     
-    console.log('[get-traffic-data] Function total time:', `${Date.now() - funcStart}ms`);
+    console.log('[get-traffic-data] Total time:', `${Date.now() - funcStart}ms`);
 
-    // Cache the response (using legacy format for compatibility)
-    const { error: upsertError } = await supabase
+    // Cache traffic data
+    await supabase
       .from('traffic_cache')
       .upsert({
         route_key: cacheKey,
@@ -258,16 +276,9 @@ serve(async (req) => {
       }, {
         onConflict: 'route_key'
       });
-    
-    if (upsertError) {
-      console.error('[get-traffic-data] Cache upsert error:', upsertError);
-      // Don't fail the request if caching fails
-    } else {
-      console.log('[get-traffic-data] Response cached successfully');
-    }
 
-    // Clean old cache entries (older than max cache duration - use 60 min to be safe)
-    const maxCacheDuration = 60 * 60 * 1000; // 60 minutes
+    // Clean old traffic cache entries
+    const maxCacheDuration = 60 * 60 * 1000;
     const cacheExpiryCutoff = new Date(Date.now() - maxCacheDuration).toISOString();
     await supabase
       .from('traffic_cache')

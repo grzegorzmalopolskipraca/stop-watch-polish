@@ -430,6 +430,48 @@ export type Database = {
         }
         Relationships: []
       }
+      street_distances: {
+        Row: {
+          created_at: string
+          destination_lat: number
+          destination_lng: number
+          direction: string
+          distance_meters: number
+          id: string
+          origin_lat: number
+          origin_lng: number
+          route_key: string
+          street: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          destination_lat: number
+          destination_lng: number
+          direction: string
+          distance_meters: number
+          id?: string
+          origin_lat: number
+          origin_lng: number
+          route_key: string
+          street: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          destination_lat?: number
+          destination_lng?: number
+          direction?: string
+          distance_meters?: number
+          id?: string
+          origin_lat?: number
+          origin_lng?: number
+          route_key?: string
+          street?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       street_votes: {
         Row: {
           created_at: string | null

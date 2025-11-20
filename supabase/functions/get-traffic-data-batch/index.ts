@@ -93,10 +93,19 @@ serve(async (req) => {
     const isRushHour = (currentHour >= 7 && currentHour <= 10) || (currentHour >= 16 && currentHour <= 19);
     console.log(`[Batch] Current time: ${currentHour}:00, Cache duration: ${cacheDurationMinutes}min (${isRushHour ? 'RUSH HOUR' : 'off-peak'})`);
 
-    // Step 1: Check cache for all routes
+    // Step 1: Check cache for all routes (both distance and traffic)
     const cacheChecks = await Promise.all(
       routes.map(async (route) => {
         const cacheKey = createCacheKey(route.origin, route.destination);
+        
+        // Check for cached distance (permanent)
+        const { data: distanceData } = await supabase
+          .from('street_distances')
+          .select('distance_meters')
+          .eq('route_key', cacheKey)
+          .single();
+        
+        // Check for cached traffic data (temporary)
         const { data, error } = await supabase
           .from('traffic_cache')
           .select('traffic_data, cached_at')
@@ -109,15 +118,15 @@ serve(async (req) => {
           const cacheAge = (nowTs - cachedAt) / 1000;
 
           if ((nowTs - cachedAt) < cacheDuration) {
-            console.log(`[Batch] Cache HIT for ${route.street || 'route'} (${route.direction || ''}) - age: ${cacheAge.toFixed(0)}s, max: ${cacheDurationMinutes}min`);
+            console.log(`[Batch] Cache HIT for ${route.street || 'route'} (${route.direction || ''}) - age: ${cacheAge.toFixed(0)}s`);
 
-            // Extract distance/duration from cached Directions API response
             const cachedRoutes = data.traffic_data?.routes;
             if (cachedRoutes && cachedRoutes[0]?.legs?.[0]) {
               const leg = cachedRoutes[0].legs[0];
               return {
                 route,
                 cached: true,
+                cachedDistance: distanceData?.distance_meters || null,
                 result: {
                   origin: route.origin,
                   destination: route.destination,
@@ -134,7 +143,7 @@ serve(async (req) => {
           }
         }
 
-        return { route, cached: false };
+        return { route, cached: false, cachedDistance: distanceData?.distance_meters || null };
       })
     );
 
@@ -170,6 +179,14 @@ serve(async (req) => {
         const route = uncachedRoutes[i];
         const routeNumber = i + 1;
         const totalRoutes = uncachedRoutes.length;
+        
+        // Check if we have cached distance for this route
+        const checkData = cacheChecks.find(c => c.route === route);
+        const cachedDistance = checkData?.cachedDistance;
+
+        if (cachedDistance) {
+          console.log(`[Batch ${routeNumber}/${totalRoutes}] Using cached distance: ${cachedDistance}m for ${route.street}`);
+        }
 
         console.log(`[Batch ${routeNumber}/${totalRoutes}] Calling Routes API for ${route.street || 'route'} (${route.direction || ''})`);
 
@@ -216,12 +233,11 @@ serve(async (req) => {
         });
         const gEnd = Date.now();
 
-        console.log(`[Batch ${routeNumber}/${totalRoutes}] Routes API response: ${response.status}, latency: ${gEnd - gStart}ms`);
+        console.log(`[Batch ${routeNumber}/${totalRoutes}] Routes API: ${response.status}, ${gEnd - gStart}ms`);
 
         if (!response.ok) {
           const errorText = await response.text();
-          console.error(`[Batch ${routeNumber}/${totalRoutes}] ❌ Google Routes API error:`, response.status, errorText);
-          // Continue with next route instead of throwing
+          console.error(`[Batch ${routeNumber}/${totalRoutes}] ❌ API error:`, response.status, errorText);
           apiResults.push({
             origin: route.origin,
             destination: route.destination,
@@ -248,14 +264,31 @@ serve(async (req) => {
           continue;
         }
 
-        console.log(`[Batch ${routeNumber}/${totalRoutes}] ✅ Received route data`);
-
-        // Process route data from new Routes API
         const routeData = data.routes[0];
         
         const distanceMeters = routeData.distanceMeters;
         const durationSeconds = parseInt(routeData.duration?.replace('s', '') || '0');
         const staticDurationSeconds = parseInt(routeData.staticDuration?.replace('s', '') || '0');
+        
+        // Cache distance permanently if not already cached
+        const cacheKey = createCacheKey(route.origin, route.destination);
+        if (!cachedDistance) {
+          console.log(`[Batch ${routeNumber}/${totalRoutes}] Caching distance: ${distanceMeters}m`);
+          await supabase
+            .from('street_distances')
+            .upsert({
+              route_key: cacheKey,
+              street: route.street || '',
+              direction: route.direction || '',
+              origin_lat: route.origin.lat,
+              origin_lng: route.origin.lng,
+              destination_lat: route.destination.lat,
+              destination_lng: route.destination.lng,
+              distance_meters: distanceMeters,
+            }, {
+              onConflict: 'route_key'
+            });
+        }
         
         const result: RouteResult = {
           origin: route.origin,
@@ -271,8 +304,7 @@ serve(async (req) => {
 
         apiResults.push(result);
 
-        // Cache the result (convert to legacy Directions API format for compatibility)
-        const cacheKey = createCacheKey(route.origin, route.destination);
+        // Cache traffic data (temporary)
         const directionsCompatibleData = {
           routes: [{
             legs: [{
@@ -307,7 +339,7 @@ serve(async (req) => {
             onConflict: 'route_key'
           });
 
-        console.log(`[Batch ${routeNumber}/${totalRoutes}] ✅ Cached result for ${route.street} (${route.direction})`);
+        console.log(`[Batch ${routeNumber}/${totalRoutes}] ✅ Cached for ${route.street} (${route.direction})`);
       }
     }
 

@@ -84,6 +84,30 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Fetch weather data from cache for this street
+    const { data: weatherData } = await supabase
+      .from('weather_cache')
+      .select('weather_data, cached_at')
+      .eq('street', street)
+      .order('cached_at', { ascending: false })
+      .limit(1)
+      .single();
+
+    let weatherFields = {};
+    if (weatherData?.weather_data) {
+      const weather = weatherData.weather_data as any;
+      weatherFields = {
+        temperature: weather.temperature || null,
+        weather_condition: weather.condition || weather.description || null,
+        humidity: weather.humidity || null,
+        wind_speed: weather.wind_speed || weather.windSpeed || null,
+        pressure: weather.pressure || null,
+        visibility: weather.visibility || null,
+        weather_cached_at: weatherData.cached_at,
+      };
+      console.log(`[AutoSubmit] Weather data found for ${street}:`, weatherFields);
+    }
+
     // Insert the traffic report without rate limiting
     const { error } = await supabase
       .from('traffic_reports')
@@ -94,6 +118,7 @@ Deno.serve(async (req) => {
         reported_at: new Date().toISOString(),
         direction,
         speed: speed || null,
+        ...weatherFields,
       });
 
     if (error) {

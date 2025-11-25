@@ -147,6 +147,30 @@ Deno.serve(async (req) => {
       const roundedSpeed = speed ? Math.round(speed * 10) / 10 : null;
       console.log(`[SpeedFlow-Backend] 4. Processing speed: raw=${speed}, rounded=${roundedSpeed}`);
 
+      // Fetch weather data from cache for this street
+      const { data: weatherData } = await supabase
+        .from('weather_cache')
+        .select('weather_data, cached_at')
+        .eq('street', street)
+        .order('cached_at', { ascending: false })
+        .limit(1)
+        .single();
+
+      let weatherFields = {};
+      if (weatherData?.weather_data) {
+        const weather = weatherData.weather_data as any;
+        weatherFields = {
+          temperature: weather.temperature || null,
+          weather_condition: weather.condition || weather.description || null,
+          humidity: weather.humidity || null,
+          wind_speed: weather.wind_speed || weather.windSpeed || null,
+          pressure: weather.pressure || null,
+          visibility: weather.visibility || null,
+          weather_cached_at: weatherData.cached_at,
+        };
+        console.log(`[SpeedFlow-Backend] Weather data found for ${street}:`, weatherFields);
+      }
+
       // Insert the traffic report only if rate limit allows
       const insertData = {
         street,
@@ -155,6 +179,7 @@ Deno.serve(async (req) => {
         reported_at: new Date().toISOString(),
         direction,
         speed: roundedSpeed,
+        ...weatherFields,
       };
       console.log(`[SpeedFlow-Backend] 5. Inserting to DB:`, JSON.stringify(insertData));
 

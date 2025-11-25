@@ -557,32 +557,53 @@ export type Database = {
         Row: {
           created_at: string
           direction: string
+          humidity: number | null
           id: string
+          pressure: number | null
           reported_at: string
           speed: number | null
           status: string
           street: string
+          temperature: number | null
           user_fingerprint: string | null
+          visibility: number | null
+          weather_cached_at: string | null
+          weather_condition: string | null
+          wind_speed: number | null
         }
         Insert: {
           created_at?: string
           direction?: string
+          humidity?: number | null
           id?: string
+          pressure?: number | null
           reported_at?: string
           speed?: number | null
           status: string
           street: string
+          temperature?: number | null
           user_fingerprint?: string | null
+          visibility?: number | null
+          weather_cached_at?: string | null
+          weather_condition?: string | null
+          wind_speed?: number | null
         }
         Update: {
           created_at?: string
           direction?: string
+          humidity?: number | null
           id?: string
+          pressure?: number | null
           reported_at?: string
           speed?: number | null
           status?: string
           street?: string
+          temperature?: number | null
           user_fingerprint?: string | null
+          visibility?: number | null
+          weather_cached_at?: string | null
+          weather_condition?: string | null
+          wind_speed?: number | null
         }
         Relationships: []
       }

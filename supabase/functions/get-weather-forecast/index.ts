@@ -161,7 +161,10 @@ serve(async (req) => {
         precipitation_mm: hour.precipitation?.qpf?.quantity || 0,
         precipitation_prob_percent: hour.precipitation?.probability?.percent || 0,
         temperature_c: hour.temperature?.degrees || 'N/A',
-        humidity_percent: hour.humidity || 'N/A',
+        humidity_percent: hour.relativeHumidity || 'N/A',
+        wind_speed_kmh: hour.wind?.speed?.value || 'N/A',
+        pressure_mb: hour.airPressure?.meanSeaLevelMillibars || 'N/A',
+        visibility_km: hour.visibility?.distance || 'N/A',
         raw_precipitation_object: JSON.stringify(hour.precipitation || {}),
         weather_condition: hour.weatherCondition?.type || 'N/A'
       });
@@ -233,10 +236,10 @@ serve(async (req) => {
     const currentConditions = {
       temperature: currentHour.temperature?.degrees || null,
       condition: currentHour.weatherCondition?.type || null,
-      humidity: currentHour.humidity || null,
-      windSpeed: currentHour.windSpeed?.kilometersPerHour || null,
-      pressure: currentHour.barometricPressure?.pascals || null,
-      visibility: currentHour.visibility?.meters || null,
+      humidity: currentHour.relativeHumidity || null,
+      windSpeed: currentHour.wind?.speed?.value || null,
+      pressure: currentHour.airPressure?.meanSeaLevelMillibars || null,
+      visibility: currentHour.visibility?.distance ? currentHour.visibility.distance * 1000 : null, // Convert km to meters
     };
     
     console.log('[get-weather-forecast] Current weather conditions:', currentConditions);

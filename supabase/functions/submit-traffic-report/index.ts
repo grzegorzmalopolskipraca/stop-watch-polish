@@ -159,13 +159,14 @@ Deno.serve(async (req) => {
       let weatherFields = {};
       if (weatherData?.weather_data) {
         const weather = weatherData.weather_data as any;
+        const conditions = weather.currentConditions || {};
         weatherFields = {
-          temperature: weather.temperature || null,
-          weather_condition: weather.condition || weather.description || null,
-          humidity: weather.humidity || null,
-          wind_speed: weather.wind_speed || weather.windSpeed || null,
-          pressure: weather.pressure || null,
-          visibility: weather.visibility || null,
+          temperature: conditions.temperature || null,
+          weather_condition: conditions.condition || null,
+          humidity: conditions.humidity || null,
+          wind_speed: conditions.windSpeed || null,
+          pressure: conditions.pressure || null,
+          visibility: conditions.visibility || null,
           weather_cached_at: weatherData.cached_at,
         };
         console.log(`[SpeedFlow-Backend] Weather data found for ${street}:`, weatherFields);

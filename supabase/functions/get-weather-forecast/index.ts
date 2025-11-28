@@ -228,9 +228,23 @@ serve(async (req) => {
       });
     });
     
-    // Add metadata to response
+    // Extract current weather conditions from the first relevant hour
+    const currentHour = relevantHours[0];
+    const currentConditions = {
+      temperature: currentHour.temperature?.degrees || null,
+      condition: currentHour.weatherCondition?.type || null,
+      humidity: currentHour.humidity || null,
+      windSpeed: currentHour.windSpeed?.kilometersPerHour || null,
+      pressure: currentHour.barometricPressure?.pascals || null,
+      visibility: currentHour.visibility?.meters || null,
+    };
+    
+    console.log('[get-weather-forecast] Current weather conditions:', currentConditions);
+    
+    // Add metadata and current conditions to response
     const responseWithMeta = {
       slots: sortedSlots,
+      currentConditions,
       meta: {
         location: { latitude, longitude, street },
         generatedAt: new Date().toISOString(),

@@ -56,6 +56,7 @@ const STREETS = [
   "Buforowa",
   "Grabiszyńska",
   "Grota Roweckiego",
+  "Hallera",
   "Karkonoska",
   "Ołtaszyńska",
   "Opolska",

@@ -7,7 +7,7 @@ const corsHeaders = {
 };
 
 const VALID_STREETS = [
-  'Borowska', 'Buforowa', 'Grabiszyńska', 'Grota Roweckiego',
+  'Borowska', 'Buforowa', 'Grabiszyńska', 'Grota Roweckiego', 'Hallera',
   'Karkonoska', 'Ołtaszyńska', 'Opolska', 'Parafialna', 'Powstańców Śląskich',
   'Radosna', 'Sudecka', 'Ślężna', 'Zwycięska'
 ];

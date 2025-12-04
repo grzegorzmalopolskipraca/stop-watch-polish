@@ -77,6 +77,10 @@ const STREET_COORDINATES: Record<string, StreetCoordinates> = {
   "Parafialna": {
     start: { lat: 51.037543, lng: 17.042567 },
     end: { lat: 51.057234, lng: 17.048923 }
+  },
+  "Hallera": {
+    start: { lat: 51.086587, lng: 17.011750 },
+    end: { lat: 51.093761, lng: 16.981001 }
   }
 };
 

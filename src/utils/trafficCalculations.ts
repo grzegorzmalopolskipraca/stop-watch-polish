@@ -1,4 +1,4 @@
-import { addDays, subDays, startOfDay, addMinutes } from "date-fns";
+import { addDays, subDays, startOfDay, addMinutes, parseISO } from "date-fns";
 
 interface Report {
   status: string;
@@ -16,6 +16,20 @@ export interface DayData {
 }
 
 /**
+ * Parse timestamp from database format to Date object
+ * Handles formats like "2025-11-28 04:19:51.686+00" and ISO strings
+ */
+const parseReportTime = (timestamp: string): Date => {
+  // Replace space with T and ensure proper timezone format for ISO parsing
+  const normalized = timestamp
+    .replace(' ', 'T')
+    .replace(/\+00$/, '+00:00')
+    .replace(/\+(\d)$/, '+0$1:00')
+    .replace(/\+(\d{2})$/, '+$1:00');
+  return parseISO(normalized);
+};
+
+/**
  * Calculate traffic status for each 30-minute block over the last 7 days
  * Returns data from 5:00 to 22:00 for each day
  */
@@ -23,6 +37,12 @@ export const calculateWeeklyTrafficBlocks = (reports: Report[]): DayData[] => {
   const now = new Date();
   // Start from 6 days ago to get last 7 days including today
   const weekStart = startOfDay(subDays(now, 6));
+  
+  // Pre-parse all report timestamps for efficiency
+  const parsedReports = reports.map(r => ({
+    ...r,
+    timestamp: parseReportTime(r.reported_at).getTime()
+  }));
   
   const grid: DayData[] = [];
   
@@ -39,18 +59,16 @@ export const calculateWeeklyTrafficBlocks = (reports: Report[]): DayData[] => {
       const hour = startHour + Math.floor(block / 2);
       const minute = (block % 2) * 30;
       
-      // Create block start time using startOfDay + hours/minutes for consistency
-      const dayStart = startOfDay(currentDay);
-      const blockStart = addMinutes(dayStart, hour * 60 + minute);
+      // Create block start time
+      const blockStart = addMinutes(currentDay, hour * 60 + minute);
       const blockEnd = addMinutes(blockStart, 30);
       
       const blockStartTime = blockStart.getTime();
       const blockEndTime = blockEnd.getTime();
       
       // Filter reports for this 30-minute block using timestamp comparison
-      const blockReports = reports.filter((r) => {
-        const reportTime = new Date(r.reported_at).getTime();
-        return reportTime >= blockStartTime && reportTime < blockEndTime;
+      const blockReports = parsedReports.filter((r) => {
+        return r.timestamp >= blockStartTime && r.timestamp < blockEndTime;
       });
       
       // Calculate majority status

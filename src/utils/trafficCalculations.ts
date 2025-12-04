@@ -1,4 +1,4 @@
-import { addDays, subDays } from "date-fns";
+import { addDays, subDays, startOfDay, addMinutes } from "date-fns";
 
 interface Report {
   status: string;
@@ -22,7 +22,7 @@ export interface DayData {
 export const calculateWeeklyTrafficBlocks = (reports: Report[]): DayData[] => {
   const now = new Date();
   // Start from 6 days ago to get last 7 days including today
-  const weekStart = subDays(now, 6);
+  const weekStart = startOfDay(subDays(now, 6));
   
   const grid: DayData[] = [];
   
@@ -39,16 +39,18 @@ export const calculateWeeklyTrafficBlocks = (reports: Report[]): DayData[] => {
       const hour = startHour + Math.floor(block / 2);
       const minute = (block % 2) * 30;
       
-      const blockStart = new Date(currentDay);
-      blockStart.setHours(hour, minute, 0, 0);
+      // Create block start time using startOfDay + hours/minutes for consistency
+      const dayStart = startOfDay(currentDay);
+      const blockStart = addMinutes(dayStart, hour * 60 + minute);
+      const blockEnd = addMinutes(blockStart, 30);
       
-      const blockEnd = new Date(blockStart);
-      blockEnd.setMinutes(blockEnd.getMinutes() + 30);
+      const blockStartTime = blockStart.getTime();
+      const blockEndTime = blockEnd.getTime();
       
-      // Filter reports for this 30-minute block
+      // Filter reports for this 30-minute block using timestamp comparison
       const blockReports = reports.filter((r) => {
-        const reportTime = new Date(r.reported_at);
-        return reportTime >= blockStart && reportTime < blockEnd;
+        const reportTime = new Date(r.reported_at).getTime();
+        return reportTime >= blockStartTime && reportTime < blockEndTime;
       });
       
       // Calculate majority status

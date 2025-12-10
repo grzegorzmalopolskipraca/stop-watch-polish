@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { User } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import {
@@ -1049,6 +1050,18 @@ const Index = () => {
       {/* Sticky Header */}
       <header className="sticky top-0 z-10 bg-card border-b border-border shadow-sm">
         <div className="container max-w-2xl mx-auto px-4 py-4">
+          {/* Login Button */}
+          <div className="flex justify-end mb-2">
+            <Link to="/auth">
+              <Button 
+                className="bg-traffic-jedzie hover:bg-traffic-jedzie/90 text-traffic-jedzie-foreground"
+                size="sm"
+              >
+                <User className="w-4 h-4 mr-2" />
+                Login
+              </Button>
+            </Link>
+          </div>
           <div className="space-y-3">
             {/* Top tagline */}
             <p className="text-sm text-muted-foreground">Oszczędzaj czas i paliwo. Nim ruszysz sprawdź:</p>

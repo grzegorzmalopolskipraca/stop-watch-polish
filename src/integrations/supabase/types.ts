@@ -95,6 +95,42 @@ export type Database = {
         }
         Relationships: []
       }
+      commute_schedule: {
+        Row: {
+          created_at: string
+          day_of_week: number
+          from_work_end: string
+          from_work_start: string
+          id: string
+          to_work_end: string
+          to_work_start: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          day_of_week: number
+          from_work_end?: string
+          from_work_start?: string
+          id?: string
+          to_work_end?: string
+          to_work_start?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          day_of_week?: number
+          from_work_end?: string
+          from_work_start?: string
+          id?: string
+          to_work_end?: string
+          to_work_start?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       coupons: {
         Row: {
           created_at: string
@@ -247,6 +283,33 @@ export type Database = {
           id?: string
           name?: string
           street?: string | null
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          home_address: string | null
+          id: string
+          updated_at: string
+          user_id: string
+          work_address: string | null
+        }
+        Insert: {
+          created_at?: string
+          home_address?: string | null
+          id?: string
+          updated_at?: string
+          user_id: string
+          work_address?: string | null
+        }
+        Update: {
+          created_at?: string
+          home_address?: string | null
+          id?: string
+          updated_at?: string
+          user_id?: string
+          work_address?: string | null
         }
         Relationships: []
       }

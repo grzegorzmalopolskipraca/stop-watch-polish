@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { LogOut, Save, MapPin, Briefcase, Clock } from 'lucide-react';
+import { LogOut, Save, MapPin, Briefcase, Clock, Search, CheckCircle, Loader2 } from 'lucide-react';
 import { User, Session } from '@supabase/supabase-js';
 
 interface CommuteSchedule {
@@ -47,6 +47,10 @@ const Konto = () => {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [validatingHome, setValidatingHome] = useState(false);
+  const [validatingWork, setValidatingWork] = useState(false);
+  const [homeAddressValidated, setHomeAddressValidated] = useState(false);
+  const [workAddressValidated, setWorkAddressValidated] = useState(false);
   const [homeAddress, setHomeAddress] = useState('');
   const [workAddress, setWorkAddress] = useState('');
   const [schedule, setSchedule] = useState<CommuteSchedule[]>([]);
@@ -87,6 +91,9 @@ const Konto = () => {
       if (profile) {
         setHomeAddress(profile.home_address || '');
         setWorkAddress(profile.work_address || '');
+        // If addresses exist, consider them validated
+        if (profile.home_address) setHomeAddressValidated(true);
+        if (profile.work_address) setWorkAddressValidated(true);
       }
 
       // Load schedule
@@ -109,6 +116,60 @@ const Konto = () => {
   const handleLogout = async () => {
     await supabase.auth.signOut();
     navigate('/');
+  };
+
+  const validateAddress = async (address: string, type: 'home' | 'work') => {
+    if (!address.trim()) {
+      toast({
+        title: 'Błąd',
+        description: 'Wprowadź adres do walidacji.',
+        variant: 'destructive',
+      });
+      return null;
+    }
+
+    const setValidating = type === 'home' ? setValidatingHome : setValidatingWork;
+    setValidating(true);
+
+    try {
+      const { data, error } = await supabase.functions.invoke('validate-address', {
+        body: { address }
+      });
+
+      if (error) throw error;
+
+      if (data.success) {
+        if (type === 'home') {
+          setHomeAddress(data.formatted_address);
+          setHomeAddressValidated(true);
+        } else {
+          setWorkAddress(data.formatted_address);
+          setWorkAddressValidated(true);
+        }
+        toast({
+          title: 'Adres zweryfikowany',
+          description: data.formatted_address,
+        });
+        return data.formatted_address;
+      } else {
+        toast({
+          title: 'Nie znaleziono adresu',
+          description: data.error || 'Sprawdź poprawność danych.',
+          variant: 'destructive',
+        });
+        return null;
+      }
+    } catch (error) {
+      console.error('Error validating address:', error);
+      toast({
+        title: 'Błąd',
+        description: 'Nie udało się zweryfikować adresu.',
+        variant: 'destructive',
+      });
+      return null;
+    } finally {
+      setValidating(false);
+    }
   };
 
   const handleSave = async () => {
@@ -212,13 +273,40 @@ const Konto = () => {
                 <MapPin className="w-4 h-4 text-muted-foreground" />
                 Mój adres wyjazdu
               </Label>
-              <Input
-                id="home-address"
-                type="text"
-                placeholder="np. ul. Przykładowa 10, Wrocław"
-                value={homeAddress}
-                onChange={(e) => setHomeAddress(e.target.value)}
-              />
+              <div className="flex gap-2">
+                <Input
+                  id="home-address"
+                  type="text"
+                  placeholder="np. ul. Przykładowa 10, Wrocław"
+                  value={homeAddress}
+                  onChange={(e) => {
+                    setHomeAddress(e.target.value);
+                    setHomeAddressValidated(false);
+                  }}
+                  className={homeAddressValidated ? 'border-green-500' : ''}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => validateAddress(homeAddress, 'home')}
+                  disabled={validatingHome}
+                  className="shrink-0"
+                >
+                  {validatingHome ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : homeAddressValidated ? (
+                    <CheckCircle className="w-4 h-4 text-green-500" />
+                  ) : (
+                    <Search className="w-4 h-4" />
+                  )}
+                </Button>
+              </div>
+              {homeAddressValidated && (
+                <p className="text-sm text-green-600 flex items-center gap-1">
+                  <CheckCircle className="w-3 h-3" />
+                  Adres zweryfikowany
+                </p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -226,13 +314,40 @@ const Konto = () => {
                 <Briefcase className="w-4 h-4 text-muted-foreground" />
                 Adres mojej pracy
               </Label>
-              <Input
-                id="work-address"
-                type="text"
-                placeholder="np. ul. Firmowa 5, Wrocław"
-                value={workAddress}
-                onChange={(e) => setWorkAddress(e.target.value)}
-              />
+              <div className="flex gap-2">
+                <Input
+                  id="work-address"
+                  type="text"
+                  placeholder="np. ul. Firmowa 5, Wrocław"
+                  value={workAddress}
+                  onChange={(e) => {
+                    setWorkAddress(e.target.value);
+                    setWorkAddressValidated(false);
+                  }}
+                  className={workAddressValidated ? 'border-green-500' : ''}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => validateAddress(workAddress, 'work')}
+                  disabled={validatingWork}
+                  className="shrink-0"
+                >
+                  {validatingWork ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : workAddressValidated ? (
+                    <CheckCircle className="w-4 h-4 text-green-500" />
+                  ) : (
+                    <Search className="w-4 h-4" />
+                  )}
+                </Button>
+              </div>
+              {workAddressValidated && (
+                <p className="text-sm text-green-600 flex items-center gap-1">
+                  <CheckCircle className="w-3 h-3" />
+                  Adres zweryfikowany
+                </p>
+              )}
             </div>
 
             <Button onClick={handleSave} disabled={saving} className="w-full">

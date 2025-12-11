@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { LogOut, Save, MapPin, Briefcase, Clock, Search, CheckCircle, Loader2 } from 'lucide-react';
+import { LogOut, Save, MapPin, Briefcase, Clock, Search, CheckCircle, Loader2, RefreshCw } from 'lucide-react';
 import { User, Session } from '@supabase/supabase-js';
 
 interface CommuteSchedule {
@@ -23,11 +23,19 @@ interface AddressLocation {
   lng: number;
 }
 
+interface TravelTime {
+  departure_time: string;
+  travel_duration_minutes: number;
+  direction: 'to_work' | 'from_work';
+  travel_date: string;
+  calculated_at: string;
+}
+
 const DAYS_PL = ['Niedziela', 'Poniedziałek', 'Wtorek', 'Środa', 'Czwartek', 'Piątek', 'Sobota'];
 
-// Generate mock travel times (will be replaced with real data later)
-const generateMockTravelTimes = (startTime: string, endTime: string): { time: string; minutes: number }[] => {
-  const times: { time: string; minutes: number }[] = [];
+// Generate time slots for a range
+const generateTimeSlots = (startTime: string, endTime: string): string[] => {
+  const times: string[] = [];
   const [startH, startM] = startTime.split(':').map(Number);
   const [endH, endM] = endTime.split(':').map(Number);
   
@@ -37,10 +45,7 @@ const generateMockTravelTimes = (startTime: string, endTime: string): { time: st
   while (currentMinutes <= endMinutes) {
     const hours = Math.floor(currentMinutes / 60);
     const mins = currentMinutes % 60;
-    times.push({
-      time: `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`,
-      minutes: Math.floor(Math.random() * 20) + 15, // Random 15-35 minutes
-    });
+    times.push(`${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`);
     currentMinutes += 10;
   }
   
@@ -48,9 +53,10 @@ const generateMockTravelTimes = (startTime: string, endTime: string): { time: st
 };
 
 // Find min time for green coloring
-const getMinTime = (times: { time: string; minutes: number }[]) => {
-  if (times.length === 0) return Infinity;
-  return Math.min(...times.map(t => t.minutes));
+const getMinTime = (times: { time: string; minutes: number | null }[]) => {
+  const validTimes = times.filter(t => t.minutes !== null);
+  if (validTimes.length === 0) return Infinity;
+  return Math.min(...validTimes.map(t => t.minutes!));
 };
 
 const Konto = () => {
@@ -67,6 +73,8 @@ const Konto = () => {
   const [homeLocation, setHomeLocation] = useState<AddressLocation | null>(null);
   const [workLocation, setWorkLocation] = useState<AddressLocation | null>(null);
   const [schedule, setSchedule] = useState<CommuteSchedule[]>([]);
+  const [travelTimes, setTravelTimes] = useState<TravelTime[]>([]);
+  const [refreshingTimes, setRefreshingTimes] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -126,10 +134,76 @@ const Konto = () => {
       if (scheduleData) {
         setSchedule(scheduleData);
       }
+
+      // Load travel times for today
+      await loadTravelTimes(userId);
     } catch (error) {
       console.error('Error loading user data:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadTravelTimes = async (userId: string) => {
+    try {
+      // Get today's date in Poland timezone
+      const today = new Date().toISOString().split('T')[0];
+      
+      const { data: timesData, error } = await supabase
+        .from('commute_travel_times')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('travel_date', today);
+
+      if (error) {
+        console.error('Error loading travel times:', error);
+        return;
+      }
+
+      if (timesData) {
+        setTravelTimes(timesData as TravelTime[]);
+      }
+    } catch (error) {
+      console.error('Error loading travel times:', error);
+    }
+  };
+
+  const handleRefreshTravelTimes = async () => {
+    if (!user) return;
+    setRefreshingTimes(true);
+    
+    try {
+      // Call the edge function to calculate current time slot
+      const { data, error } = await supabase.functions.invoke('calculate-commute-times');
+      
+      if (error) {
+        console.error('Error refreshing travel times:', error);
+        toast({
+          title: 'Błąd',
+          description: 'Nie udało się odświeżyć czasów dojazdu.',
+          variant: 'destructive',
+        });
+        return;
+      }
+      
+      console.log('Travel times refresh result:', data);
+      
+      // Reload travel times from database
+      await loadTravelTimes(user.id);
+      
+      toast({
+        title: 'Odświeżono',
+        description: `Obliczono ${data?.processed || 0} czasów dojazdu.`,
+      });
+    } catch (error) {
+      console.error('Error refreshing travel times:', error);
+      toast({
+        title: 'Błąd',
+        description: 'Nie udało się odświeżyć czasów dojazdu.',
+        variant: 'destructive',
+      });
+    } finally {
+      setRefreshingTimes(false);
     }
   };
 
@@ -256,6 +330,23 @@ const Konto = () => {
       // Auto-save to database
       saveScheduleItem(day.id, field, value);
     }
+  };
+
+  // Get travel time for a specific slot
+  const getTravelTimeForSlot = (direction: 'to_work' | 'from_work', time: string): number | null => {
+    const match = travelTimes.find(
+      t => t.direction === direction && t.departure_time.substring(0, 5) === time
+    );
+    return match ? match.travel_duration_minutes : null;
+  };
+
+  // Generate travel time data for display
+  const getDisplayTravelTimes = (startTime: string, endTime: string, direction: 'to_work' | 'from_work') => {
+    const slots = generateTimeSlots(startTime, endTime);
+    return slots.map(time => ({
+      time,
+      minutes: getTravelTimeForSlot(direction, time),
+    }));
   };
 
   if (loading) {
@@ -468,67 +559,91 @@ const Konto = () => {
         {/* Travel Times Card */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Clock className="w-5 h-5" />
-              Przewidywany czas dojazdu
-            </CardTitle>
-            <p className="text-sm text-muted-foreground">W zależności od godziny wyjazdu</p>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <Clock className="w-5 h-5" />
+                  Przewidywany czas dojazdu
+                </CardTitle>
+                <p className="text-sm text-muted-foreground mt-1">W zależności od godziny wyjazdu</p>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleRefreshTravelTimes}
+                disabled={refreshingTimes || !homeAddressValidated || !workAddressValidated}
+                className="flex items-center gap-2"
+              >
+                <RefreshCw className={`w-4 h-4 ${refreshingTimes ? 'animate-spin' : ''}`} />
+                Odśwież teraz
+              </Button>
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="space-y-6">
-              {schedule.filter(day => day.day_of_week >= 1 && day.day_of_week <= 5).map((day) => {
-                const toWorkTimes = generateMockTravelTimes(day.to_work_start, day.to_work_end);
-                const fromWorkTimes = generateMockTravelTimes(day.from_work_start, day.from_work_end);
-                const toWorkMin = getMinTime(toWorkTimes);
-                const fromWorkMin = getMinTime(fromWorkTimes);
+            {!homeAddressValidated || !workAddressValidated ? (
+              <p className="text-center text-muted-foreground py-8">
+                Najpierw zweryfikuj i zapisz adresy domu i pracy, aby zobaczyć czasy dojazdu.
+              </p>
+            ) : (
+              <div className="space-y-6">
+                {schedule.filter(day => day.day_of_week >= 1 && day.day_of_week <= 5).map((day) => {
+                  const toWorkTimes = getDisplayTravelTimes(day.to_work_start, day.to_work_end, 'to_work');
+                  const fromWorkTimes = getDisplayTravelTimes(day.from_work_start, day.from_work_end, 'from_work');
+                  const toWorkMin = getMinTime(toWorkTimes);
+                  const fromWorkMin = getMinTime(fromWorkTimes);
 
-                return (
-                  <div key={day.id} className="border border-border rounded-lg p-4">
-                    <h4 className="font-medium mb-3">{DAYS_PL[day.day_of_week]}</h4>
-                    
-                    <div className="space-y-4">
-                      {/* To Work */}
-                      <div>
-                        <p className="text-sm text-muted-foreground mb-2">Do pracy ({day.to_work_start} - {day.to_work_end})</p>
-                        <div className="flex flex-wrap gap-1">
-                          {toWorkTimes.map((slot, idx) => (
-                            <div 
-                              key={idx}
-                              className={`text-xs px-2 py-1 rounded whitespace-nowrap ${
-                                slot.minutes === toWorkMin 
-                                  ? 'bg-green-500/20 text-green-700 dark:text-green-400 border border-green-500/30' 
-                                  : 'bg-secondary'
-                              }`}
-                            >
-                              {slot.time}: <span className="font-medium">{slot.minutes}min</span>
-                            </div>
-                          ))}
+                  return (
+                    <div key={day.id} className="border border-border rounded-lg p-4">
+                      <h4 className="font-medium mb-3">{DAYS_PL[day.day_of_week]}</h4>
+                      
+                      <div className="space-y-4">
+                        {/* To Work */}
+                        <div>
+                          <p className="text-sm text-muted-foreground mb-2">Do pracy ({day.to_work_start} - {day.to_work_end})</p>
+                          <div className="flex flex-wrap gap-1">
+                            {toWorkTimes.map((slot, idx) => (
+                              <div 
+                                key={idx}
+                                className={`text-xs px-2 py-1 rounded whitespace-nowrap ${
+                                  slot.minutes !== null && slot.minutes === toWorkMin 
+                                    ? 'bg-green-500/20 text-green-700 dark:text-green-400 border border-green-500/30' 
+                                    : slot.minutes !== null 
+                                      ? 'bg-secondary' 
+                                      : 'bg-muted/50 text-muted-foreground'
+                                }`}
+                              >
+                                {slot.time}: <span className="font-medium">{slot.minutes !== null ? `${slot.minutes}min` : '—'}</span>
+                              </div>
+                            ))}
+                          </div>
                         </div>
-                      </div>
 
-                      {/* From Work */}
-                      <div>
-                        <p className="text-sm text-muted-foreground mb-2">Z pracy ({day.from_work_start} - {day.from_work_end})</p>
-                        <div className="flex flex-wrap gap-1">
-                          {fromWorkTimes.map((slot, idx) => (
-                            <div 
-                              key={idx}
-                              className={`text-xs px-2 py-1 rounded whitespace-nowrap ${
-                                slot.minutes === fromWorkMin 
-                                  ? 'bg-green-500/20 text-green-700 dark:text-green-400 border border-green-500/30' 
-                                  : 'bg-secondary'
-                              }`}
-                            >
-                              {slot.time}: <span className="font-medium">{slot.minutes}min</span>
-                            </div>
-                          ))}
+                        {/* From Work */}
+                        <div>
+                          <p className="text-sm text-muted-foreground mb-2">Z pracy ({day.from_work_start} - {day.from_work_end})</p>
+                          <div className="flex flex-wrap gap-1">
+                            {fromWorkTimes.map((slot, idx) => (
+                              <div 
+                                key={idx}
+                                className={`text-xs px-2 py-1 rounded whitespace-nowrap ${
+                                  slot.minutes !== null && slot.minutes === fromWorkMin 
+                                    ? 'bg-green-500/20 text-green-700 dark:text-green-400 border border-green-500/30' 
+                                    : slot.minutes !== null 
+                                      ? 'bg-secondary' 
+                                      : 'bg-muted/50 text-muted-foreground'
+                                }`}
+                              >
+                                {slot.time}: <span className="font-medium">{slot.minutes !== null ? `${slot.minutes}min` : '—'}</span>
+                              </div>
+                            ))}
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
+            )}
           </CardContent>
         </Card>
       </main>

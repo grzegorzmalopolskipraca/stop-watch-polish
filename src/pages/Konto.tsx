@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -16,6 +16,11 @@ interface CommuteSchedule {
   to_work_end: string;
   from_work_start: string;
   from_work_end: string;
+}
+
+interface AddressLocation {
+  lat: number;
+  lng: number;
 }
 
 const DAYS_PL = ['Niedziela', 'Poniedziałek', 'Wtorek', 'Środa', 'Czwartek', 'Piątek', 'Sobota'];
@@ -42,17 +47,25 @@ const generateMockTravelTimes = (startTime: string, endTime: string): { time: st
   return times;
 };
 
+// Find min time for green coloring
+const getMinTime = (times: { time: string; minutes: number }[]) => {
+  if (times.length === 0) return Infinity;
+  return Math.min(...times.map(t => t.minutes));
+};
+
 const Konto = () => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const [savingAddresses, setSavingAddresses] = useState(false);
   const [validatingHome, setValidatingHome] = useState(false);
   const [validatingWork, setValidatingWork] = useState(false);
   const [homeAddressValidated, setHomeAddressValidated] = useState(false);
   const [workAddressValidated, setWorkAddressValidated] = useState(false);
   const [homeAddress, setHomeAddress] = useState('');
   const [workAddress, setWorkAddress] = useState('');
+  const [homeLocation, setHomeLocation] = useState<AddressLocation | null>(null);
+  const [workLocation, setWorkLocation] = useState<AddressLocation | null>(null);
   const [schedule, setSchedule] = useState<CommuteSchedule[]>([]);
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -94,6 +107,13 @@ const Konto = () => {
         // If addresses exist, consider them validated
         if (profile.home_address) setHomeAddressValidated(true);
         if (profile.work_address) setWorkAddressValidated(true);
+        // Load saved coordinates
+        if (profile.home_lat && profile.home_lng) {
+          setHomeLocation({ lat: profile.home_lat, lng: profile.home_lng });
+        }
+        if (profile.work_lat && profile.work_lng) {
+          setWorkLocation({ lat: profile.work_lat, lng: profile.work_lng });
+        }
       }
 
       // Load schedule
@@ -142,15 +162,17 @@ const Konto = () => {
         if (type === 'home') {
           setHomeAddress(data.formatted_address);
           setHomeAddressValidated(true);
+          setHomeLocation(data.location);
         } else {
           setWorkAddress(data.formatted_address);
           setWorkAddressValidated(true);
+          setWorkLocation(data.location);
         }
         toast({
           title: 'Adres zweryfikowany',
           description: data.formatted_address,
         });
-        return data.formatted_address;
+        return { address: data.formatted_address, location: data.location };
       } else {
         toast({
           title: 'Nie znaleziono adresu',
@@ -172,56 +194,68 @@ const Konto = () => {
     }
   };
 
-  const handleSave = async () => {
+  const handleSaveAddresses = async () => {
     if (!user) return;
-    setSaving(true);
+    setSavingAddresses(true);
 
     try {
-      // Update profile
       const { error: profileError } = await supabase
         .from('profiles')
         .update({
           home_address: homeAddress,
           work_address: workAddress,
+          home_lat: homeLocation?.lat || null,
+          home_lng: homeLocation?.lng || null,
+          work_lat: workLocation?.lat || null,
+          work_lng: workLocation?.lng || null,
         })
         .eq('user_id', user.id);
 
       if (profileError) throw profileError;
 
-      // Update schedule
-      for (const day of schedule) {
-        const { error: scheduleError } = await supabase
-          .from('commute_schedule')
-          .update({
-            to_work_start: day.to_work_start,
-            to_work_end: day.to_work_end,
-            from_work_start: day.from_work_start,
-            from_work_end: day.from_work_end,
-          })
-          .eq('id', day.id);
-
-        if (scheduleError) throw scheduleError;
-      }
-
       toast({
         title: 'Zapisano!',
-        description: 'Twoje ustawienia zostały zapisane.',
+        description: 'Adresy zostały zapisane.',
       });
     } catch (error) {
       toast({
         title: 'Błąd',
-        description: 'Nie udało się zapisać ustawień.',
+        description: 'Nie udało się zapisać adresów.',
         variant: 'destructive',
       });
     } finally {
-      setSaving(false);
+      setSavingAddresses(false);
     }
   };
 
+  // Auto-save schedule when changed
+  const saveScheduleItem = useCallback(async (dayId: string, field: string, value: string) => {
+    try {
+      const { error } = await supabase
+        .from('commute_schedule')
+        .update({ [field]: value })
+        .eq('id', dayId);
+
+      if (error) throw error;
+    } catch (error) {
+      console.error('Error saving schedule:', error);
+      toast({
+        title: 'Błąd',
+        description: 'Nie udało się zapisać harmonogramu.',
+        variant: 'destructive',
+      });
+    }
+  }, [toast]);
+
   const updateSchedule = (dayIndex: number, field: keyof CommuteSchedule, value: string) => {
-    setSchedule(prev => prev.map(day => 
-      day.day_of_week === dayIndex ? { ...day, [field]: value } : day
-    ));
+    const day = schedule.find(d => d.day_of_week === dayIndex);
+    if (day) {
+      setSchedule(prev => prev.map(d => 
+        d.day_of_week === dayIndex ? { ...d, [field]: value } : d
+      ));
+      // Auto-save to database
+      saveScheduleItem(day.id, field, value);
+    }
   };
 
   if (loading) {
@@ -282,6 +316,7 @@ const Konto = () => {
                   onChange={(e) => {
                     setHomeAddress(e.target.value);
                     setHomeAddressValidated(false);
+                    setHomeLocation(null);
                   }}
                   className={homeAddressValidated ? 'border-green-500' : ''}
                 />
@@ -305,6 +340,7 @@ const Konto = () => {
                 <p className="text-sm text-green-600 flex items-center gap-1">
                   <CheckCircle className="w-3 h-3" />
                   Adres zweryfikowany
+                  {homeLocation && <span className="text-xs text-muted-foreground ml-2">({homeLocation.lat.toFixed(4)}, {homeLocation.lng.toFixed(4)})</span>}
                 </p>
               )}
             </div>
@@ -323,6 +359,7 @@ const Konto = () => {
                   onChange={(e) => {
                     setWorkAddress(e.target.value);
                     setWorkAddressValidated(false);
+                    setWorkLocation(null);
                   }}
                   className={workAddressValidated ? 'border-green-500' : ''}
                 />
@@ -346,13 +383,14 @@ const Konto = () => {
                 <p className="text-sm text-green-600 flex items-center gap-1">
                   <CheckCircle className="w-3 h-3" />
                   Adres zweryfikowany
+                  {workLocation && <span className="text-xs text-muted-foreground ml-2">({workLocation.lat.toFixed(4)}, {workLocation.lng.toFixed(4)})</span>}
                 </p>
               )}
             </div>
 
-            <Button onClick={handleSave} disabled={saving} className="w-full">
+            <Button onClick={handleSaveAddresses} disabled={savingAddresses} className="w-full">
               <Save className="w-4 h-4 mr-2" />
-              {saving ? 'Zapisywanie...' : 'Zapisz'}
+              {savingAddresses ? 'Zapisywanie...' : 'Zapisz adresy'}
             </Button>
           </CardContent>
         </Card>
@@ -364,6 +402,7 @@ const Konto = () => {
               <Clock className="w-5 h-5" />
               Harmonogram tygodniowy
             </CardTitle>
+            <p className="text-sm text-muted-foreground">Zmiany zapisują się automatycznie</p>
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">
@@ -423,11 +462,6 @@ const Konto = () => {
                 </tbody>
               </table>
             </div>
-
-            <Button onClick={handleSave} disabled={saving} className="w-full mt-4">
-              <Save className="w-4 h-4 mr-2" />
-              {saving ? 'Zapisywanie...' : 'Zapisz'}
-            </Button>
           </CardContent>
         </Card>
 
@@ -438,46 +472,62 @@ const Konto = () => {
               <Clock className="w-5 h-5" />
               Przewidywany czas dojazdu
             </CardTitle>
+            <p className="text-sm text-muted-foreground">W zależności od godziny wyjazdu</p>
           </CardHeader>
           <CardContent>
             <div className="space-y-6">
-              {schedule.filter(day => day.day_of_week >= 1 && day.day_of_week <= 5).map((day) => (
-                <div key={day.id} className="border border-border rounded-lg p-4">
-                  <h4 className="font-medium mb-3">{DAYS_PL[day.day_of_week]}</h4>
-                  
-                  <div className="grid md:grid-cols-2 gap-4">
-                    {/* To Work */}
-                    <div>
-                      <p className="text-sm text-muted-foreground mb-2">Do pracy ({day.to_work_start} - {day.to_work_end})</p>
-                      <div className="flex flex-wrap gap-2">
-                        {generateMockTravelTimes(day.to_work_start, day.to_work_end).map((slot, idx) => (
-                          <div 
-                            key={idx}
-                            className="text-xs bg-secondary px-2 py-1 rounded"
-                          >
-                            {slot.time}: <span className="font-medium">{slot.minutes}min</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
+              {schedule.filter(day => day.day_of_week >= 1 && day.day_of_week <= 5).map((day) => {
+                const toWorkTimes = generateMockTravelTimes(day.to_work_start, day.to_work_end);
+                const fromWorkTimes = generateMockTravelTimes(day.from_work_start, day.from_work_end);
+                const toWorkMin = getMinTime(toWorkTimes);
+                const fromWorkMin = getMinTime(fromWorkTimes);
 
-                    {/* From Work */}
-                    <div>
-                      <p className="text-sm text-muted-foreground mb-2">Z pracy ({day.from_work_start} - {day.from_work_end})</p>
-                      <div className="flex flex-wrap gap-2">
-                        {generateMockTravelTimes(day.from_work_start, day.from_work_end).map((slot, idx) => (
-                          <div 
-                            key={idx}
-                            className="text-xs bg-secondary px-2 py-1 rounded"
-                          >
-                            {slot.time}: <span className="font-medium">{slot.minutes}min</span>
-                          </div>
-                        ))}
+                return (
+                  <div key={day.id} className="border border-border rounded-lg p-4">
+                    <h4 className="font-medium mb-3">{DAYS_PL[day.day_of_week]}</h4>
+                    
+                    <div className="space-y-4">
+                      {/* To Work */}
+                      <div>
+                        <p className="text-sm text-muted-foreground mb-2">Do pracy ({day.to_work_start} - {day.to_work_end})</p>
+                        <div className="flex flex-wrap gap-1">
+                          {toWorkTimes.map((slot, idx) => (
+                            <div 
+                              key={idx}
+                              className={`text-xs px-2 py-1 rounded whitespace-nowrap ${
+                                slot.minutes === toWorkMin 
+                                  ? 'bg-green-500/20 text-green-700 dark:text-green-400 border border-green-500/30' 
+                                  : 'bg-secondary'
+                              }`}
+                            >
+                              {slot.time}: <span className="font-medium">{slot.minutes}min</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* From Work */}
+                      <div>
+                        <p className="text-sm text-muted-foreground mb-2">Z pracy ({day.from_work_start} - {day.from_work_end})</p>
+                        <div className="flex flex-wrap gap-1">
+                          {fromWorkTimes.map((slot, idx) => (
+                            <div 
+                              key={idx}
+                              className={`text-xs px-2 py-1 rounded whitespace-nowrap ${
+                                slot.minutes === fromWorkMin 
+                                  ? 'bg-green-500/20 text-green-700 dark:text-green-400 border border-green-500/30' 
+                                  : 'bg-secondary'
+                              }`}
+                            >
+                              {slot.time}: <span className="font-medium">{slot.minutes}min</span>
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </CardContent>
         </Card>

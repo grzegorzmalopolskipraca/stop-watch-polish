@@ -290,26 +290,38 @@ export type Database = {
         Row: {
           created_at: string
           home_address: string | null
+          home_lat: number | null
+          home_lng: number | null
           id: string
           updated_at: string
           user_id: string
           work_address: string | null
+          work_lat: number | null
+          work_lng: number | null
         }
         Insert: {
           created_at?: string
           home_address?: string | null
+          home_lat?: number | null
+          home_lng?: number | null
           id?: string
           updated_at?: string
           user_id: string
           work_address?: string | null
+          work_lat?: number | null
+          work_lng?: number | null
         }
         Update: {
           created_at?: string
           home_address?: string | null
+          home_lat?: number | null
+          home_lng?: number | null
           id?: string
           updated_at?: string
           user_id?: string
           work_address?: string | null
+          work_lat?: number | null
+          work_lng?: number | null
         }
         Relationships: []
       }

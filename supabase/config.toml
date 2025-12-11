@@ -38,3 +38,9 @@ verify_jwt = false
 
 [functions.auto-traffic-monitor]
 verify_jwt = false
+
+[functions.validate-address]
+verify_jwt = false
+
+[functions.calculate-commute-times]
+verify_jwt = false

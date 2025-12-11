@@ -131,6 +131,51 @@ export type Database = {
         }
         Relationships: []
       }
+      commute_travel_times: {
+        Row: {
+          calculated_at: string
+          created_at: string
+          day_of_week: number
+          departure_time: string
+          destination_address: string | null
+          direction: string
+          id: string
+          origin_address: string | null
+          travel_date: string
+          travel_duration_minutes: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          calculated_at?: string
+          created_at?: string
+          day_of_week: number
+          departure_time: string
+          destination_address?: string | null
+          direction: string
+          id?: string
+          origin_address?: string | null
+          travel_date: string
+          travel_duration_minutes: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          calculated_at?: string
+          created_at?: string
+          day_of_week?: number
+          departure_time?: string
+          destination_address?: string | null
+          direction?: string
+          id?: string
+          origin_address?: string | null
+          travel_date?: string
+          travel_duration_minutes?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       coupons: {
         Row: {
           created_at: string

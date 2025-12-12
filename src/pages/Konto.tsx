@@ -358,28 +358,29 @@ const Konto = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background overflow-x-hidden">
       {/* Header */}
-      <header className="bg-card border-b border-border p-4">
-        <div className="max-w-4xl mx-auto flex items-center justify-between">
-          <h1 className="text-xl font-bold text-foreground">eJedzie.pl</h1>
+      <header className="bg-card border-b border-border p-3 sm:p-4">
+        <div className="max-w-4xl mx-auto flex items-center justify-between gap-2">
+          <h1 className="text-lg sm:text-xl font-bold text-foreground">eJedzie.pl</h1>
           <Button 
             variant="outline" 
             onClick={handleLogout}
-            className="flex items-center gap-2"
+            className="flex items-center gap-1 sm:gap-2 text-sm"
+            size="sm"
           >
             <LogOut className="w-4 h-4" />
-            Wyloguj
+            <span className="hidden sm:inline">Wyloguj</span>
           </Button>
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="max-w-4xl mx-auto p-4 space-y-6">
+      <main className="max-w-4xl mx-auto p-3 sm:p-4 space-y-4 sm:space-y-6">
         {/* Title */}
-        <div className="text-center py-6">
-          <h2 className="text-3xl font-bold text-foreground">Prywatny asystent dojazdu do pracy</h2>
-          <p className="text-muted-foreground mt-2">
+        <div className="text-center py-4 sm:py-6">
+          <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-foreground px-2">Prywatny asystent dojazdu do pracy</h2>
+          <p className="text-muted-foreground mt-2 text-sm sm:text-base break-all px-2">
             Zalogowany jako: {user?.email}
           </p>
         </div>
@@ -394,8 +395,8 @@ const Konto = () => {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="home-address" className="flex items-center gap-2">
-                <MapPin className="w-4 h-4 text-muted-foreground" />
+              <Label htmlFor="home-address" className="flex items-center gap-2 text-sm">
+                <MapPin className="w-4 h-4 text-muted-foreground shrink-0" />
                 Mój adres wyjazdu
               </Label>
               <div className="flex gap-2">
@@ -409,7 +410,7 @@ const Konto = () => {
                     setHomeAddressValidated(false);
                     setHomeLocation(null);
                   }}
-                  className={homeAddressValidated ? 'border-green-500' : ''}
+                  className={`min-w-0 flex-1 text-sm ${homeAddressValidated ? 'border-green-500' : ''}`}
                 />
                 <Button
                   type="button"
@@ -417,6 +418,7 @@ const Konto = () => {
                   onClick={() => validateAddress(homeAddress, 'home')}
                   disabled={validatingHome}
                   className="shrink-0"
+                  size="icon"
                 >
                   {validatingHome ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
@@ -428,17 +430,17 @@ const Konto = () => {
                 </Button>
               </div>
               {homeAddressValidated && (
-                <p className="text-sm text-green-600 flex items-center gap-1">
-                  <CheckCircle className="w-3 h-3" />
-                  Adres zweryfikowany
-                  {homeLocation && <span className="text-xs text-muted-foreground ml-2">({homeLocation.lat.toFixed(4)}, {homeLocation.lng.toFixed(4)})</span>}
+                <p className="text-xs sm:text-sm text-green-600 flex flex-wrap items-center gap-1">
+                  <CheckCircle className="w-3 h-3 shrink-0" />
+                  <span>Adres zweryfikowany</span>
+                  {homeLocation && <span className="text-xs text-muted-foreground">({homeLocation.lat.toFixed(4)}, {homeLocation.lng.toFixed(4)})</span>}
                 </p>
               )}
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="work-address" className="flex items-center gap-2">
-                <Briefcase className="w-4 h-4 text-muted-foreground" />
+              <Label htmlFor="work-address" className="flex items-center gap-2 text-sm">
+                <Briefcase className="w-4 h-4 text-muted-foreground shrink-0" />
                 Adres mojej pracy
               </Label>
               <div className="flex gap-2">
@@ -452,7 +454,7 @@ const Konto = () => {
                     setWorkAddressValidated(false);
                     setWorkLocation(null);
                   }}
-                  className={workAddressValidated ? 'border-green-500' : ''}
+                  className={`min-w-0 flex-1 text-sm ${workAddressValidated ? 'border-green-500' : ''}`}
                 />
                 <Button
                   type="button"
@@ -460,6 +462,7 @@ const Konto = () => {
                   onClick={() => validateAddress(workAddress, 'work')}
                   disabled={validatingWork}
                   className="shrink-0"
+                  size="icon"
                 >
                   {validatingWork ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
@@ -471,15 +474,15 @@ const Konto = () => {
                 </Button>
               </div>
               {workAddressValidated && (
-                <p className="text-sm text-green-600 flex items-center gap-1">
-                  <CheckCircle className="w-3 h-3" />
-                  Adres zweryfikowany
-                  {workLocation && <span className="text-xs text-muted-foreground ml-2">({workLocation.lat.toFixed(4)}, {workLocation.lng.toFixed(4)})</span>}
+                <p className="text-xs sm:text-sm text-green-600 flex flex-wrap items-center gap-1">
+                  <CheckCircle className="w-3 h-3 shrink-0" />
+                  <span>Adres zweryfikowany</span>
+                  {workLocation && <span className="text-xs text-muted-foreground">({workLocation.lat.toFixed(4)}, {workLocation.lng.toFixed(4)})</span>}
                 </p>
               )}
             </div>
 
-            <Button onClick={handleSaveAddresses} disabled={savingAddresses} className="w-full">
+            <Button onClick={handleSaveAddresses} disabled={savingAddresses} className="w-full text-sm">
               <Save className="w-4 h-4 mr-2" />
               {savingAddresses ? 'Zapisywanie...' : 'Zapisz adresy'}
             </Button>
@@ -488,23 +491,71 @@ const Konto = () => {
 
         {/* Schedule Card */}
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Clock className="w-5 h-5" />
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+              <Clock className="w-5 h-5 shrink-0" />
               Harmonogram tygodniowy
             </CardTitle>
-            <p className="text-sm text-muted-foreground">Zmiany zapisują się automatycznie</p>
+            <p className="text-xs sm:text-sm text-muted-foreground">Zmiany zapisują się automatycznie</p>
           </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <table className="w-full border-collapse">
+          <CardContent className="px-2 sm:px-6">
+            {/* Mobile: Cards view */}
+            <div className="block sm:hidden space-y-3">
+              {schedule.map((day) => (
+                <div key={day.id} className="border border-border rounded-lg p-3 space-y-3">
+                  <p className="font-medium text-sm">{DAYS_PL[day.day_of_week]}</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <p className="text-xs text-muted-foreground">Do pracy</p>
+                      <div className="flex gap-1 items-center">
+                        <Input
+                          type="time"
+                          value={day.to_work_start}
+                          onChange={(e) => updateSchedule(day.day_of_week, 'to_work_start', e.target.value)}
+                          className="text-xs h-8 px-1"
+                        />
+                        <span className="text-xs text-muted-foreground">-</span>
+                        <Input
+                          type="time"
+                          value={day.to_work_end}
+                          onChange={(e) => updateSchedule(day.day_of_week, 'to_work_end', e.target.value)}
+                          className="text-xs h-8 px-1"
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-xs text-muted-foreground">Z pracy</p>
+                      <div className="flex gap-1 items-center">
+                        <Input
+                          type="time"
+                          value={day.from_work_start}
+                          onChange={(e) => updateSchedule(day.day_of_week, 'from_work_start', e.target.value)}
+                          className="text-xs h-8 px-1"
+                        />
+                        <span className="text-xs text-muted-foreground">-</span>
+                        <Input
+                          type="time"
+                          value={day.from_work_end}
+                          onChange={(e) => updateSchedule(day.day_of_week, 'from_work_end', e.target.value)}
+                          className="text-xs h-8 px-1"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            
+            {/* Desktop: Table view */}
+            <div className="hidden sm:block overflow-x-auto">
+              <table className="w-full border-collapse text-sm">
                 <thead>
                   <tr className="border-b border-border">
                     <th className="text-left p-2 font-medium">Dzień</th>
                     <th className="text-center p-2 font-medium" colSpan={2}>Do pracy</th>
                     <th className="text-center p-2 font-medium" colSpan={2}>Z pracy</th>
                   </tr>
-                  <tr className="border-b border-border text-sm text-muted-foreground">
+                  <tr className="border-b border-border text-xs text-muted-foreground">
                     <th></th>
                     <th className="p-2">Od</th>
                     <th className="p-2">Do</th>
@@ -515,37 +566,37 @@ const Konto = () => {
                 <tbody>
                   {schedule.map((day) => (
                     <tr key={day.id} className="border-b border-border">
-                      <td className="p-2 font-medium">{DAYS_PL[day.day_of_week]}</td>
-                      <td className="p-2">
+                      <td className="p-2 font-medium text-sm">{DAYS_PL[day.day_of_week]}</td>
+                      <td className="p-1">
                         <Input
                           type="time"
                           value={day.to_work_start}
                           onChange={(e) => updateSchedule(day.day_of_week, 'to_work_start', e.target.value)}
-                          className="w-24"
+                          className="w-[90px] text-sm h-8"
                         />
                       </td>
-                      <td className="p-2">
+                      <td className="p-1">
                         <Input
                           type="time"
                           value={day.to_work_end}
                           onChange={(e) => updateSchedule(day.day_of_week, 'to_work_end', e.target.value)}
-                          className="w-24"
+                          className="w-[90px] text-sm h-8"
                         />
                       </td>
-                      <td className="p-2">
+                      <td className="p-1">
                         <Input
                           type="time"
                           value={day.from_work_start}
                           onChange={(e) => updateSchedule(day.day_of_week, 'from_work_start', e.target.value)}
-                          className="w-24"
+                          className="w-[90px] text-sm h-8"
                         />
                       </td>
-                      <td className="p-2">
+                      <td className="p-1">
                         <Input
                           type="time"
                           value={day.from_work_end}
                           onChange={(e) => updateSchedule(day.day_of_week, 'from_work_end', e.target.value)}
-                          className="w-24"
+                          className="w-[90px] text-sm h-8"
                         />
                       </td>
                     </tr>
@@ -558,34 +609,34 @@ const Konto = () => {
 
         {/* Travel Times Card */}
         <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
+          <CardHeader className="pb-3">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <div>
-                <CardTitle className="flex items-center gap-2">
-                  <Clock className="w-5 h-5" />
+                <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                  <Clock className="w-5 h-5 shrink-0" />
                   Przewidywany czas dojazdu
                 </CardTitle>
-                <p className="text-sm text-muted-foreground mt-1">W zależności od godziny wyjazdu</p>
+                <p className="text-xs sm:text-sm text-muted-foreground mt-1">W zależności od godziny wyjazdu</p>
               </div>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={handleRefreshTravelTimes}
                 disabled={refreshingTimes || !homeAddressValidated || !workAddressValidated}
-                className="flex items-center gap-2"
+                className="flex items-center gap-2 w-full sm:w-auto text-sm"
               >
                 <RefreshCw className={`w-4 h-4 ${refreshingTimes ? 'animate-spin' : ''}`} />
                 Odśwież teraz
               </Button>
             </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-2 sm:px-6">
             {!homeAddressValidated || !workAddressValidated ? (
-              <p className="text-center text-muted-foreground py-8">
+              <p className="text-center text-muted-foreground py-6 sm:py-8 text-sm px-2">
                 Najpierw zweryfikuj i zapisz adresy domu i pracy, aby zobaczyć czasy dojazdu.
               </p>
             ) : (
-              <div className="space-y-6">
+              <div className="space-y-4 sm:space-y-6">
                 {schedule.filter(day => day.day_of_week >= 1 && day.day_of_week <= 5).map((day) => {
                   const toWorkTimes = getDisplayTravelTimes(day.to_work_start, day.to_work_end, 'to_work');
                   const fromWorkTimes = getDisplayTravelTimes(day.from_work_start, day.from_work_end, 'from_work');
@@ -593,18 +644,18 @@ const Konto = () => {
                   const fromWorkMin = getMinTime(fromWorkTimes);
 
                   return (
-                    <div key={day.id} className="border border-border rounded-lg p-4">
-                      <h4 className="font-medium mb-3">{DAYS_PL[day.day_of_week]}</h4>
+                    <div key={day.id} className="border border-border rounded-lg p-3 sm:p-4">
+                      <h4 className="font-medium mb-2 sm:mb-3 text-sm sm:text-base">{DAYS_PL[day.day_of_week]}</h4>
                       
-                      <div className="space-y-4">
+                      <div className="space-y-3 sm:space-y-4">
                         {/* To Work */}
                         <div>
-                          <p className="text-sm text-muted-foreground mb-2">Do pracy ({day.to_work_start} - {day.to_work_end})</p>
+                          <p className="text-xs sm:text-sm text-muted-foreground mb-2">Do pracy ({day.to_work_start} - {day.to_work_end})</p>
                           <div className="flex flex-wrap gap-1">
                             {toWorkTimes.map((slot, idx) => (
                               <div 
                                 key={idx}
-                                className={`text-xs px-2 py-1 rounded whitespace-nowrap ${
+                                className={`text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 sm:py-1 rounded whitespace-nowrap ${
                                   slot.minutes !== null && slot.minutes === toWorkMin 
                                     ? 'bg-green-500/20 text-green-700 dark:text-green-400 border border-green-500/30' 
                                     : slot.minutes !== null 
@@ -620,12 +671,12 @@ const Konto = () => {
 
                         {/* From Work */}
                         <div>
-                          <p className="text-sm text-muted-foreground mb-2">Z pracy ({day.from_work_start} - {day.from_work_end})</p>
+                          <p className="text-xs sm:text-sm text-muted-foreground mb-2">Z pracy ({day.from_work_start} - {day.from_work_end})</p>
                           <div className="flex flex-wrap gap-1">
                             {fromWorkTimes.map((slot, idx) => (
                               <div 
                                 key={idx}
-                                className={`text-xs px-2 py-1 rounded whitespace-nowrap ${
+                                className={`text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 sm:py-1 rounded whitespace-nowrap ${
                                   slot.minutes !== null && slot.minutes === fromWorkMin 
                                     ? 'bg-green-500/20 text-green-700 dark:text-green-400 border border-green-500/30' 
                                     : slot.minutes !== null 
@@ -649,7 +700,7 @@ const Konto = () => {
       </main>
 
       {/* Footer */}
-      <footer className="max-w-4xl mx-auto p-4 mt-8 text-center text-sm text-muted-foreground">
+      <footer className="max-w-4xl mx-auto p-3 sm:p-4 mt-6 sm:mt-8 text-center text-xs sm:text-sm text-muted-foreground">
         <p>© 2024 eJedzie.pl - Prywatny asystent dojazdu do pracy</p>
       </footer>
     </div>

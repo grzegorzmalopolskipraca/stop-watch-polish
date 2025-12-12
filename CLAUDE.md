@@ -6,6 +6,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 This is a Polish traffic monitoring web application ("Czy ulica stoi?") built with React, TypeScript, Vite, and Supabase. Users can report and view real-time traffic conditions on streets in Wrocław, Poland. The app includes push notifications via OneSignal, traffic predictions, voting, chat, and other community features.
 
+## Project Owner
+
+- **Owner:** Grzegorz Malopolski
+- **Email:** grzegorz.malopolski@ringieraxelspringer.pl
+
 ## Tech Stack
 
 - **Frontend:** React 18 + TypeScript + Vite
@@ -383,6 +388,22 @@ const stopScanning = () => {
   isProcessingScanRef.current = false;
 };
 ```
+
+## MCP Server Integration
+
+This project integrates with the **10x Rules MCP server** to provide access to curated coding rules and standards.
+
+### Configuration Files
+- `.mcp.json` - Defines the 10x-rules MCP server connection
+- `.claude/settings.local.json` - Enables all project MCP servers automatically
+
+### Available Tools
+When the MCP server is active, the following tools become available:
+- `listAvailableRules` - Discover all available rule sets, their names, and technology stacks
+- `getRuleContent` - Fetch specific coding guidelines for a chosen rule set
+
+### Documentation
+Full MCP server documentation: [10x Rules MCP Server](https://10x-rules-mcp-server.przeprogramowani.workers.dev/)
 
 ## Lovable Integration
 

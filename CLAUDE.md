@@ -11,6 +11,28 @@ This is a Polish traffic monitoring web application ("Czy ulica stoi?") built wi
 - **Owner:** Grzegorz Malopolski
 - **Email:** grzegorz.malopolski@ringieraxelspringer.pl
 
+## CI/CD Pipeline
+
+This project uses **GitHub Actions** for continuous integration:
+
+- **Workflow File:** `.github/workflows/ci.yml`
+- **Triggers:** Push to `develop`, `feature/**` branches; Pull requests
+- **Jobs:** Code analysis (non-blocking), Tests, Build
+- **Secrets Required:** `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`
+
+📋 **Complete CI/CD guide:** See `10devs/GITHUBACTIONS-PLAN.md`
+
+## Comprehensive Documentation
+
+**All technical documentation is in the `10devs/` folder:**
+- Product specs (PRD.md)
+- Architecture & testing (ARCHITECTURE_AND_TESTING.md)
+- Visual diagrams (ARCHITECTURE_DIAGRAMS.md)
+- Tech stack (TECHNOLOGY.md)
+- CI/CD workflow (GITHUBACTIONS-PLAN.md)
+
+See `10devs/README.md` for complete documentation index.
+
 ## Tech Stack
 
 - **Frontend:** React 18 + TypeScript + Vite

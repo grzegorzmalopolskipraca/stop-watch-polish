@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "10x-rules": {
+      "command": "npx",
+      "args": [
+        "mcp-remote",
+        "https://10x-rules-mcp-server.przeprogramowani.workers.dev/sse"
+      ]
+    }
+  }
+}

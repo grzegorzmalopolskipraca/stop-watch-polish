@@ -1,0 +1,151 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches:
+      - develop
+      - 'feature/**'
+  pull_request:
+    branches:
+      - develop
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  # ====================================
+  # JOB 1: CODE ANALYSIS (Non-blocking)
+  # ====================================
+  code-analysis:
+    name: 📊 Code Analysis
+    runs-on: ubuntu-latest
+    continue-on-error: true
+
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🔧 Setup Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: 📦 Install dependencies
+        run: npm ci
+
+      - name: 🔍 Run ESLint
+        run: npm run lint
+        continue-on-error: true
+
+      - name: 🔎 TypeScript Check
+        run: npm run type-check
+        continue-on-error: true
+
+      - name: 📝 Analysis Summary
+        if: always()
+        run: |
+          echo "## 📊 Code Analysis Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ ESLint check completed" >> $GITHUB_STEP_SUMMARY
+          echo "✅ TypeScript check completed" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "⚠️ Note: Analysis is non-blocking. Check logs for details." >> $GITHUB_STEP_SUMMARY
+
+  # ====================================
+  # JOB 2: TESTS (Blocking - when implemented)
+  # ====================================
+  test:
+    name: 🧪 Tests
+    runs-on: ubuntu-latest
+    if: false  # TODO: Remove when tests are implemented
+
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🔧 Setup Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: 📦 Install dependencies
+        run: npm ci
+
+      - name: 🧪 Run tests
+        run: npm run test:ci
+        env:
+          CI: true
+
+      - name: 📊 Upload coverage
+        if: always()
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./coverage/lcov.info
+          flags: unittests
+
+  # ====================================
+  # JOB 3: BUILD (Blocking)
+  # ====================================
+  build:
+    name: 🏗️ Build
+    runs-on: ubuntu-latest
+    # Uncomment when tests are enabled:
+    # needs: [test]
+
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🔧 Setup Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: 📦 Install dependencies
+        run: npm ci
+
+      - name: 🏗️ Build project
+        run: npm run build
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
+
+      - name: 📤 Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-${{ github.sha }}
+          path: dist/
+          retention-days: 7
+
+      - name: 📊 Build size report
+        run: |
+          echo "## 🏗️ Build Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Build Output Size" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          du -sh dist/ >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Files:" >> $GITHUB_STEP_SUMMARY
+          ls -lh dist/ | tail -n +2 >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+
+      - name: ✅ Success message
+        run: |
+          echo "## ✅ Workflow Completed Successfully" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- Code analysis: ✅ Completed (non-blocking)" >> $GITHUB_STEP_SUMMARY
+          echo "- Build: ✅ Passed" >> $GITHUB_STEP_SUMMARY
+          echo "- Artifacts: ✅ Uploaded (available for 7 days)" >> $GITHUB_STEP_SUMMARY

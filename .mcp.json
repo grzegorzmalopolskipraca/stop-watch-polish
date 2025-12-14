@@ -6,6 +6,13 @@
         "mcp-remote",
         "https://10x-rules-mcp-server.przeprogramowani.workers.dev/sse"
       ]
+    },
+    "context7": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@upstash/context7-mcp@latest"
+      ]
     }
   }
 }

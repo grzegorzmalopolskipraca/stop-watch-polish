@@ -14,7 +14,10 @@
       "Bash(npm run dev:*)",
       "Bash(npm run build:*)",
       "Bash(npx supabase:*)",
-      "WebFetch(domain:code.claude.com)"
+      "WebFetch(domain:code.claude.com)",
+      "WebFetch(domain:platform.claude.com)",
+      "Bash(npm run test:ci:*)",
+      "Bash(npm run test:*)"
     ],
     "deny": [],
     "ask": []

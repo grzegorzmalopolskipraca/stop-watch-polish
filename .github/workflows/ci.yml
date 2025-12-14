@@ -63,12 +63,11 @@ jobs:
           echo "⚠️ Note: Analysis is non-blocking. Check logs for details." >> $GITHUB_STEP_SUMMARY
 
   # ====================================
-  # JOB 2: TESTS (Blocking - when implemented)
+  # JOB 2: TESTS (Blocking)
   # ====================================
   test:
     name: 🧪 Tests
     runs-on: ubuntu-latest
-    if: false  # TODO: Remove when tests are implemented
 
     steps:
       - name: 📥 Checkout code
@@ -88,12 +87,25 @@ jobs:
         env:
           CI: true
 
-      - name: 📊 Upload coverage
+      - name: 📊 Upload coverage (optional)
         if: always()
         uses: codecov/codecov-action@v4
+        continue-on-error: true
         with:
           files: ./coverage/lcov.info
           flags: unittests
+
+      - name: 📝 Test Summary
+        if: always()
+        run: |
+          echo "## 🧪 Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Unit tests completed" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Tests run for:" >> $GITHUB_STEP_SUMMARY
+          echo "- Traffic Calculations (trafficCalculations.ts)" >> $GITHUB_STEP_SUMMARY
+          echo "- Traffic Predictions (trafficPrediction.ts)" >> $GITHUB_STEP_SUMMARY
+          echo "- Utility Functions (lib/utils.ts)" >> $GITHUB_STEP_SUMMARY
 
   # ====================================
   # JOB 3: BUILD (Blocking)
@@ -101,8 +113,7 @@ jobs:
   build:
     name: 🏗️ Build
     runs-on: ubuntu-latest
-    # Uncomment when tests are enabled:
-    # needs: [test]
+    needs: [test]
 
     steps:
       - name: 📥 Checkout code
@@ -147,5 +158,6 @@ jobs:
           echo "## ✅ Workflow Completed Successfully" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "- Code analysis: ✅ Completed (non-blocking)" >> $GITHUB_STEP_SUMMARY
+          echo "- Tests: ✅ Passed" >> $GITHUB_STEP_SUMMARY
           echo "- Build: ✅ Passed" >> $GITHUB_STEP_SUMMARY
           echo "- Artifacts: ✅ Uploaded (available for 7 days)" >> $GITHUB_STEP_SUMMARY

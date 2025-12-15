@@ -12,6 +12,7 @@
 - [CI/CD Pipeline](#-cicd-pipeline)
 - [Testing Infrastructure](#-testing-infrastructure)
 - [Claude Code Integration & AI-First Development](#-claude-code-integration--ai-first-development)
+- [MCP Servers](#-mcp-servers)
 - [Comprehensive Documentation](#-comprehensive-documentation)
 - [Deployment](#how-can-i-deploy-this-project)
 - [Learning Project](#-learning-project)
@@ -171,91 +172,6 @@ All tests run automatically in GitHub Actions and **block deployment** if any te
 
 This project follows an **AI-First development approach** using Claude Code as the primary development assistant.
 
-### MCP Servers (Model Context Protocol)
-
-The project uses **2 MCP servers** to enhance Claude Code's capabilities:
-
-#### 1. **10x Rules** 🎯
-- **Purpose:** Coding best practices and rules from the 10xdevs 2.0 course
-- **Auto-invokes:** When working with code patterns, architecture decisions, or best practices
-- **Source:** https://10x-rules-mcp-server.przeprogramowani.workers.dev/sse
-
-#### 2. **Context7** 📚
-- **Purpose:** Fetches up-to-date, version-specific documentation from official sources
-- **Auto-invokes:** When you need current API docs, library documentation, or code examples
-- **Developer:** Upstash
-- **Repository:** https://github.com/upstash/context7
-
-### Configuration
-
-MCP servers are configured in `.mcp.json`:
-
-```json
-{
-  "mcpServers": {
-    "10x-rules": {
-      "command": "npx",
-      "args": [
-        "mcp-remote",
-        "https://10x-rules-mcp-server.przeprogramowani.workers.dev/sse"
-      ]
-    },
-    "context7": {
-      "command": "npx",
-      "args": ["-y", "@upstash/context7-mcp@latest"]
-    }
-  }
-}
-```
-
-MCP servers are enabled in `.claude/settings.local.json`:
-
-```json
-{
-  "enableAllProjectMcpServers": true
-}
-```
-
-### How to Use MCP Servers with Claude Code
-
-**Automatic usage (recommended):**
-```
-"Create a new React component with traffic predictions"
-  → Context7 automatically fetches React 18 and React Query 5.83.0 docs
-  → 10x-rules applies project-specific patterns
-```
-
-**Explicit usage:**
-```
-"Use context7 to get the latest Supabase documentation"
-"Apply 10x-rules for this component architecture"
-```
-
-### Benefits of MCP Integration
-
-- ✅ **Always current:** Documentation is fetched in real-time, never outdated
-- ✅ **Context-aware:** Servers understand your project structure and needs
-- ✅ **Best practices:** Built-in coding standards and patterns
-- ✅ **Faster development:** Less context switching to documentation sites
-- ✅ **Fewer errors:** Accurate, version-specific code examples
-
-### Requirements
-
-- **Node.js:** v18.0.0 or higher
-- **Claude Code:** Latest version with MCP support
-- **Internet connection:** Required for remote MCP servers
-
-### `.claude/` Folder Structure
-
-```
-.claude/
-├── settings.local.json    # Claude Code settings (MCP enabled)
-└── (future additions)
-    ├── agents/            # Specialized AI agents (planned)
-    ├── skills/            # Reusable code patterns (planned)
-    └── commands/          # Custom slash commands (planned)
-```
-
 ### AI-Assisted Development Workflow
 
 This project leverages Claude Code for:
@@ -283,6 +199,139 @@ The project includes [`CLAUDE.md`](./CLAUDE.md) with detailed instructions for C
 - Common anti-patterns to avoid
 
 This file is automatically loaded by Claude Code to provide context-aware assistance throughout development.
+
+---
+
+## 🤖 MCP Servers
+
+This project uses **Model Context Protocol (MCP) servers** to enhance AI-assisted development with Claude Code.
+
+### What are MCP Servers?
+
+MCP servers extend Claude's capabilities by providing access to external tools, data sources, and specialized knowledge. They enable Claude to:
+- Access up-to-date documentation
+- Follow project-specific coding standards
+- Integrate with external APIs and services
+- Provide context-aware assistance
+
+### Installed MCP Servers
+
+The project uses **2 MCP servers**:
+
+#### 1. **10x Rules** 🎯
+- **Purpose:** Provides coding best practices and rules from the 10xdevs 2.0 course
+- **Auto-invokes:** When working with code patterns, architecture decisions, or best practices
+- **Source:** https://10x-rules-mcp-server.przeprogramowani.workers.dev/sse
+
+#### 2. **Context7** 📚
+- **Purpose:** Fetches up-to-date, version-specific documentation from official sources
+- **Auto-invokes:** When you need current API docs, library documentation, or code examples
+- **Developer:** Upstash
+- **Repository:** https://github.com/upstash/context7
+
+### Configuration
+
+MCP servers are configured in `.mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "10x-rules": {
+      "command": "npx",
+      "args": [
+        "mcp-remote",
+        "https://10x-rules-mcp-server.przeprogramowani.workers.dev/sse"
+      ]
+    },
+    "context7": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@upstash/context7-mcp@latest"
+      ]
+    }
+  }
+}
+```
+
+MCP servers are enabled in `.claude/settings.local.json`:
+
+```json
+{
+  "enableAllProjectMcpServers": true
+}
+```
+
+### How to Use
+
+MCP servers work automatically - Claude invokes them when relevant to your task.
+
+**Explicit usage:**
+```
+"Use context7 to get the latest React 18 documentation"
+"Apply 10x-rules for this component architecture"
+```
+
+**Automatic usage:**
+```
+"Create a new React component with traffic predictions"
+  → Context7 automatically fetches React 18 and React Query 5.83.0 docs
+  → 10x-rules applies project-specific patterns
+
+"Should I use useState or useReducer here?"
+  → 10x-rules provides best practices guidance
+```
+
+### Benefits
+
+- ✅ **Always current:** Documentation is fetched in real-time, never outdated
+- ✅ **Context-aware:** Servers understand your project structure and needs
+- ✅ **Best practices:** Built-in coding standards and patterns
+- ✅ **Faster development:** Less context switching to documentation sites
+- ✅ **Fewer errors:** Accurate, version-specific code examples
+
+### Requirements
+
+- **Node.js:** v18.0.0 or higher
+- **Claude Code:** Latest version with MCP support
+- **Internet connection:** Required for remote MCP servers
+
+### Adding More MCP Servers
+
+To add additional MCP servers, update `.mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "10x-rules": { /* ... */ },
+    "context7": { /* ... */ },
+    "your-new-server": {
+      "command": "npx",
+      "args": ["-y", "your-mcp-package@latest"]
+    }
+  }
+}
+```
+
+**Popular MCP servers:**
+- **Filesystem:** Access and modify local files
+- **GitHub:** Interact with GitHub repositories
+- **Brave Search:** Web search capabilities
+- **PostgreSQL:** Direct database queries
+- **Slack:** Team communication integration
+
+**Explore more:** https://github.com/modelcontextprotocol/servers
+
+### `.claude/` Folder Structure
+
+```
+.claude/
+├── settings.local.json    # Claude Code settings (MCP enabled)
+└── (future additions)
+    ├── agents/            # Specialized AI agents (planned)
+    ├── skills/            # Reusable code patterns (planned)
+    └── commands/          # Custom slash commands (planned)
+```
 
 ---
 

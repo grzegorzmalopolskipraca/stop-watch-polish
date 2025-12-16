@@ -6,8 +6,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { LogOut, Save, MapPin, Briefcase, Clock, Search, CheckCircle, Loader2, RefreshCw } from 'lucide-react';
+import { LogOut, Save, MapPin, Briefcase, Clock, Search, CheckCircle, Loader2, RefreshCw, Map, Crosshair } from 'lucide-react';
 import { User, Session } from '@supabase/supabase-js';
+import MapLocationPicker from '@/components/MapLocationPicker';
 
 interface CommuteSchedule {
   id: string;
@@ -75,6 +76,9 @@ const Konto = () => {
   const [schedule, setSchedule] = useState<CommuteSchedule[]>([]);
   const [travelTimes, setTravelTimes] = useState<TravelTime[]>([]);
   const [refreshingTimes, setRefreshingTimes] = useState(false);
+  const [showHomeMapPicker, setShowHomeMapPicker] = useState(false);
+  const [showWorkMapPicker, setShowWorkMapPicker] = useState(false);
+  const [gettingCurrentLocation, setGettingCurrentLocation] = useState<'home' | 'work' | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -268,6 +272,75 @@ const Konto = () => {
     }
   };
 
+  const handleGetCurrentLocation = async (type: 'home' | 'work') => {
+    setGettingCurrentLocation(type);
+    
+    if (!navigator.geolocation) {
+      toast({
+        title: 'Błąd',
+        description: 'Geolokalizacja nie jest obsługiwana przez tę przeglądarkę.',
+        variant: 'destructive',
+      });
+      setGettingCurrentLocation(null);
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const lat = position.coords.latitude;
+        const lng = position.coords.longitude;
+        
+        if (type === 'home') {
+          setHomeLocation({ lat, lng });
+          setHomeAddress(`${lat.toFixed(6)}, ${lng.toFixed(6)}`);
+          setHomeAddressValidated(true);
+        } else {
+          setWorkLocation({ lat, lng });
+          setWorkAddress(`${lat.toFixed(6)}, ${lng.toFixed(6)}`);
+          setWorkAddressValidated(true);
+        }
+        
+        toast({
+          title: 'Lokalizacja pobrana',
+          description: `Współrzędne: ${lat.toFixed(4)}, ${lng.toFixed(4)}`,
+        });
+        
+        setGettingCurrentLocation(null);
+      },
+      (error) => {
+        console.error('Geolocation error:', error);
+        toast({
+          title: 'Błąd',
+          description: 'Nie udało się pobrać lokalizacji. Sprawdź uprawnienia przeglądarki.',
+          variant: 'destructive',
+        });
+        setGettingCurrentLocation(null);
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0
+      }
+    );
+  };
+
+  const handleMapLocationSelect = (type: 'home' | 'work', lat: number, lng: number) => {
+    if (type === 'home') {
+      setHomeLocation({ lat, lng });
+      setHomeAddress(`${lat.toFixed(6)}, ${lng.toFixed(6)}`);
+      setHomeAddressValidated(true);
+    } else {
+      setWorkLocation({ lat, lng });
+      setWorkAddress(`${lat.toFixed(6)}, ${lng.toFixed(6)}`);
+      setWorkAddressValidated(true);
+    }
+    
+    toast({
+      title: 'Lokalizacja wybrana',
+      description: `Współrzędne: ${lat.toFixed(4)}, ${lng.toFixed(4)}`,
+    });
+  };
+
   const handleSaveAddresses = async () => {
     if (!user) return;
     setSavingAddresses(true);
@@ -399,7 +472,7 @@ const Konto = () => {
                 <MapPin className="w-4 h-4 text-muted-foreground shrink-0" />
                 Mój adres wyjazdu
               </Label>
-              <div className="flex gap-2">
+              <div className="flex gap-2 flex-wrap sm:flex-nowrap">
                 <Input
                   id="home-address"
                   type="text"
@@ -412,27 +485,55 @@ const Konto = () => {
                   }}
                   className={`min-w-0 flex-1 text-sm ${homeAddressValidated ? 'border-green-500' : ''}`}
                 />
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => validateAddress(homeAddress, 'home')}
-                  disabled={validatingHome}
-                  className="shrink-0"
-                  size="icon"
-                >
-                  {validatingHome ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : homeAddressValidated ? (
-                    <CheckCircle className="w-4 h-4 text-green-500" />
-                  ) : (
-                    <Search className="w-4 h-4" />
-                  )}
-                </Button>
+                <div className="flex gap-1">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => validateAddress(homeAddress, 'home')}
+                    disabled={validatingHome}
+                    className="shrink-0"
+                    size="icon"
+                    title="Szukaj adresu"
+                  >
+                    {validatingHome ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : homeAddressValidated ? (
+                      <CheckCircle className="w-4 h-4 text-green-500" />
+                    ) : (
+                      <Search className="w-4 h-4" />
+                    )}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => handleGetCurrentLocation('home')}
+                    disabled={gettingCurrentLocation === 'home'}
+                    className="shrink-0"
+                    size="icon"
+                    title="Użyj aktualnej lokalizacji"
+                  >
+                    {gettingCurrentLocation === 'home' ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Crosshair className="w-4 h-4" />
+                    )}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setShowHomeMapPicker(true)}
+                    className="shrink-0"
+                    size="icon"
+                    title="Wybierz na mapie"
+                  >
+                    <Map className="w-4 h-4" />
+                  </Button>
+                </div>
               </div>
               {homeAddressValidated && (
                 <p className="text-xs sm:text-sm text-green-600 flex flex-wrap items-center gap-1">
                   <CheckCircle className="w-3 h-3 shrink-0" />
-                  <span>Adres zweryfikowany</span>
+                  <span>Lokalizacja ustawiona</span>
                   {homeLocation && <span className="text-xs text-muted-foreground">({homeLocation.lat.toFixed(4)}, {homeLocation.lng.toFixed(4)})</span>}
                 </p>
               )}
@@ -443,7 +544,7 @@ const Konto = () => {
                 <Briefcase className="w-4 h-4 text-muted-foreground shrink-0" />
                 Adres mojej pracy
               </Label>
-              <div className="flex gap-2">
+              <div className="flex gap-2 flex-wrap sm:flex-nowrap">
                 <Input
                   id="work-address"
                   type="text"
@@ -456,27 +557,55 @@ const Konto = () => {
                   }}
                   className={`min-w-0 flex-1 text-sm ${workAddressValidated ? 'border-green-500' : ''}`}
                 />
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => validateAddress(workAddress, 'work')}
-                  disabled={validatingWork}
-                  className="shrink-0"
-                  size="icon"
-                >
-                  {validatingWork ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : workAddressValidated ? (
-                    <CheckCircle className="w-4 h-4 text-green-500" />
-                  ) : (
-                    <Search className="w-4 h-4" />
-                  )}
-                </Button>
+                <div className="flex gap-1">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => validateAddress(workAddress, 'work')}
+                    disabled={validatingWork}
+                    className="shrink-0"
+                    size="icon"
+                    title="Szukaj adresu"
+                  >
+                    {validatingWork ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : workAddressValidated ? (
+                      <CheckCircle className="w-4 h-4 text-green-500" />
+                    ) : (
+                      <Search className="w-4 h-4" />
+                    )}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => handleGetCurrentLocation('work')}
+                    disabled={gettingCurrentLocation === 'work'}
+                    className="shrink-0"
+                    size="icon"
+                    title="Użyj aktualnej lokalizacji"
+                  >
+                    {gettingCurrentLocation === 'work' ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Crosshair className="w-4 h-4" />
+                    )}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setShowWorkMapPicker(true)}
+                    className="shrink-0"
+                    size="icon"
+                    title="Wybierz na mapie"
+                  >
+                    <Map className="w-4 h-4" />
+                  </Button>
+                </div>
               </div>
               {workAddressValidated && (
                 <p className="text-xs sm:text-sm text-green-600 flex flex-wrap items-center gap-1">
                   <CheckCircle className="w-3 h-3 shrink-0" />
-                  <span>Adres zweryfikowany</span>
+                  <span>Lokalizacja ustawiona</span>
                   {workLocation && <span className="text-xs text-muted-foreground">({workLocation.lat.toFixed(4)}, {workLocation.lng.toFixed(4)})</span>}
                 </p>
               )}
@@ -703,6 +832,24 @@ const Konto = () => {
       <footer className="max-w-4xl mx-auto p-3 sm:p-4 mt-6 sm:mt-8 text-center text-xs sm:text-sm text-muted-foreground">
         <p>© 2024 eJedzie.pl - Prywatny asystent dojazdu do pracy</p>
       </footer>
+
+      {/* Map Location Pickers */}
+      <MapLocationPicker
+        open={showHomeMapPicker}
+        onClose={() => setShowHomeMapPicker(false)}
+        onSelectLocation={(lat, lng) => handleMapLocationSelect('home', lat, lng)}
+        initialLat={homeLocation?.lat}
+        initialLng={homeLocation?.lng}
+        title="Wybierz adres wyjazdu na mapie"
+      />
+      <MapLocationPicker
+        open={showWorkMapPicker}
+        onClose={() => setShowWorkMapPicker(false)}
+        onSelectLocation={(lat, lng) => handleMapLocationSelect('work', lat, lng)}
+        initialLat={workLocation?.lat}
+        initialLng={workLocation?.lng}
+        title="Wybierz adres pracy na mapie"
+      />
     </div>
   );
 };

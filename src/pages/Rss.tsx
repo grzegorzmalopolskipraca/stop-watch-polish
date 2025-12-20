@@ -4,9 +4,12 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Trash2, Edit2, ChevronUp, ChevronDown, Plus, Minus, Database, Clock, RefreshCw, Copy } from "lucide-react";
+import { Trash2, Edit2, ChevronUp, ChevronDown, Plus, Minus, Database, Clock, RefreshCw, Copy, LogOut } from "lucide-react";
 import { RssTicker } from "@/components/RssTicker";
 import { formatDistanceToNow } from "date-fns";
+import { useAdminAuth } from "@/hooks/useAdminAuth";
+import { AdminLoginForm } from "@/components/AdminLoginForm";
+import { AdminAccessDenied } from "@/components/AdminAccessDenied";
 
 interface RssItem {
   id: string;
@@ -15,8 +18,7 @@ interface RssItem {
 }
 
 const Rss = () => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [password, setPassword] = useState("");
+  const { user, isAdmin, isLoading, signOut } = useAdminAuth();
   const [items, setItems] = useState<RssItem[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editText, setEditText] = useState("");
@@ -39,7 +41,7 @@ const Rss = () => {
   };
 
   useEffect(() => {
-    if (isAuthenticated) {
+    if (isAdmin) {
       fetchItems();
       fetchTickerSpeed();
       fetchAutoTrafficSettings();
@@ -64,7 +66,7 @@ const Rss = () => {
         autoTrafficChannel.unsubscribe();
       };
     }
-  }, [isAuthenticated]);
+  }, [isAdmin]);
 
   const fetchTickerSpeed = async () => {
     const { data } = await supabase
@@ -173,19 +175,6 @@ const Rss = () => {
     }
 
     setItems(data || []);
-  };
-
-  const handleLogin = () => {
-    if (password === "grzelazny") {
-      setIsAuthenticated(true);
-      setPassword("");
-    } else {
-      toast({
-        title: "Error",
-        description: "Incorrect password",
-        variant: "destructive",
-      });
-    }
   };
 
   const handleAddItem = async () => {
@@ -367,26 +356,20 @@ const Rss = () => {
     }
   };
 
-  if (!isAuthenticated) {
+  if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="w-full max-w-md p-8 space-y-4">
-          <h1 className="text-2xl font-bold text-center">RSS Management</h1>
-          <div className="space-y-4">
-            <Input
-              type="password"
-              placeholder="Enter password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              onKeyPress={(e) => e.key === "Enter" && handleLogin()}
-            />
-            <Button onClick={handleLogin} className="w-full">
-              Enter
-            </Button>
-          </div>
-        </div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
       </div>
     );
+  }
+
+  if (!user) {
+    return <AdminLoginForm title="RSS Management" description="Zaloguj się jako administrator" />;
+  }
+
+  if (!isAdmin) {
+    return <AdminAccessDenied onSignOut={signOut} userEmail={user.email} />;
   }
 
   return (
@@ -395,6 +378,12 @@ const Rss = () => {
 
       <div className="p-8">
         <div className="max-w-4xl mx-auto space-y-6">
+          <div className="flex justify-end">
+            <Button variant="outline" onClick={signOut}>
+              <LogOut className="w-4 h-4 mr-2" />
+              Wyloguj
+            </Button>
+          </div>
           {/* Edge Functions Deployment Section */}
           <div className="border rounded-lg p-4 bg-card space-y-3">
             <div className="flex items-center justify-between">

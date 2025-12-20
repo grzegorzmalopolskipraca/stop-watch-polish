@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { LogOut, Save, MapPin, Briefcase, Clock, Search, CheckCircle, Loader2, RefreshCw, Map, Crosshair } from 'lucide-react';
+import { LogOut, Save, MapPin, Briefcase, Clock, Search, CheckCircle, Loader2, RefreshCw, Map, Crosshair, Car, Home, Building2, ArrowRight, TrendingDown, Calendar, Sun, Moon } from 'lucide-react';
 import { User, Session } from '@supabase/supabase-js';
 import MapLocationPicker from '@/components/MapLocationPicker';
 
@@ -620,203 +620,257 @@ const Konto = () => {
 
         {/* Schedule Card */}
         <Card>
-          <CardHeader className="pb-3">
+          <CardHeader className="pb-4">
             <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
-              <Clock className="w-5 h-5 shrink-0" />
+              <Calendar className="w-5 h-5 shrink-0 text-primary" />
               Harmonogram tygodniowy
             </CardTitle>
-            <p className="text-xs sm:text-sm text-muted-foreground">Zmiany zapisują się automatycznie</p>
+            <p className="text-xs sm:text-sm text-muted-foreground">
+              Określ przedziały czasowe, kiedy planujesz dojazd do pracy i powrót
+            </p>
           </CardHeader>
-          <CardContent className="px-2 sm:px-6">
-            {/* Mobile: Cards view */}
-            <div className="block sm:hidden space-y-3">
-              {schedule.map((day) => (
-                <div key={day.id} className="border border-border rounded-lg p-3 space-y-3">
-                  <p className="font-medium text-sm">{DAYS_PL[day.day_of_week]}</p>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1">
-                      <p className="text-xs text-muted-foreground">Do pracy</p>
-                      <div className="flex gap-1 items-center">
-                        <Input
-                          type="time"
-                          value={day.to_work_start}
-                          onChange={(e) => updateSchedule(day.day_of_week, 'to_work_start', e.target.value)}
-                          className="text-xs h-8 px-1"
-                        />
-                        <span className="text-xs text-muted-foreground">-</span>
-                        <Input
-                          type="time"
-                          value={day.to_work_end}
-                          onChange={(e) => updateSchedule(day.day_of_week, 'to_work_end', e.target.value)}
-                          className="text-xs h-8 px-1"
-                        />
+          <CardContent className="px-3 sm:px-6">
+            <div className="space-y-3">
+              {schedule.map((day) => {
+                const isWeekend = day.day_of_week === 0 || day.day_of_week === 6;
+                return (
+                  <div 
+                    key={day.id} 
+                    className={`border rounded-xl p-4 transition-all ${
+                      isWeekend 
+                        ? 'border-border/50 bg-muted/30 opacity-75' 
+                        : 'border-border bg-card hover:border-primary/30 hover:shadow-sm'
+                    }`}
+                  >
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                      {/* Day name */}
+                      <div className="flex items-center gap-3 sm:w-32">
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${
+                          isWeekend ? 'bg-muted' : 'bg-primary/10'
+                        }`}>
+                          <span className={`text-sm font-bold ${isWeekend ? 'text-muted-foreground' : 'text-primary'}`}>
+                            {DAYS_PL[day.day_of_week].substring(0, 2)}
+                          </span>
+                        </div>
+                        <span className={`font-medium text-sm ${isWeekend ? 'text-muted-foreground' : ''}`}>
+                          {DAYS_PL[day.day_of_week]}
+                        </span>
                       </div>
-                    </div>
-                    <div className="space-y-1">
-                      <p className="text-xs text-muted-foreground">Z pracy</p>
-                      <div className="flex gap-1 items-center">
-                        <Input
-                          type="time"
-                          value={day.from_work_start}
-                          onChange={(e) => updateSchedule(day.day_of_week, 'from_work_start', e.target.value)}
-                          className="text-xs h-8 px-1"
-                        />
-                        <span className="text-xs text-muted-foreground">-</span>
-                        <Input
-                          type="time"
-                          value={day.from_work_end}
-                          onChange={(e) => updateSchedule(day.day_of_week, 'from_work_end', e.target.value)}
-                          className="text-xs h-8 px-1"
-                        />
+                      
+                      {/* Time inputs */}
+                      <div className="flex flex-1 flex-col sm:flex-row gap-4">
+                        {/* To work */}
+                        <div className="flex-1 space-y-2">
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <Sun className="w-3.5 h-3.5" />
+                            <span>Do pracy</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Input
+                              type="time"
+                              value={day.to_work_start}
+                              onChange={(e) => updateSchedule(day.day_of_week, 'to_work_start', e.target.value)}
+                              className="flex-1 text-sm h-9 text-center"
+                            />
+                            <ArrowRight className="w-4 h-4 text-muted-foreground shrink-0" />
+                            <Input
+                              type="time"
+                              value={day.to_work_end}
+                              onChange={(e) => updateSchedule(day.day_of_week, 'to_work_end', e.target.value)}
+                              className="flex-1 text-sm h-9 text-center"
+                            />
+                          </div>
+                        </div>
+                        
+                        {/* From work */}
+                        <div className="flex-1 space-y-2">
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <Moon className="w-3.5 h-3.5" />
+                            <span>Z pracy</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Input
+                              type="time"
+                              value={day.from_work_start}
+                              onChange={(e) => updateSchedule(day.day_of_week, 'from_work_start', e.target.value)}
+                              className="flex-1 text-sm h-9 text-center"
+                            />
+                            <ArrowRight className="w-4 h-4 text-muted-foreground shrink-0" />
+                            <Input
+                              type="time"
+                              value={day.from_work_end}
+                              onChange={(e) => updateSchedule(day.day_of_week, 'from_work_end', e.target.value)}
+                              className="flex-1 text-sm h-9 text-center"
+                            />
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
-            
-            {/* Desktop: Table view */}
-            <div className="hidden sm:block overflow-x-auto">
-              <table className="w-full border-collapse text-sm">
-                <thead>
-                  <tr className="border-b border-border">
-                    <th className="text-left p-2 font-medium">Dzień</th>
-                    <th className="text-center p-2 font-medium" colSpan={2}>Do pracy</th>
-                    <th className="text-center p-2 font-medium" colSpan={2}>Z pracy</th>
-                  </tr>
-                  <tr className="border-b border-border text-xs text-muted-foreground">
-                    <th></th>
-                    <th className="p-2">Od</th>
-                    <th className="p-2">Do</th>
-                    <th className="p-2">Od</th>
-                    <th className="p-2">Do</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {schedule.map((day) => (
-                    <tr key={day.id} className="border-b border-border">
-                      <td className="p-2 font-medium text-sm">{DAYS_PL[day.day_of_week]}</td>
-                      <td className="p-1">
-                        <Input
-                          type="time"
-                          value={day.to_work_start}
-                          onChange={(e) => updateSchedule(day.day_of_week, 'to_work_start', e.target.value)}
-                          className="w-[90px] text-sm h-8"
-                        />
-                      </td>
-                      <td className="p-1">
-                        <Input
-                          type="time"
-                          value={day.to_work_end}
-                          onChange={(e) => updateSchedule(day.day_of_week, 'to_work_end', e.target.value)}
-                          className="w-[90px] text-sm h-8"
-                        />
-                      </td>
-                      <td className="p-1">
-                        <Input
-                          type="time"
-                          value={day.from_work_start}
-                          onChange={(e) => updateSchedule(day.day_of_week, 'from_work_start', e.target.value)}
-                          className="w-[90px] text-sm h-8"
-                        />
-                      </td>
-                      <td className="p-1">
-                        <Input
-                          type="time"
-                          value={day.from_work_end}
-                          onChange={(e) => updateSchedule(day.day_of_week, 'from_work_end', e.target.value)}
-                          className="w-[90px] text-sm h-8"
-                        />
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <p className="text-xs text-muted-foreground text-center mt-4 flex items-center justify-center gap-1">
+              <CheckCircle className="w-3 h-3 text-green-500" />
+              Zmiany zapisują się automatycznie
+            </p>
           </CardContent>
         </Card>
 
         {/* Travel Times Card */}
         <Card>
-          <CardHeader className="pb-3">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <CardHeader className="pb-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div>
                 <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
-                  <Clock className="w-5 h-5 shrink-0" />
+                  <Car className="w-5 h-5 shrink-0 text-primary" />
                   Przewidywany czas dojazdu
                 </CardTitle>
-                <p className="text-xs sm:text-sm text-muted-foreground mt-1">W zależności od godziny wyjazdu</p>
+                <p className="text-xs sm:text-sm text-muted-foreground mt-1">
+                  Najkrótszy czas podświetlony na zielono
+                </p>
               </div>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={handleRefreshTravelTimes}
                 disabled={refreshingTimes || !homeAddressValidated || !workAddressValidated}
-                className="flex items-center gap-2 w-full sm:w-auto text-sm"
+                className="flex items-center gap-2 w-full sm:w-auto"
               >
                 <RefreshCw className={`w-4 h-4 ${refreshingTimes ? 'animate-spin' : ''}`} />
-                Odśwież teraz
+                Oblicz czasy
               </Button>
             </div>
           </CardHeader>
-          <CardContent className="px-2 sm:px-6">
+          <CardContent className="px-3 sm:px-6">
             {!homeAddressValidated || !workAddressValidated ? (
-              <p className="text-center text-muted-foreground py-6 sm:py-8 text-sm px-2">
-                Najpierw zweryfikuj i zapisz adresy domu i pracy, aby zobaczyć czasy dojazdu.
-              </p>
+              <div className="text-center py-8 sm:py-12 space-y-3">
+                <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center mx-auto">
+                  <MapPin className="w-8 h-8 text-muted-foreground/50" />
+                </div>
+                <p className="text-muted-foreground text-sm px-4">
+                  Najpierw zweryfikuj i zapisz adresy domu i pracy, aby zobaczyć czasy dojazdu.
+                </p>
+              </div>
+            ) : travelTimes.length === 0 ? (
+              <div className="text-center py-8 sm:py-12 space-y-3">
+                <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
+                  <Clock className="w-8 h-8 text-primary/50" />
+                </div>
+                <p className="text-muted-foreground text-sm px-4">
+                  Kliknij "Oblicz czasy" aby zobaczyć przewidywane czasy dojazdu
+                </p>
+              </div>
             ) : (
-              <div className="space-y-4 sm:space-y-6">
+              <div className="space-y-4">
                 {schedule.filter(day => day.day_of_week >= 1 && day.day_of_week <= 5).map((day) => {
                   const toWorkTimes = getDisplayTravelTimes(day.to_work_start, day.to_work_end, 'to_work');
                   const fromWorkTimes = getDisplayTravelTimes(day.from_work_start, day.from_work_end, 'from_work');
                   const toWorkMin = getMinTime(toWorkTimes);
                   const fromWorkMin = getMinTime(fromWorkTimes);
+                  const hasToWorkData = toWorkTimes.some(t => t.minutes !== null);
+                  const hasFromWorkData = fromWorkTimes.some(t => t.minutes !== null);
 
                   return (
-                    <div key={day.id} className="border border-border rounded-lg p-3 sm:p-4">
-                      <h4 className="font-medium mb-2 sm:mb-3 text-sm sm:text-base">{DAYS_PL[day.day_of_week]}</h4>
+                    <div key={day.id} className="border border-border rounded-xl overflow-hidden">
+                      {/* Day header */}
+                      <div className="bg-muted/30 px-4 py-2.5 border-b border-border flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                          <span className="text-xs font-bold text-primary">
+                            {DAYS_PL[day.day_of_week].substring(0, 2)}
+                          </span>
+                        </div>
+                        <span className="font-medium text-sm">{DAYS_PL[day.day_of_week]}</span>
+                      </div>
                       
-                      <div className="space-y-3 sm:space-y-4">
+                      <div className="p-4 space-y-4">
                         {/* To Work */}
-                        <div>
-                          <p className="text-xs sm:text-sm text-muted-foreground mb-2">Do pracy ({day.to_work_start} - {day.to_work_end})</p>
-                          <div className="flex flex-wrap gap-1">
-                            {toWorkTimes.map((slot, idx) => (
-                              <div 
-                                key={idx}
-                                className={`text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 sm:py-1 rounded whitespace-nowrap ${
-                                  slot.minutes !== null && slot.minutes === toWorkMin 
-                                    ? 'bg-green-500/20 text-green-700 dark:text-green-400 border border-green-500/30' 
-                                    : slot.minutes !== null 
-                                      ? 'bg-secondary' 
-                                      : 'bg-muted/50 text-muted-foreground'
-                                }`}
-                              >
-                                {slot.time}: <span className="font-medium">{slot.minutes !== null ? `${slot.minutes}min` : '—'}</span>
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <div className="w-6 h-6 rounded-full bg-blue-500/10 flex items-center justify-center">
+                                <Building2 className="w-3.5 h-3.5 text-blue-600" />
                               </div>
-                            ))}
+                              <span className="text-xs sm:text-sm font-medium">Do pracy</span>
+                            </div>
+                            <span className="text-xs text-muted-foreground">
+                              {day.to_work_start} - {day.to_work_end}
+                            </span>
                           </div>
+                          {hasToWorkData ? (
+                            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
+                              {toWorkTimes.filter(t => t.minutes !== null).map((slot, idx) => {
+                                const isMin = slot.minutes === toWorkMin;
+                                return (
+                                  <div 
+                                    key={idx}
+                                    className={`relative rounded-lg p-2 text-center transition-all ${
+                                      isMin 
+                                        ? 'bg-green-500/15 ring-2 ring-green-500/30' 
+                                        : 'bg-muted/50 hover:bg-muted'
+                                    }`}
+                                  >
+                                    {isMin && (
+                                      <TrendingDown className="absolute -top-1 -right-1 w-4 h-4 text-green-600 bg-background rounded-full" />
+                                    )}
+                                    <p className="text-[10px] sm:text-xs text-muted-foreground">{slot.time}</p>
+                                    <p className={`text-sm sm:text-base font-bold ${isMin ? 'text-green-600' : ''}`}>
+                                      {slot.minutes}
+                                      <span className="text-[10px] sm:text-xs font-normal text-muted-foreground ml-0.5">min</span>
+                                    </p>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          ) : (
+                            <p className="text-xs text-muted-foreground italic">Brak danych - kliknij "Oblicz czasy"</p>
+                          )}
                         </div>
 
+                        {/* Divider */}
+                        <div className="border-t border-dashed border-border" />
+
                         {/* From Work */}
-                        <div>
-                          <p className="text-xs sm:text-sm text-muted-foreground mb-2">Z pracy ({day.from_work_start} - {day.from_work_end})</p>
-                          <div className="flex flex-wrap gap-1">
-                            {fromWorkTimes.map((slot, idx) => (
-                              <div 
-                                key={idx}
-                                className={`text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 sm:py-1 rounded whitespace-nowrap ${
-                                  slot.minutes !== null && slot.minutes === fromWorkMin 
-                                    ? 'bg-green-500/20 text-green-700 dark:text-green-400 border border-green-500/30' 
-                                    : slot.minutes !== null 
-                                      ? 'bg-secondary' 
-                                      : 'bg-muted/50 text-muted-foreground'
-                                }`}
-                              >
-                                {slot.time}: <span className="font-medium">{slot.minutes !== null ? `${slot.minutes}min` : '—'}</span>
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <div className="w-6 h-6 rounded-full bg-orange-500/10 flex items-center justify-center">
+                                <Home className="w-3.5 h-3.5 text-orange-600" />
                               </div>
-                            ))}
+                              <span className="text-xs sm:text-sm font-medium">Z pracy</span>
+                            </div>
+                            <span className="text-xs text-muted-foreground">
+                              {day.from_work_start} - {day.from_work_end}
+                            </span>
                           </div>
+                          {hasFromWorkData ? (
+                            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
+                              {fromWorkTimes.filter(t => t.minutes !== null).map((slot, idx) => {
+                                const isMin = slot.minutes === fromWorkMin;
+                                return (
+                                  <div 
+                                    key={idx}
+                                    className={`relative rounded-lg p-2 text-center transition-all ${
+                                      isMin 
+                                        ? 'bg-green-500/15 ring-2 ring-green-500/30' 
+                                        : 'bg-muted/50 hover:bg-muted'
+                                    }`}
+                                  >
+                                    {isMin && (
+                                      <TrendingDown className="absolute -top-1 -right-1 w-4 h-4 text-green-600 bg-background rounded-full" />
+                                    )}
+                                    <p className="text-[10px] sm:text-xs text-muted-foreground">{slot.time}</p>
+                                    <p className={`text-sm sm:text-base font-bold ${isMin ? 'text-green-600' : ''}`}>
+                                      {slot.minutes}
+                                      <span className="text-[10px] sm:text-xs font-normal text-muted-foreground ml-0.5">min</span>
+                                    </p>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          ) : (
+                            <p className="text-xs text-muted-foreground italic">Brak danych - kliknij "Oblicz czasy"</p>
+                          )}
                         </div>
                       </div>
                     </div>

@@ -20,6 +20,10 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
+import { useAdminAuth } from "@/hooks/useAdminAuth";
+import { AdminLoginForm } from "@/components/AdminLoginForm";
+import { AdminAccessDenied } from "@/components/AdminAccessDenied";
+import { LogOut } from "lucide-react";
 
 const STREETS = [
   "Borowska",
@@ -58,12 +62,8 @@ interface Coupon {
   show_on_streets: string | null;
 }
 
-const PASSWORD = "grzelazny";
-
 export default function Coupons() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [password, setPassword] = useState("");
-  const [passwordError, setPasswordError] = useState(false);
+  const { user, isAdmin, isLoading, signOut } = useAdminAuth();
   const [locations, setLocations] = useState<Location[]>([]);
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [selectedLocationId, setSelectedLocationId] = useState<string>("");
@@ -100,26 +100,17 @@ export default function Coupons() {
   const [isUploadingEdit, setIsUploadingEdit] = useState(false);
 
   useEffect(() => {
-    if (isAuthenticated) {
+    if (isAdmin) {
       loadLocations();
       loadCoupons();
     }
-  }, [isAuthenticated]);
+  }, [isAdmin]);
 
   useEffect(() => {
     if (selectedLocationId) {
       loadCoupons();
     }
   }, [selectedLocationId]);
-
-  const handleLogin = () => {
-    if (password === PASSWORD) {
-      setIsAuthenticated(true);
-      setPasswordError(false);
-    } else {
-      setPasswordError(true);
-    }
-  };
 
   const loadLocations = async () => {
     const { data, error } = await supabase
@@ -529,34 +520,32 @@ export default function Coupons() {
     );
   };
 
-  if (!isAuthenticated) {
+  if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="w-full max-w-md p-8 space-y-4 bg-card rounded-lg shadow-lg">
-          <h1 className="text-2xl font-bold text-center text-foreground">Coupon Management</h1>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => {
-                  setPassword(e.target.value);
-                  setPasswordError(false);
-                }}
-                onKeyDown={(e) => e.key === "Enter" && handleLogin()}
-              />
-            </div>
-            {passwordError && (
-              <p className="text-sm text-destructive">Incorrect password</p>
-            )}
-            <Button onClick={handleLogin} className="w-full">
-              Continue
-            </Button>
-          </div>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-4 text-muted-foreground">Ładowanie...</p>
         </div>
       </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <AdminLoginForm 
+        title="Zarządzanie Kuponami" 
+        description="Zaloguj się, aby zarządzać kuponami i lokalizacjami" 
+      />
+    );
+  }
+
+  if (!isAdmin) {
+    return (
+      <AdminAccessDenied 
+        onSignOut={signOut} 
+        userEmail={user.email} 
+      />
     );
   }
 
@@ -565,7 +554,13 @@ export default function Coupons() {
   return (
     <div className="min-h-screen bg-background p-8">
       <div className="max-w-7xl mx-auto space-y-8">
-        <h1 className="text-3xl font-bold text-foreground">Coupon Management System</h1>
+        <div className="flex items-center justify-between">
+          <h1 className="text-3xl font-bold text-foreground">Coupon Management System</h1>
+          <Button variant="outline" onClick={signOut}>
+            <LogOut className="w-4 h-4 mr-2" />
+            Wyloguj
+          </Button>
+        </div>
 
         {/* SECTION 1: Location Management */}
         <section className="bg-card rounded-lg p-6 shadow">

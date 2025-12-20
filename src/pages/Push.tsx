@@ -3,14 +3,16 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Bell, BellOff, Send } from "lucide-react";
+import { Bell, BellOff, Send, LogOut } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { ConsoleViewer } from "@/components/ConsoleViewer";
+import { useAdminAuth } from "@/hooks/useAdminAuth";
+import { AdminLoginForm } from "@/components/AdminLoginForm";
+import { AdminAccessDenied } from "@/components/AdminAccessDenied";
 
 const Push = () => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [password, setPassword] = useState("");
+  const { user, isAdmin, isLoading, signOut } = useAdminAuth();
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
@@ -27,20 +29,11 @@ const Push = () => {
   }>>([]);
 
   useEffect(() => {
-    if (isAuthenticated) {
+    if (isAdmin) {
       console.log("🚀 [COMPONENT] Component mounted - Initializing OneSignal");
       initializeOneSignal();
     }
-  }, [isAuthenticated]);
-
-  const handleLogin = () => {
-    if (password === "grzelazny") {
-      setIsAuthenticated(true);
-      setPassword("");
-    } else {
-      toast.error("Incorrect password");
-    }
-  };
+  }, [isAdmin]);
 
   const initializeOneSignal = async () => {
     try {
@@ -1024,31 +1017,31 @@ const Push = () => {
     }
   };
 
-  if (!isAuthenticated) {
+  if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="w-full max-w-md p-8 space-y-4">
-          <h1 className="text-2xl font-bold text-center">Push Notifications Management</h1>
-          <div className="space-y-4">
-            <Input
-              type="password"
-              placeholder="Enter password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              onKeyPress={(e) => e.key === "Enter" && handleLogin()}
-            />
-            <Button onClick={handleLogin} className="w-full">
-              Enter
-            </Button>
-          </div>
-        </div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
       </div>
     );
+  }
+
+  if (!user) {
+    return <AdminLoginForm title="Push Notifications" description="Zaloguj się jako administrator" />;
+  }
+
+  if (!isAdmin) {
+    return <AdminAccessDenied onSignOut={signOut} userEmail={user.email} />;
   }
 
   return (
     <div className="min-h-screen bg-background p-4">
       <div className="max-w-2xl mx-auto space-y-6 py-8">
+        <div className="flex justify-end">
+          <Button variant="outline" onClick={signOut}>
+            <LogOut className="w-4 h-4 mr-2" />
+            Wyloguj
+          </Button>
+        </div>
         <header className="text-center space-y-2">
           <h1 className="text-3xl font-bold text-foreground">
             Test Push Notifications

@@ -150,14 +150,17 @@ const Konto = () => {
 
   const loadTravelTimes = async (userId: string) => {
     try {
-      // Get today's date in Poland timezone
-      const today = new Date().toISOString().split('T')[0];
+      // Get current day of week (0 = Sunday, 1 = Monday, etc.)
+      const currentDayOfWeek = new Date().getDay();
       
+      // Get the most recent travel date for each day of week to get the latest data
       const { data: timesData, error } = await supabase
         .from('commute_travel_times')
         .select('*')
         .eq('user_id', userId)
-        .eq('travel_date', today);
+        .eq('day_of_week', currentDayOfWeek)
+        .order('travel_date', { ascending: false })
+        .order('departure_time', { ascending: true });
 
       if (error) {
         console.error('Error loading travel times:', error);
@@ -165,7 +168,12 @@ const Konto = () => {
       }
 
       if (timesData) {
-        setTravelTimes(timesData as TravelTime[]);
+        // Filter to keep only the most recent travel_date records
+        const latestDate = timesData.length > 0 ? timesData[0].travel_date : null;
+        const filteredData = latestDate 
+          ? timesData.filter(t => t.travel_date === latestDate)
+          : [];
+        setTravelTimes(filteredData as TravelTime[]);
       }
     } catch (error) {
       console.error('Error loading travel times:', error);
@@ -763,7 +771,7 @@ const Konto = () => {
               </div>
             ) : (
               <div className="space-y-4">
-                {schedule.filter(day => day.day_of_week >= 1 && day.day_of_week <= 5).map((day) => {
+                {schedule.map((day) => {
                   const toWorkTimes = getDisplayTravelTimes(day.to_work_start, day.to_work_end, 'to_work');
                   const fromWorkTimes = getDisplayTravelTimes(day.from_work_start, day.from_work_end, 'from_work');
                   const toWorkMin = getMinTime(toWorkTimes);

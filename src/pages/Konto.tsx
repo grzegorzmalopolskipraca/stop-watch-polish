@@ -30,6 +30,7 @@ interface TravelTime {
   direction: 'to_work' | 'from_work';
   travel_date: string;
   calculated_at: string;
+  day_of_week: number;
 }
 
 const DAYS_PL = ['Niedziela', 'Poniedziałek', 'Wtorek', 'Środa', 'Czwartek', 'Piątek', 'Sobota'];
@@ -150,16 +151,13 @@ const Konto = () => {
 
   const loadTravelTimes = async (userId: string) => {
     try {
-      // Get current day of week (0 = Sunday, 1 = Monday, etc.)
-      const currentDayOfWeek = new Date().getDay();
-      
-      // Get the most recent travel date for each day of week to get the latest data
+      // Get travel times for ALL days of the week - most recent data for each day
       const { data: timesData, error } = await supabase
         .from('commute_travel_times')
         .select('*')
         .eq('user_id', userId)
-        .eq('day_of_week', currentDayOfWeek)
         .order('travel_date', { ascending: false })
+        .order('day_of_week', { ascending: true })
         .order('departure_time', { ascending: true });
 
       if (error) {
@@ -168,12 +166,30 @@ const Konto = () => {
       }
 
       if (timesData) {
-        // Filter to keep only the most recent travel_date records
-        const latestDate = timesData.length > 0 ? timesData[0].travel_date : null;
-        const filteredData = latestDate 
-          ? timesData.filter(t => t.travel_date === latestDate)
-          : [];
-        setTravelTimes(filteredData as TravelTime[]);
+        // For each day_of_week, keep only the most recent travel_date records
+        const latestByDay: Record<number, { date: string; records: TravelTime[] }> = {};
+        
+        for (const record of timesData) {
+          const dayOfWeek = record.day_of_week;
+          const travelDate = record.travel_date;
+          
+          if (!latestByDay[dayOfWeek]) {
+            latestByDay[dayOfWeek] = { date: travelDate, records: [] };
+          }
+          
+          // Only include records from the most recent date for this day_of_week
+          if (latestByDay[dayOfWeek].date === travelDate) {
+            latestByDay[dayOfWeek].records.push(record as TravelTime);
+          }
+        }
+        
+        // Flatten all records from all days
+        const allRecords: TravelTime[] = [];
+        for (const dayOfWeek of Object.keys(latestByDay).map(Number)) {
+          allRecords.push(...latestByDay[dayOfWeek].records);
+        }
+        
+        setTravelTimes(allRecords);
       }
     } catch (error) {
       console.error('Error loading travel times:', error);
@@ -413,20 +429,22 @@ const Konto = () => {
     }
   };
 
-  // Get travel time for a specific slot
-  const getTravelTimeForSlot = (direction: 'to_work' | 'from_work', time: string): number | null => {
+  // Get travel time for a specific slot and day of week
+  const getTravelTimeForSlot = (direction: 'to_work' | 'from_work', time: string, dayOfWeek: number): number | null => {
     const match = travelTimes.find(
-      t => t.direction === direction && t.departure_time.substring(0, 5) === time
+      t => t.direction === direction && 
+           t.departure_time.substring(0, 5) === time &&
+           t.day_of_week === dayOfWeek
     );
     return match ? match.travel_duration_minutes : null;
   };
 
-  // Generate travel time data for display
-  const getDisplayTravelTimes = (startTime: string, endTime: string, direction: 'to_work' | 'from_work') => {
+  // Generate travel time data for display for a specific day
+  const getDisplayTravelTimes = (startTime: string, endTime: string, direction: 'to_work' | 'from_work', dayOfWeek: number) => {
     const slots = generateTimeSlots(startTime, endTime);
     return slots.map(time => ({
       time,
-      minutes: getTravelTimeForSlot(direction, time),
+      minutes: getTravelTimeForSlot(direction, time, dayOfWeek),
     }));
   };
 
@@ -772,8 +790,8 @@ const Konto = () => {
             ) : (
               <div className="space-y-4">
                 {schedule.map((day) => {
-                  const toWorkTimes = getDisplayTravelTimes(day.to_work_start, day.to_work_end, 'to_work');
-                  const fromWorkTimes = getDisplayTravelTimes(day.from_work_start, day.from_work_end, 'from_work');
+                  const toWorkTimes = getDisplayTravelTimes(day.to_work_start, day.to_work_end, 'to_work', day.day_of_week);
+                  const fromWorkTimes = getDisplayTravelTimes(day.from_work_start, day.from_work_end, 'from_work', day.day_of_week);
                   const toWorkMin = getMinTime(toWorkTimes);
                   const fromWorkMin = getMinTime(fromWorkTimes);
                   const hasToWorkData = toWorkTimes.some(t => t.minutes !== null);

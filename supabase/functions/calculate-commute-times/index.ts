@@ -61,56 +61,131 @@ function isTimeInRange(current: string, start: string, end: string): boolean {
   return currMinutes >= startMinutes && currMinutes <= endMinutes;
 }
 
-// Get travel duration using Google Distance Matrix API
+// Log error to database
+async function logError(
+  // deno-lint-ignore no-explicit-any
+  supabase: any,
+  serviceName: string,
+  errorType: string,
+  errorMessage: string,
+  errorDetails?: Record<string, unknown>
+): Promise<void> {
+  try {
+    const { error } = await supabase
+      .from('service_errors')
+      .insert({
+        service_name: serviceName,
+        error_type: errorType,
+        error_message: errorMessage,
+        error_details: errorDetails || null,
+      });
+    
+    if (error) {
+      console.error('Failed to log error to database:', error);
+    } else {
+      console.log(`Error logged to database: ${errorType} - ${errorMessage}`);
+    }
+  } catch (e) {
+    console.error('Exception while logging error:', e);
+  }
+}
+
+// Get travel duration using Google Distance Matrix API with retry
 async function getTravelDuration(
   originLat: number,
   originLng: number,
   destLat: number,
   destLng: number,
-  apiKey: string
+  apiKey: string,
+  // deno-lint-ignore no-explicit-any
+  supabase: any,
+  retries: number = 3
 ): Promise<number | null> {
-  try {
-    const url = `https://maps.googleapis.com/maps/api/distancematrix/json?origins=${originLat},${originLng}&destinations=${destLat},${destLng}&mode=driving&departure_time=now&traffic_model=best_guess&key=${apiKey}`;
-    
-    const response = await fetch(url);
-    const data = await response.json();
-    
-    console.log(`Distance Matrix response:`, JSON.stringify(data));
-    
-    if (data.status === 'OK' && data.rows?.[0]?.elements?.[0]?.status === 'OK') {
-      const element = data.rows[0].elements[0];
-      // Use duration_in_traffic if available, otherwise duration
-      const durationSeconds = element.duration_in_traffic?.value || element.duration?.value;
-      if (durationSeconds) {
-        return Math.round(durationSeconds / 60); // Convert to minutes
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      const url = `https://maps.googleapis.com/maps/api/distancematrix/json?origins=${originLat},${originLng}&destinations=${destLat},${destLng}&mode=driving&departure_time=now&traffic_model=best_guess&key=${apiKey}`;
+      
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout
+      
+      const response = await fetch(url, { signal: controller.signal });
+      clearTimeout(timeoutId);
+      
+      const data = await response.json();
+      
+      console.log(`Distance Matrix response (attempt ${attempt}):`, JSON.stringify(data));
+      
+      if (data.status === 'OK' && data.rows?.[0]?.elements?.[0]?.status === 'OK') {
+        const element = data.rows[0].elements[0];
+        const durationSeconds = element.duration_in_traffic?.value || element.duration?.value;
+        if (durationSeconds) {
+          return Math.round(durationSeconds / 60);
+        }
       }
+      
+      // Handle specific API errors
+      if (data.status === 'OVER_QUERY_LIMIT' || data.status === 'OVER_DAILY_LIMIT') {
+        await logError(supabase, 'calculate-commute-times', 'API_RATE_LIMIT', 
+          `Google Maps API rate limit exceeded: ${data.status}`, 
+          { response: data, attempt, origin: `${originLat},${originLng}`, dest: `${destLat},${destLng}` }
+        );
+        // Wait longer before retry for rate limits
+        if (attempt < retries) {
+          await new Promise(resolve => setTimeout(resolve, 5000 * attempt));
+          continue;
+        }
+        return null;
+      }
+      
+      if (data.status === 'REQUEST_DENIED') {
+        await logError(supabase, 'calculate-commute-times', 'API_AUTH_ERROR', 
+          `Google Maps API request denied: ${data.error_message || 'Unknown reason'}`, 
+          { response: data }
+        );
+        return null;
+      }
+      
+      if (data.status !== 'OK' || data.rows?.[0]?.elements?.[0]?.status !== 'OK') {
+        await logError(supabase, 'calculate-commute-times', 'API_ERROR', 
+          `Distance Matrix API returned error status`, 
+          { response: data, origin: `${originLat},${originLng}`, dest: `${destLat},${destLng}` }
+        );
+        
+        // Retry for transient errors
+        if (attempt < retries && ['UNKNOWN_ERROR', 'INVALID_REQUEST'].includes(data.status)) {
+          await new Promise(resolve => setTimeout(resolve, 2000 * attempt));
+          continue;
+        }
+        return null;
+      }
+      
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.error(`Error calling Distance Matrix API (attempt ${attempt}):`, error);
+      
+      // Check for timeout/network errors
+      if (errorMessage.includes('abort') || errorMessage.includes('timeout')) {
+        await logError(supabase, 'calculate-commute-times', 'API_TIMEOUT', 
+          `Request to Google Maps API timed out`, 
+          { error: errorMessage, attempt }
+        );
+      } else {
+        await logError(supabase, 'calculate-commute-times', 'API_NETWORK_ERROR', 
+          `Network error while calling Google Maps API: ${errorMessage}`, 
+          { error: errorMessage, attempt }
+        );
+      }
+      
+      // Retry on network errors
+      if (attempt < retries) {
+        await new Promise(resolve => setTimeout(resolve, 2000 * attempt));
+        continue;
+      }
+      return null;
     }
-    
-    console.error('Distance Matrix API error:', data);
-    return null;
-  } catch (error) {
-    console.error('Error calling Distance Matrix API:', error);
-    return null;
-  }
-}
-
-// Generate all time slots for a range with 10-minute intervals
-function generateTimeSlots(start: string, end: string): string[] {
-  const slots: string[] = [];
-  const [startH, startM] = start.split(':').map(Number);
-  const [endH, endM] = end.split(':').map(Number);
-  
-  let currentMinutes = startH * 60 + startM;
-  const endMinutes = endH * 60 + endM;
-  
-  while (currentMinutes <= endMinutes) {
-    const hours = Math.floor(currentMinutes / 60);
-    const mins = currentMinutes % 60;
-    slots.push(`${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`);
-    currentMinutes += 10;
   }
   
-  return slots;
+  return null;
 }
 
 serve(async (req) => {
@@ -118,28 +193,34 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // deno-lint-ignore no-explicit-any
+  let supabase: any = null;
+
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const googleMapsApiKey = Deno.env.get("GOOGLE_MAPS_API_KEY");
 
+    supabase = createClient(supabaseUrl, supabaseServiceKey);
+
     if (!googleMapsApiKey) {
       console.error("GOOGLE_MAPS_API_KEY is not configured");
+      await logError(supabase, 'calculate-commute-times', 'CONFIG_ERROR', 
+        'GOOGLE_MAPS_API_KEY is not configured', {}
+      );
       return new Response(
         JSON.stringify({ error: "Google Maps API key not configured" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
-    
     // Get current time in Poland
     const polandTime = getPolandTime();
     const currentDayOfWeek = polandTime.getDay();
     const currentTime = roundToNearest10Min(polandTime);
     const today = polandTime.toISOString().split('T')[0];
     
-    console.log(`Running commute time calculation at ${currentTime} on day ${currentDayOfWeek} (${today})`);
+    console.log(`Running commute time calculation at ${currentTime} (Poland time) on day ${currentDayOfWeek} (${today})`);
 
     // Get all profiles with both home and work addresses set
     const { data: profiles, error: profilesError } = await supabase
@@ -150,6 +231,10 @@ serve(async (req) => {
 
     if (profilesError) {
       console.error('Error fetching profiles:', profilesError);
+      await logError(supabase, 'calculate-commute-times', 'DATABASE_ERROR', 
+        `Failed to fetch profiles: ${profilesError.message}`, 
+        { error: profilesError }
+      );
       throw profilesError;
     }
 
@@ -174,7 +259,16 @@ serve(async (req) => {
         .eq('user_id', profile.user_id)
         .eq('day_of_week', currentDayOfWeek);
 
-      if (scheduleError || !schedules || schedules.length === 0) {
+      if (scheduleError) {
+        console.error(`Error fetching schedule for user ${profile.user_id}:`, scheduleError);
+        await logError(supabase, 'calculate-commute-times', 'DATABASE_ERROR', 
+          `Failed to fetch schedule for user: ${scheduleError.message}`, 
+          { userId: profile.user_id, dayOfWeek: currentDayOfWeek, error: scheduleError }
+        );
+        continue;
+      }
+      
+      if (!schedules || schedules.length === 0) {
         console.log(`No schedule found for user ${profile.user_id} on day ${currentDayOfWeek}`);
         continue;
       }
@@ -190,7 +284,8 @@ serve(async (req) => {
           profile.home_lng!,
           profile.work_lat!,
           profile.work_lng!,
-          googleMapsApiKey
+          googleMapsApiKey,
+          supabase
         );
         
         if (duration !== null) {
@@ -213,11 +308,17 @@ serve(async (req) => {
 
           if (upsertError) {
             console.error(`Error saving to_work time for user ${profile.user_id}:`, upsertError);
+            await logError(supabase, 'calculate-commute-times', 'DATABASE_ERROR', 
+              `Failed to save to_work time: ${upsertError.message}`, 
+              { userId: profile.user_id, direction: 'to_work', time: currentTime, error: upsertError }
+            );
             errors.push(`User ${profile.user_id} to_work: ${upsertError.message}`);
           } else {
             console.log(`Saved to_work time for user ${profile.user_id}: ${duration} min`);
             processedCount++;
           }
+        } else {
+          console.log(`Failed to get to_work duration for user ${profile.user_id}`);
         }
       }
       
@@ -230,7 +331,8 @@ serve(async (req) => {
           profile.work_lng!,
           profile.home_lat!,
           profile.home_lng!,
-          googleMapsApiKey
+          googleMapsApiKey,
+          supabase
         );
         
         if (duration !== null) {
@@ -253,11 +355,17 @@ serve(async (req) => {
 
           if (upsertError) {
             console.error(`Error saving from_work time for user ${profile.user_id}:`, upsertError);
+            await logError(supabase, 'calculate-commute-times', 'DATABASE_ERROR', 
+              `Failed to save from_work time: ${upsertError.message}`, 
+              { userId: profile.user_id, direction: 'from_work', time: currentTime, error: upsertError }
+            );
             errors.push(`User ${profile.user_id} from_work: ${upsertError.message}`);
           } else {
             console.log(`Saved from_work time for user ${profile.user_id}: ${duration} min`);
             processedCount++;
           }
+        } else {
+          console.log(`Failed to get from_work duration for user ${profile.user_id}`);
         }
       }
     }
@@ -278,6 +386,14 @@ serve(async (req) => {
 
   } catch (error) {
     console.error("Error in calculate-commute-times:", error);
+    
+    if (supabase) {
+      await logError(supabase, 'calculate-commute-times', 'FATAL_ERROR', 
+        error instanceof Error ? error.message : 'Unknown fatal error', 
+        { stack: error instanceof Error ? error.stack : undefined }
+      );
+    }
+    
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }

@@ -484,6 +484,39 @@ export type Database = {
         }
         Relationships: []
       }
+      service_errors: {
+        Row: {
+          created_at: string
+          error_details: Json | null
+          error_message: string
+          error_type: string
+          id: string
+          resolved: boolean
+          resolved_at: string | null
+          service_name: string
+        }
+        Insert: {
+          created_at?: string
+          error_details?: Json | null
+          error_message: string
+          error_type: string
+          id?: string
+          resolved?: boolean
+          resolved_at?: string | null
+          service_name: string
+        }
+        Update: {
+          created_at?: string
+          error_details?: Json | null
+          error_message?: string
+          error_type?: string
+          id?: string
+          resolved?: boolean
+          resolved_at?: string | null
+          service_name?: string
+        }
+        Relationships: []
+      }
       sms_subscriptions: {
         Row: {
           back_to_home_hour: string | null

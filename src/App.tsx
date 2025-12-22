@@ -15,6 +15,7 @@ import Coupons from "./pages/Coupons";
 import Kupon from "./pages/Kupon";
 import Auth from "./pages/Auth";
 import Konto from "./pages/Konto";
+import Errors from "./pages/Errors";
 
 const queryClient = new QueryClient();
 
@@ -36,6 +37,7 @@ const App = () => (
           <Route path="/kupon" element={<Kupon />} />
           <Route path="/auth" element={<Auth />} />
           <Route path="/konto" element={<Konto />} />
+          <Route path="/errors" element={<Errors />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

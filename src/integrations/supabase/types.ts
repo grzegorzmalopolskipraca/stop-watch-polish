@@ -517,6 +517,45 @@ export type Database = {
         }
         Relationships: []
       }
+      service_execution_status: {
+        Row: {
+          consecutive_failures: number | null
+          created_at: string
+          current_interval_minutes: number | null
+          id: string
+          is_healthy: boolean | null
+          last_attempt_at: string | null
+          last_error_at: string | null
+          last_success_at: string | null
+          service_name: string
+          updated_at: string
+        }
+        Insert: {
+          consecutive_failures?: number | null
+          created_at?: string
+          current_interval_minutes?: number | null
+          id?: string
+          is_healthy?: boolean | null
+          last_attempt_at?: string | null
+          last_error_at?: string | null
+          last_success_at?: string | null
+          service_name: string
+          updated_at?: string
+        }
+        Update: {
+          consecutive_failures?: number | null
+          created_at?: string
+          current_interval_minutes?: number | null
+          id?: string
+          is_healthy?: boolean | null
+          last_attempt_at?: string | null
+          last_error_at?: string | null
+          last_success_at?: string | null
+          service_name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       sms_subscriptions: {
         Row: {
           back_to_home_hour: string | null

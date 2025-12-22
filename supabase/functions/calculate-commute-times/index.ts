@@ -6,6 +6,10 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+const SERVICE_NAME = 'calculate-commute-times';
+const DEFAULT_INTERVAL = 10;
+const FALLBACK_INTERVAL = 20;
+
 interface Profile {
   user_id: string;
   home_address: string | null;
@@ -25,6 +29,17 @@ interface CommuteSchedule {
   from_work_end: string;
 }
 
+interface ServiceStatus {
+  id: string;
+  service_name: string;
+  last_success_at: string | null;
+  last_attempt_at: string | null;
+  last_error_at: string | null;
+  consecutive_failures: number;
+  current_interval_minutes: number;
+  is_healthy: boolean;
+}
+
 // Get current time in Poland timezone
 function getPolandTime(): Date {
   const now = new Date();
@@ -38,7 +53,7 @@ function getPolandOffset(date: Date): number {
   const jul = new Date(date.getFullYear(), 6, 1);
   const stdOffset = Math.max(jan.getTimezoneOffset(), jul.getTimezoneOffset());
   const isDST = date.getTimezoneOffset() < stdOffset;
-  return isDST ? -120 : -60; // -120 for summer (UTC+2), -60 for winter (UTC+1)
+  return isDST ? -120 : -60;
 }
 
 // Round time to nearest 10 minutes
@@ -90,6 +105,123 @@ async function logError(
   }
 }
 
+// Get or create service status
+async function getServiceStatus(
+  // deno-lint-ignore no-explicit-any
+  supabase: any
+): Promise<ServiceStatus | null> {
+  try {
+    const { data, error } = await supabase
+      .from('service_execution_status')
+      .select('*')
+      .eq('service_name', SERVICE_NAME)
+      .maybeSingle();
+
+    if (error) {
+      console.error('Error fetching service status:', error);
+      return null;
+    }
+
+    if (!data) {
+      // Create initial record
+      const { data: newData, error: insertError } = await supabase
+        .from('service_execution_status')
+        .insert({
+          service_name: SERVICE_NAME,
+          current_interval_minutes: DEFAULT_INTERVAL,
+          is_healthy: true,
+        })
+        .select()
+        .single();
+
+      if (insertError) {
+        console.error('Error creating service status:', insertError);
+        return null;
+      }
+      return newData;
+    }
+
+    return data;
+  } catch (e) {
+    console.error('Exception in getServiceStatus:', e);
+    return null;
+  }
+}
+
+// Update service status after execution
+async function updateServiceStatus(
+  // deno-lint-ignore no-explicit-any
+  supabase: any,
+  success: boolean,
+  status: ServiceStatus | null
+): Promise<void> {
+  try {
+    const now = new Date().toISOString();
+    
+    if (success) {
+      // Reset to default interval on success
+      await supabase
+        .from('service_execution_status')
+        .upsert({
+          service_name: SERVICE_NAME,
+          last_success_at: now,
+          last_attempt_at: now,
+          consecutive_failures: 0,
+          current_interval_minutes: DEFAULT_INTERVAL,
+          is_healthy: true,
+        }, { onConflict: 'service_name' });
+      
+      console.log(`Service status updated: healthy, interval: ${DEFAULT_INTERVAL}min`);
+    } else {
+      // Increment failures and potentially switch to fallback interval
+      const newFailures = (status?.consecutive_failures || 0) + 1;
+      const shouldUseFallback = newFailures >= 3;
+      
+      await supabase
+        .from('service_execution_status')
+        .upsert({
+          service_name: SERVICE_NAME,
+          last_attempt_at: now,
+          last_error_at: now,
+          consecutive_failures: newFailures,
+          current_interval_minutes: shouldUseFallback ? FALLBACK_INTERVAL : DEFAULT_INTERVAL,
+          is_healthy: !shouldUseFallback,
+        }, { onConflict: 'service_name' });
+      
+      if (shouldUseFallback) {
+        console.log(`Service unhealthy after ${newFailures} failures, switching to ${FALLBACK_INTERVAL}min interval`);
+        await logError(supabase, SERVICE_NAME, 'SERVICE_UNHEALTHY',
+          `Service marked unhealthy after ${newFailures} consecutive failures, fallback to ${FALLBACK_INTERVAL}min interval`,
+          { consecutiveFailures: newFailures }
+        );
+      }
+    }
+  } catch (e) {
+    console.error('Error updating service status:', e);
+  }
+}
+
+// Check if we should skip based on interval
+function shouldSkipExecution(status: ServiceStatus | null): boolean {
+  if (!status || !status.last_attempt_at) {
+    return false;
+  }
+
+  const lastAttempt = new Date(status.last_attempt_at);
+  const now = new Date();
+  const minutesSinceLastAttempt = (now.getTime() - lastAttempt.getTime()) / (1000 * 60);
+  
+  // Use fallback interval if service is unhealthy
+  const requiredInterval = status.is_healthy ? DEFAULT_INTERVAL : FALLBACK_INTERVAL;
+  
+  if (minutesSinceLastAttempt < (requiredInterval - 1)) {
+    console.log(`Skipping: only ${minutesSinceLastAttempt.toFixed(1)}min since last attempt, interval: ${requiredInterval}min`);
+    return true;
+  }
+  
+  return false;
+}
+
 // Get travel duration using Google Distance Matrix API with retry
 async function getTravelDuration(
   originLat: number,
@@ -106,7 +238,7 @@ async function getTravelDuration(
       const url = `https://maps.googleapis.com/maps/api/distancematrix/json?origins=${originLat},${originLng}&destinations=${destLat},${destLng}&mode=driving&departure_time=now&traffic_model=best_guess&key=${apiKey}`;
       
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout
+      const timeoutId = setTimeout(() => controller.abort(), 30000);
       
       const response = await fetch(url, { signal: controller.signal });
       clearTimeout(timeoutId);
@@ -125,11 +257,10 @@ async function getTravelDuration(
       
       // Handle specific API errors
       if (data.status === 'OVER_QUERY_LIMIT' || data.status === 'OVER_DAILY_LIMIT') {
-        await logError(supabase, 'calculate-commute-times', 'API_RATE_LIMIT', 
+        await logError(supabase, SERVICE_NAME, 'API_RATE_LIMIT', 
           `Google Maps API rate limit exceeded: ${data.status}`, 
           { response: data, attempt, origin: `${originLat},${originLng}`, dest: `${destLat},${destLng}` }
         );
-        // Wait longer before retry for rate limits
         if (attempt < retries) {
           await new Promise(resolve => setTimeout(resolve, 5000 * attempt));
           continue;
@@ -138,7 +269,7 @@ async function getTravelDuration(
       }
       
       if (data.status === 'REQUEST_DENIED') {
-        await logError(supabase, 'calculate-commute-times', 'API_AUTH_ERROR', 
+        await logError(supabase, SERVICE_NAME, 'API_AUTH_ERROR', 
           `Google Maps API request denied: ${data.error_message || 'Unknown reason'}`, 
           { response: data }
         );
@@ -146,12 +277,11 @@ async function getTravelDuration(
       }
       
       if (data.status !== 'OK' || data.rows?.[0]?.elements?.[0]?.status !== 'OK') {
-        await logError(supabase, 'calculate-commute-times', 'API_ERROR', 
+        await logError(supabase, SERVICE_NAME, 'API_ERROR', 
           `Distance Matrix API returned error status`, 
           { response: data, origin: `${originLat},${originLng}`, dest: `${destLat},${destLng}` }
         );
         
-        // Retry for transient errors
         if (attempt < retries && ['UNKNOWN_ERROR', 'INVALID_REQUEST'].includes(data.status)) {
           await new Promise(resolve => setTimeout(resolve, 2000 * attempt));
           continue;
@@ -163,20 +293,18 @@ async function getTravelDuration(
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       console.error(`Error calling Distance Matrix API (attempt ${attempt}):`, error);
       
-      // Check for timeout/network errors
       if (errorMessage.includes('abort') || errorMessage.includes('timeout')) {
-        await logError(supabase, 'calculate-commute-times', 'API_TIMEOUT', 
+        await logError(supabase, SERVICE_NAME, 'API_TIMEOUT', 
           `Request to Google Maps API timed out`, 
           { error: errorMessage, attempt }
         );
       } else {
-        await logError(supabase, 'calculate-commute-times', 'API_NETWORK_ERROR', 
+        await logError(supabase, SERVICE_NAME, 'API_NETWORK_ERROR', 
           `Network error while calling Google Maps API: ${errorMessage}`, 
           { error: errorMessage, attempt }
         );
       }
       
-      // Retry on network errors
       if (attempt < retries) {
         await new Promise(resolve => setTimeout(resolve, 2000 * attempt));
         continue;
@@ -195,6 +323,8 @@ serve(async (req) => {
 
   // deno-lint-ignore no-explicit-any
   let supabase: any = null;
+  let serviceStatus: ServiceStatus | null = null;
+  let executionSuccess = false;
 
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -203,11 +333,30 @@ serve(async (req) => {
 
     supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+    // Get service status
+    serviceStatus = await getServiceStatus(supabase);
+    
+    // Check if we should skip based on interval (only for cron, not manual calls)
+    const body = await req.text();
+    const isManualCall = body && body.includes('"force"');
+    
+    if (!isManualCall && shouldSkipExecution(serviceStatus)) {
+      return new Response(
+        JSON.stringify({ 
+          message: "Skipped - too soon since last execution",
+          isHealthy: serviceStatus?.is_healthy,
+          currentInterval: serviceStatus?.current_interval_minutes
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     if (!googleMapsApiKey) {
       console.error("GOOGLE_MAPS_API_KEY is not configured");
-      await logError(supabase, 'calculate-commute-times', 'CONFIG_ERROR', 
+      await logError(supabase, SERVICE_NAME, 'CONFIG_ERROR', 
         'GOOGLE_MAPS_API_KEY is not configured', {}
       );
+      await updateServiceStatus(supabase, false, serviceStatus);
       return new Response(
         JSON.stringify({ error: "Google Maps API key not configured" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -231,7 +380,7 @@ serve(async (req) => {
 
     if (profilesError) {
       console.error('Error fetching profiles:', profilesError);
-      await logError(supabase, 'calculate-commute-times', 'DATABASE_ERROR', 
+      await logError(supabase, SERVICE_NAME, 'DATABASE_ERROR', 
         `Failed to fetch profiles: ${profilesError.message}`, 
         { error: profilesError }
       );
@@ -240,6 +389,8 @@ serve(async (req) => {
 
     if (!profiles || profiles.length === 0) {
       console.log('No profiles with complete addresses found');
+      executionSuccess = true;
+      await updateServiceStatus(supabase, true, serviceStatus);
       return new Response(
         JSON.stringify({ message: "No profiles to process", processed: 0 }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -261,7 +412,7 @@ serve(async (req) => {
 
       if (scheduleError) {
         console.error(`Error fetching schedule for user ${profile.user_id}:`, scheduleError);
-        await logError(supabase, 'calculate-commute-times', 'DATABASE_ERROR', 
+        await logError(supabase, SERVICE_NAME, 'DATABASE_ERROR', 
           `Failed to fetch schedule for user: ${scheduleError.message}`, 
           { userId: profile.user_id, dayOfWeek: currentDayOfWeek, error: scheduleError }
         );
@@ -289,7 +440,6 @@ serve(async (req) => {
         );
         
         if (duration !== null) {
-          // Upsert travel time
           const { error: upsertError } = await supabase
             .from('commute_travel_times')
             .upsert({
@@ -308,7 +458,7 @@ serve(async (req) => {
 
           if (upsertError) {
             console.error(`Error saving to_work time for user ${profile.user_id}:`, upsertError);
-            await logError(supabase, 'calculate-commute-times', 'DATABASE_ERROR', 
+            await logError(supabase, SERVICE_NAME, 'DATABASE_ERROR', 
               `Failed to save to_work time: ${upsertError.message}`, 
               { userId: profile.user_id, direction: 'to_work', time: currentTime, error: upsertError }
             );
@@ -336,7 +486,6 @@ serve(async (req) => {
         );
         
         if (duration !== null) {
-          // Upsert travel time
           const { error: upsertError } = await supabase
             .from('commute_travel_times')
             .upsert({
@@ -355,7 +504,7 @@ serve(async (req) => {
 
           if (upsertError) {
             console.error(`Error saving from_work time for user ${profile.user_id}:`, upsertError);
-            await logError(supabase, 'calculate-commute-times', 'DATABASE_ERROR', 
+            await logError(supabase, SERVICE_NAME, 'DATABASE_ERROR', 
               `Failed to save from_work time: ${upsertError.message}`, 
               { userId: profile.user_id, direction: 'from_work', time: currentTime, error: upsertError }
             );
@@ -371,6 +520,10 @@ serve(async (req) => {
     }
 
     console.log(`Processed ${processedCount} travel time calculations`);
+    
+    // Mark as success if we processed at least something or had no errors
+    executionSuccess = errors.length === 0;
+    await updateServiceStatus(supabase, executionSuccess, serviceStatus);
 
     return new Response(
       JSON.stringify({ 
@@ -379,7 +532,9 @@ serve(async (req) => {
         errors: errors.length > 0 ? errors : undefined,
         currentTime,
         currentDay: currentDayOfWeek,
-        date: today
+        date: today,
+        isHealthy: executionSuccess,
+        nextInterval: executionSuccess ? DEFAULT_INTERVAL : FALLBACK_INTERVAL
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
@@ -388,10 +543,11 @@ serve(async (req) => {
     console.error("Error in calculate-commute-times:", error);
     
     if (supabase) {
-      await logError(supabase, 'calculate-commute-times', 'FATAL_ERROR', 
+      await logError(supabase, SERVICE_NAME, 'FATAL_ERROR', 
         error instanceof Error ? error.message : 'Unknown fatal error', 
         { stack: error instanceof Error ? error.stack : undefined }
       );
+      await updateServiceStatus(supabase, false, serviceStatus);
     }
     
     return new Response(

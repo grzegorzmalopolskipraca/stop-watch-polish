@@ -56,24 +56,44 @@ function getPolandOffset(date: Date): number {
   return isDST ? -120 : -60;
 }
 
-// Round time to nearest 10 minutes
+// Round time to nearest 10 minutes (floor)
 function roundToNearest10Min(date: Date): string {
   const hours = date.getHours();
   const minutes = Math.floor(date.getMinutes() / 10) * 10;
   return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
 }
 
-// Check if current time is within a range
+// Parse time string to minutes since midnight
+function timeToMinutes(time: string): number {
+  const [h, m] = time.split(':').map(Number);
+  return h * 60 + m;
+}
+
+// Convert minutes since midnight to time string
+function minutesToTime(minutes: number): string {
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+}
+
+// Check if time is in range
 function isTimeInRange(current: string, start: string, end: string): boolean {
-  const [currH, currM] = current.split(':').map(Number);
-  const [startH, startM] = start.split(':').map(Number);
-  const [endH, endM] = end.split(':').map(Number);
-  
-  const currMinutes = currH * 60 + currM;
-  const startMinutes = startH * 60 + startM;
-  const endMinutes = endH * 60 + endM;
-  
+  const currMinutes = timeToMinutes(current);
+  const startMinutes = timeToMinutes(start);
+  const endMinutes = timeToMinutes(end);
   return currMinutes >= startMinutes && currMinutes <= endMinutes;
+}
+
+// Generate all 10-minute slots in a range
+function generateTimeSlots(start: string, end: string): string[] {
+  const slots: string[] = [];
+  const startMin = timeToMinutes(start);
+  const endMin = timeToMinutes(end);
+  
+  for (let m = startMin; m <= endMin; m += 10) {
+    slots.push(minutesToTime(m));
+  }
+  return slots;
 }
 
 // Log error to database
@@ -201,7 +221,7 @@ async function updateServiceStatus(
   }
 }
 
-// Check if we should skip based on interval
+// Check if we should skip based on interval (CRON only)
 function shouldSkipExecution(status: ServiceStatus | null): boolean {
   if (!status || !status.last_attempt_at) {
     return false;
@@ -316,6 +336,62 @@ async function getTravelDuration(
   return null;
 }
 
+// Get missing time slots that need to be calculated
+async function getMissingSlots(
+  // deno-lint-ignore no-explicit-any
+  supabase: any,
+  userId: string,
+  today: string,
+  dayOfWeek: number,
+  schedule: CommuteSchedule,
+  currentTime: string
+): Promise<{ toWork: string[]; fromWork: string[] }> {
+  // Get existing records for today
+  const { data: existingRecords, error } = await supabase
+    .from('commute_travel_times')
+    .select('departure_time, direction')
+    .eq('user_id', userId)
+    .eq('travel_date', today)
+    .eq('day_of_week', dayOfWeek);
+
+  if (error) {
+    console.error('Error fetching existing records:', error);
+    return { toWork: [], fromWork: [] };
+  }
+
+  const existingToWork = new Set(
+    existingRecords
+      ?.filter((r: { direction: string }) => r.direction === 'to_work')
+      .map((r: { departure_time: string }) => r.departure_time.substring(0, 5)) || []
+  );
+  
+  const existingFromWork = new Set(
+    existingRecords
+      ?.filter((r: { direction: string }) => r.direction === 'from_work')
+      .map((r: { departure_time: string }) => r.departure_time.substring(0, 5)) || []
+  );
+
+  const currentMinutes = timeToMinutes(currentTime);
+  
+  // Generate all slots up to current time for to_work
+  const toWorkSlots = generateTimeSlots(schedule.to_work_start, schedule.to_work_end);
+  const missingToWork = toWorkSlots.filter(slot => {
+    const slotMinutes = timeToMinutes(slot);
+    // Only include slots up to and including current time
+    return slotMinutes <= currentMinutes && !existingToWork.has(slot);
+  });
+
+  // Generate all slots up to current time for from_work
+  const fromWorkSlots = generateTimeSlots(schedule.from_work_start, schedule.from_work_end);
+  const missingFromWork = fromWorkSlots.filter(slot => {
+    const slotMinutes = timeToMinutes(slot);
+    // Only include slots up to and including current time
+    return slotMinutes <= currentMinutes && !existingFromWork.has(slot);
+  });
+
+  return { toWork: missingToWork, fromWork: missingFromWork };
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -336,10 +412,23 @@ serve(async (req) => {
     // Get service status
     serviceStatus = await getServiceStatus(supabase);
     
-    // Check if we should skip based on interval (only for cron, not manual calls)
-    const body = await req.text();
-    const isManualCall = body && body.includes('"force"');
+    // Parse request body to check for manual/force call
+    let isManualCall = false;
+    let fillMissing = false;
+    try {
+      const body = await req.text();
+      if (body) {
+        const parsed = JSON.parse(body);
+        isManualCall = parsed.force === true;
+        fillMissing = parsed.fillMissing === true || isManualCall; // Always fill missing on manual calls
+      }
+    } catch {
+      // Body parsing failed, treat as CRON call
+    }
+
+    console.log(`Request type: ${isManualCall ? 'MANUAL' : 'CRON'}, fillMissing: ${fillMissing}`);
     
+    // Only check interval for CRON calls, not manual calls
     if (!isManualCall && shouldSkipExecution(serviceStatus)) {
       return new Response(
         JSON.stringify({ 
@@ -401,6 +490,7 @@ serve(async (req) => {
 
     let processedCount = 0;
     const errors: string[] = [];
+    const processedSlots: string[] = [];
 
     for (const profile of profiles as Profile[]) {
       // Get schedule for current day
@@ -426,9 +516,29 @@ serve(async (req) => {
 
       const schedule = schedules[0] as CommuteSchedule;
       
-      // Check "to work" range
-      if (isTimeInRange(currentTime, schedule.to_work_start, schedule.to_work_end)) {
-        console.log(`User ${profile.user_id}: Calculating to_work time at ${currentTime}`);
+      // Determine which slots to process
+      let toWorkSlots: string[] = [];
+      let fromWorkSlots: string[] = [];
+
+      if (fillMissing) {
+        // Fill all missing slots up to current time
+        const missing = await getMissingSlots(supabase, profile.user_id, today, currentDayOfWeek, schedule, currentTime);
+        toWorkSlots = missing.toWork;
+        fromWorkSlots = missing.fromWork;
+        console.log(`User ${profile.user_id}: Found ${toWorkSlots.length} missing to_work slots, ${fromWorkSlots.length} missing from_work slots`);
+      } else {
+        // Only process current time slot (CRON behavior)
+        if (isTimeInRange(currentTime, schedule.to_work_start, schedule.to_work_end)) {
+          toWorkSlots = [currentTime];
+        }
+        if (isTimeInRange(currentTime, schedule.from_work_start, schedule.from_work_end)) {
+          fromWorkSlots = [currentTime];
+        }
+      }
+
+      // Process to_work slots
+      for (const timeSlot of toWorkSlots) {
+        console.log(`User ${profile.user_id}: Calculating to_work time at ${timeSlot}`);
         
         const duration = await getTravelDuration(
           profile.home_lat!,
@@ -447,7 +557,7 @@ serve(async (req) => {
               travel_date: today,
               day_of_week: currentDayOfWeek,
               direction: 'to_work',
-              departure_time: currentTime,
+              departure_time: timeSlot,
               travel_duration_minutes: duration,
               origin_address: profile.home_address,
               destination_address: profile.work_address,
@@ -460,21 +570,27 @@ serve(async (req) => {
             console.error(`Error saving to_work time for user ${profile.user_id}:`, upsertError);
             await logError(supabase, SERVICE_NAME, 'DATABASE_ERROR', 
               `Failed to save to_work time: ${upsertError.message}`, 
-              { userId: profile.user_id, direction: 'to_work', time: currentTime, error: upsertError }
+              { userId: profile.user_id, direction: 'to_work', time: timeSlot, error: upsertError }
             );
-            errors.push(`User ${profile.user_id} to_work: ${upsertError.message}`);
+            errors.push(`User ${profile.user_id} to_work ${timeSlot}: ${upsertError.message}`);
           } else {
-            console.log(`Saved to_work time for user ${profile.user_id}: ${duration} min`);
+            console.log(`Saved to_work time for user ${profile.user_id} at ${timeSlot}: ${duration} min`);
+            processedSlots.push(`to_work:${timeSlot}`);
             processedCount++;
           }
         } else {
-          console.log(`Failed to get to_work duration for user ${profile.user_id}`);
+          console.log(`Failed to get to_work duration for user ${profile.user_id} at ${timeSlot}`);
+        }
+        
+        // Small delay between API calls to avoid rate limiting
+        if (toWorkSlots.length > 1) {
+          await new Promise(resolve => setTimeout(resolve, 500));
         }
       }
       
-      // Check "from work" range
-      if (isTimeInRange(currentTime, schedule.from_work_start, schedule.from_work_end)) {
-        console.log(`User ${profile.user_id}: Calculating from_work time at ${currentTime}`);
+      // Process from_work slots
+      for (const timeSlot of fromWorkSlots) {
+        console.log(`User ${profile.user_id}: Calculating from_work time at ${timeSlot}`);
         
         const duration = await getTravelDuration(
           profile.work_lat!,
@@ -493,7 +609,7 @@ serve(async (req) => {
               travel_date: today,
               day_of_week: currentDayOfWeek,
               direction: 'from_work',
-              departure_time: currentTime,
+              departure_time: timeSlot,
               travel_duration_minutes: duration,
               origin_address: profile.work_address,
               destination_address: profile.home_address,
@@ -506,15 +622,21 @@ serve(async (req) => {
             console.error(`Error saving from_work time for user ${profile.user_id}:`, upsertError);
             await logError(supabase, SERVICE_NAME, 'DATABASE_ERROR', 
               `Failed to save from_work time: ${upsertError.message}`, 
-              { userId: profile.user_id, direction: 'from_work', time: currentTime, error: upsertError }
+              { userId: profile.user_id, direction: 'from_work', time: timeSlot, error: upsertError }
             );
-            errors.push(`User ${profile.user_id} from_work: ${upsertError.message}`);
+            errors.push(`User ${profile.user_id} from_work ${timeSlot}: ${upsertError.message}`);
           } else {
-            console.log(`Saved from_work time for user ${profile.user_id}: ${duration} min`);
+            console.log(`Saved from_work time for user ${profile.user_id} at ${timeSlot}: ${duration} min`);
+            processedSlots.push(`from_work:${timeSlot}`);
             processedCount++;
           }
         } else {
-          console.log(`Failed to get from_work duration for user ${profile.user_id}`);
+          console.log(`Failed to get from_work duration for user ${profile.user_id} at ${timeSlot}`);
+        }
+        
+        // Small delay between API calls to avoid rate limiting
+        if (fromWorkSlots.length > 1) {
+          await new Promise(resolve => setTimeout(resolve, 500));
         }
       }
     }
@@ -529,12 +651,14 @@ serve(async (req) => {
       JSON.stringify({ 
         message: "Commute times calculated",
         processed: processedCount,
+        slots: processedSlots,
         errors: errors.length > 0 ? errors : undefined,
         currentTime,
         currentDay: currentDayOfWeek,
         date: today,
         isHealthy: executionSuccess,
-        nextInterval: executionSuccess ? DEFAULT_INTERVAL : FALLBACK_INTERVAL
+        nextInterval: executionSuccess ? DEFAULT_INTERVAL : FALLBACK_INTERVAL,
+        mode: isManualCall ? 'manual' : 'cron'
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );

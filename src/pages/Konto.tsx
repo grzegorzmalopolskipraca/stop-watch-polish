@@ -201,8 +201,10 @@ const Konto = () => {
     setRefreshingTimes(true);
     
     try {
-      // Call the edge function to calculate current time slot
-      const { data, error } = await supabase.functions.invoke('calculate-commute-times');
+      // Call the edge function with force=true to bypass interval check and fill missing slots
+      const { data, error } = await supabase.functions.invoke('calculate-commute-times', {
+        body: { force: true, fillMissing: true }
+      });
       
       if (error) {
         console.error('Error refreshing travel times:', error);
@@ -219,9 +221,13 @@ const Konto = () => {
       // Reload travel times from database
       await loadTravelTimes(user.id);
       
+      const slotsInfo = data?.slots?.length > 0 
+        ? `Obliczono ${data.processed} czasów (${data.slots.join(', ')}).`
+        : `Obliczono ${data?.processed || 0} czasów dojazdu.`;
+      
       toast({
         title: 'Odświeżono',
-        description: `Obliczono ${data?.processed || 0} czasów dojazdu.`,
+        description: slotsInfo,
       });
     } catch (error) {
       console.error('Error refreshing travel times:', error);

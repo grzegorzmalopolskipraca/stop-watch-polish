@@ -40,20 +40,40 @@ interface ServiceStatus {
   is_healthy: boolean;
 }
 
-// Get current time in Poland timezone
+// Get current time in Poland timezone (Europe/Warsaw)
 function getPolandTime(): Date {
   const now = new Date();
-  const polandOffset = getPolandOffset(now);
-  return new Date(now.getTime() + polandOffset * 60 * 1000);
-}
-
-function getPolandOffset(date: Date): number {
-  // Poland is UTC+1 in winter, UTC+2 in summer (DST)
-  const jan = new Date(date.getFullYear(), 0, 1);
-  const jul = new Date(date.getFullYear(), 6, 1);
-  const stdOffset = Math.max(jan.getTimezoneOffset(), jul.getTimezoneOffset());
-  const isDST = date.getTimezoneOffset() < stdOffset;
-  return isDST ? -120 : -60;
+  
+  // Use Intl.DateTimeFormat to get the correct time in Poland
+  // This properly handles DST transitions
+  const formatter = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Europe/Warsaw',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  });
+  
+  const parts = formatter.formatToParts(now);
+  const getPart = (type: string) => parts.find(p => p.type === type)?.value || '0';
+  
+  const year = parseInt(getPart('year'));
+  const month = parseInt(getPart('month')) - 1; // JS months are 0-indexed
+  const day = parseInt(getPart('day'));
+  const hour = parseInt(getPart('hour'));
+  const minute = parseInt(getPart('minute'));
+  const second = parseInt(getPart('second'));
+  
+  // Create a date object representing Poland time
+  // Note: This date object's UTC methods will reflect Poland local time values
+  const polandDate = new Date(year, month, day, hour, minute, second);
+  
+  console.log(`Poland time calculated: ${year}-${(month+1).toString().padStart(2,'0')}-${day.toString().padStart(2,'0')} ${hour.toString().padStart(2,'0')}:${minute.toString().padStart(2,'0')}:${second.toString().padStart(2,'0')}`);
+  
+  return polandDate;
 }
 
 // Round time to nearest 10 minutes (floor)
@@ -346,6 +366,9 @@ async function getMissingSlots(
   schedule: CommuteSchedule,
   currentTime: string
 ): Promise<{ toWork: string[]; fromWork: string[] }> {
+  console.log(`getMissingSlots called for user ${userId}, date ${today}, day ${dayOfWeek}, currentTime ${currentTime}`);
+  console.log(`Schedule: to_work ${schedule.to_work_start}-${schedule.to_work_end}, from_work ${schedule.from_work_start}-${schedule.from_work_end}`);
+  
   // Get existing records for today
   const { data: existingRecords, error } = await supabase
     .from('commute_travel_times')
@@ -371,10 +394,15 @@ async function getMissingSlots(
       .map((r: { departure_time: string }) => r.departure_time.substring(0, 5)) || []
   );
 
+  console.log(`Existing to_work records: ${Array.from(existingToWork).join(', ') || 'none'}`);
+  console.log(`Existing from_work records: ${Array.from(existingFromWork).join(', ') || 'none'}`);
+
   const currentMinutes = timeToMinutes(currentTime);
   
   // Generate all slots up to current time for to_work
   const toWorkSlots = generateTimeSlots(schedule.to_work_start, schedule.to_work_end);
+  console.log(`All to_work slots: ${toWorkSlots.join(', ')}`);
+  
   const missingToWork = toWorkSlots.filter(slot => {
     const slotMinutes = timeToMinutes(slot);
     // Only include slots up to and including current time
@@ -383,11 +411,16 @@ async function getMissingSlots(
 
   // Generate all slots up to current time for from_work
   const fromWorkSlots = generateTimeSlots(schedule.from_work_start, schedule.from_work_end);
+  console.log(`All from_work slots: ${fromWorkSlots.join(', ')}`);
+  
   const missingFromWork = fromWorkSlots.filter(slot => {
     const slotMinutes = timeToMinutes(slot);
     // Only include slots up to and including current time
     return slotMinutes <= currentMinutes && !existingFromWork.has(slot);
   });
+
+  console.log(`Missing to_work: ${missingToWork.join(', ') || 'none'}`);
+  console.log(`Missing from_work: ${missingFromWork.join(', ') || 'none'}`);
 
   return { toWork: missingToWork, fromWork: missingFromWork };
 }

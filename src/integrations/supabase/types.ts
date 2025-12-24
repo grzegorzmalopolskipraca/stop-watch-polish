@@ -338,6 +338,7 @@ export type Database = {
           home_lat: number | null
           home_lng: number | null
           id: string
+          traffic_api_preference: string | null
           updated_at: string
           user_id: string
           work_address: string | null
@@ -350,6 +351,7 @@ export type Database = {
           home_lat?: number | null
           home_lng?: number | null
           id?: string
+          traffic_api_preference?: string | null
           updated_at?: string
           user_id: string
           work_address?: string | null
@@ -362,6 +364,7 @@ export type Database = {
           home_lat?: number | null
           home_lng?: number | null
           id?: string
+          traffic_api_preference?: string | null
           updated_at?: string
           user_id?: string
           work_address?: string | null

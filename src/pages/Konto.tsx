@@ -6,9 +6,40 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { LogOut, Save, MapPin, Briefcase, Clock, Search, CheckCircle, Loader2, RefreshCw, Map, Crosshair, Car, Home, Building2, ArrowRight, TrendingDown, Calendar, Sun, Moon } from 'lucide-react';
+import { LogOut, Save, MapPin, Briefcase, Clock, Search, CheckCircle, Loader2, RefreshCw, Map, Crosshair, Car, Home, Building2, ArrowRight, TrendingDown, Calendar, Sun, Moon, Settings } from 'lucide-react';
 import { User, Session } from '@supabase/supabase-js';
 import MapLocationPicker from '@/components/MapLocationPicker';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+// Traffic API options with descriptions
+const TRAFFIC_API_OPTIONS = [
+  {
+    value: 'distance_matrix_pessimistic',
+    label: 'Pesymistyczny (zalecany)',
+    description: 'Uwzględnia największe korki - najbardziej realistyczny w godzinach szczytu'
+  },
+  {
+    value: 'distance_matrix_best_guess',
+    label: 'Uśredniony',
+    description: 'Średni czas na podstawie danych historycznych'
+  },
+  {
+    value: 'distance_matrix_optimistic',
+    label: 'Optymistyczny',
+    description: 'Zakłada minimalny ruch - najkrótszy możliwy czas'
+  },
+  {
+    value: 'routes_api',
+    label: 'Google Routes API',
+    description: 'Nowsze API z danymi w czasie rzeczywistym (TRAFFIC_AWARE)'
+  }
+];
 
 interface CommuteSchedule {
   id: string;
@@ -80,6 +111,8 @@ const Konto = () => {
   const [showHomeMapPicker, setShowHomeMapPicker] = useState(false);
   const [showWorkMapPicker, setShowWorkMapPicker] = useState(false);
   const [gettingCurrentLocation, setGettingCurrentLocation] = useState<'home' | 'work' | null>(null);
+  const [trafficApiPreference, setTrafficApiPreference] = useState('distance_matrix_pessimistic');
+  const [savingApiPreference, setSavingApiPreference] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -117,6 +150,8 @@ const Konto = () => {
       if (profile) {
         setHomeAddress(profile.home_address || '');
         setWorkAddress(profile.work_address || '');
+        // Load traffic API preference
+        setTrafficApiPreference(profile.traffic_api_preference || 'distance_matrix_pessimistic');
         // If addresses exist, consider them validated
         if (profile.home_address) setHomeAddressValidated(true);
         if (profile.work_address) setWorkAddressValidated(true);
@@ -202,8 +237,9 @@ const Konto = () => {
     
     try {
       // Call the edge function with force=true to bypass interval check and fill missing slots
+      // Pass the traffic API preference so the edge function uses the correct API/model
       const { data, error } = await supabase.functions.invoke('calculate-commute-times', {
-        body: { force: true, fillMissing: true }
+        body: { force: true, fillMissing: true, trafficApi: trafficApiPreference }
       });
       
       if (error) {
@@ -221,9 +257,10 @@ const Konto = () => {
       // Reload travel times from database
       await loadTravelTimes(user.id);
       
+      const apiLabel = TRAFFIC_API_OPTIONS.find(o => o.value === trafficApiPreference)?.label || trafficApiPreference;
       const slotsInfo = data?.slots?.length > 0 
-        ? `Obliczono ${data.processed} czasów (${data.slots.join(', ')}).`
-        : `Obliczono ${data?.processed || 0} czasów dojazdu.`;
+        ? `Obliczono ${data.processed} czasów (${apiLabel}): ${data.slots.join(', ')}.`
+        : `Obliczono ${data?.processed || 0} czasów dojazdu (${apiLabel}).`;
       
       toast({
         title: 'Odświeżono',
@@ -238,6 +275,37 @@ const Konto = () => {
       });
     } finally {
       setRefreshingTimes(false);
+    }
+  };
+
+  const handleTrafficApiChange = async (value: string) => {
+    if (!user) return;
+    
+    setTrafficApiPreference(value);
+    setSavingApiPreference(true);
+    
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ traffic_api_preference: value })
+        .eq('user_id', user.id);
+      
+      if (error) throw error;
+      
+      const apiLabel = TRAFFIC_API_OPTIONS.find(o => o.value === value)?.label || value;
+      toast({
+        title: 'Zapisano',
+        description: `Wybrano: ${apiLabel}. Kliknij "Oblicz czasy" aby przeliczyć.`,
+      });
+    } catch (error) {
+      console.error('Error saving traffic API preference:', error);
+      toast({
+        title: 'Błąd',
+        description: 'Nie udało się zapisać preferencji API.',
+        variant: 'destructive',
+      });
+    } finally {
+      setSavingApiPreference(false);
     }
   };
 
@@ -749,6 +817,53 @@ const Konto = () => {
           </CardContent>
         </Card>
 
+        {/* Traffic API Settings Card */}
+        <Card>
+          <CardHeader className="pb-4">
+            <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+              <Settings className="w-5 h-5 shrink-0 text-primary" />
+              Ustawienia API ruchu
+            </CardTitle>
+            <p className="text-xs sm:text-sm text-muted-foreground">
+              Wybierz źródło danych o ruchu drogowym
+            </p>
+          </CardHeader>
+          <CardContent className="px-3 sm:px-6">
+            <div className="space-y-3">
+              <Label htmlFor="traffic-api" className="text-sm font-medium">
+                Rodzaj API / model ruchu
+              </Label>
+              <Select 
+                value={trafficApiPreference} 
+                onValueChange={handleTrafficApiChange}
+                disabled={savingApiPreference}
+              >
+                <SelectTrigger id="traffic-api" className="w-full">
+                  <SelectValue placeholder="Wybierz API" />
+                </SelectTrigger>
+                <SelectContent>
+                  {TRAFFIC_API_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      <div className="flex flex-col items-start">
+                        <span className="font-medium">{option.label}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                {TRAFFIC_API_OPTIONS.find(o => o.value === trafficApiPreference)?.description}
+              </p>
+              <div className="bg-muted/50 rounded-lg p-3 text-xs text-muted-foreground space-y-1">
+                <p><strong>Pesymistyczny</strong> - najdłuższy czas, zakłada maksymalne korki. Zalecany dla godzin 7-10 i 14-18.</p>
+                <p><strong>Uśredniony</strong> - średni czas na podstawie danych historycznych.</p>
+                <p><strong>Optymistyczny</strong> - najkrótszy czas, zakłada pusty ruch.</p>
+                <p><strong>Routes API</strong> - najnowsze API Google z danymi w czasie rzeczywistym.</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Travel Times Card */}
         <Card>
           <CardHeader className="pb-4">
@@ -759,7 +874,7 @@ const Konto = () => {
                   Przewidywany czas dojazdu
                 </CardTitle>
                 <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-                  Najkrótszy czas podświetlony na zielono
+                  Najkrótszy czas podświetlony na zielono • {TRAFFIC_API_OPTIONS.find(o => o.value === trafficApiPreference)?.label}
                 </p>
               </div>
               <Button

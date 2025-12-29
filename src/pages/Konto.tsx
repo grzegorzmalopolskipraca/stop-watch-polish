@@ -111,7 +111,7 @@ const Konto = () => {
   const [showHomeMapPicker, setShowHomeMapPicker] = useState(false);
   const [showWorkMapPicker, setShowWorkMapPicker] = useState(false);
   const [gettingCurrentLocation, setGettingCurrentLocation] = useState<'home' | 'work' | null>(null);
-  const [trafficApiPreference, setTrafficApiPreference] = useState('distance_matrix_pessimistic');
+  const [trafficApiPreference, setTrafficApiPreference] = useState('routes_api');
   const [savingApiPreference, setSavingApiPreference] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -151,7 +151,7 @@ const Konto = () => {
         setHomeAddress(profile.home_address || '');
         setWorkAddress(profile.work_address || '');
         // Load traffic API preference
-        setTrafficApiPreference(profile.traffic_api_preference || 'distance_matrix_pessimistic');
+        setTrafficApiPreference(profile.traffic_api_preference || 'routes_api');
         // If addresses exist, consider them validated
         if (profile.home_address) setHomeAddressValidated(true);
         if (profile.work_address) setWorkAddressValidated(true);
@@ -585,50 +585,23 @@ const Konto = () => {
                   }}
                   className={`min-w-0 flex-1 text-sm ${homeAddressValidated ? 'border-green-500' : ''}`}
                 />
-                <div className="flex gap-1">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => validateAddress(homeAddress, 'home')}
-                    disabled={validatingHome}
-                    className="shrink-0"
-                    size="icon"
-                    title="Szukaj adresu"
-                  >
-                    {validatingHome ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : homeAddressValidated ? (
-                      <CheckCircle className="w-4 h-4 text-green-500" />
-                    ) : (
-                      <Search className="w-4 h-4" />
-                    )}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => handleGetCurrentLocation('home')}
-                    disabled={gettingCurrentLocation === 'home'}
-                    className="shrink-0"
-                    size="icon"
-                    title="Użyj aktualnej lokalizacji"
-                  >
-                    {gettingCurrentLocation === 'home' ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <Crosshair className="w-4 h-4" />
-                    )}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setShowHomeMapPicker(true)}
-                    className="shrink-0"
-                    size="icon"
-                    title="Wybierz na mapie"
-                  >
-                    <Map className="w-4 h-4" />
-                  </Button>
-                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => validateAddress(homeAddress, 'home')}
+                  disabled={validatingHome}
+                  className="shrink-0"
+                  size="icon"
+                  title="Szukaj adresu"
+                >
+                  {validatingHome ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : homeAddressValidated ? (
+                    <CheckCircle className="w-4 h-4 text-green-500" />
+                  ) : (
+                    <Search className="w-4 h-4" />
+                  )}
+                </Button>
               </div>
               {homeAddressValidated && (
                 <p className="text-xs sm:text-sm text-green-600 flex flex-wrap items-center gap-1">
@@ -657,50 +630,23 @@ const Konto = () => {
                   }}
                   className={`min-w-0 flex-1 text-sm ${workAddressValidated ? 'border-green-500' : ''}`}
                 />
-                <div className="flex gap-1">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => validateAddress(workAddress, 'work')}
-                    disabled={validatingWork}
-                    className="shrink-0"
-                    size="icon"
-                    title="Szukaj adresu"
-                  >
-                    {validatingWork ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : workAddressValidated ? (
-                      <CheckCircle className="w-4 h-4 text-green-500" />
-                    ) : (
-                      <Search className="w-4 h-4" />
-                    )}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => handleGetCurrentLocation('work')}
-                    disabled={gettingCurrentLocation === 'work'}
-                    className="shrink-0"
-                    size="icon"
-                    title="Użyj aktualnej lokalizacji"
-                  >
-                    {gettingCurrentLocation === 'work' ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <Crosshair className="w-4 h-4" />
-                    )}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setShowWorkMapPicker(true)}
-                    className="shrink-0"
-                    size="icon"
-                    title="Wybierz na mapie"
-                  >
-                    <Map className="w-4 h-4" />
-                  </Button>
-                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => validateAddress(workAddress, 'work')}
+                  disabled={validatingWork}
+                  className="shrink-0"
+                  size="icon"
+                  title="Szukaj adresu"
+                >
+                  {validatingWork ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : workAddressValidated ? (
+                    <CheckCircle className="w-4 h-4 text-green-500" />
+                  ) : (
+                    <Search className="w-4 h-4" />
+                  )}
+                </Button>
               </div>
               {workAddressValidated && (
                 <p className="text-xs sm:text-sm text-green-600 flex flex-wrap items-center gap-1">
@@ -817,53 +763,6 @@ const Konto = () => {
           </CardContent>
         </Card>
 
-        {/* Traffic API Settings Card */}
-        <Card>
-          <CardHeader className="pb-4">
-            <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
-              <Settings className="w-5 h-5 shrink-0 text-primary" />
-              Ustawienia API ruchu
-            </CardTitle>
-            <p className="text-xs sm:text-sm text-muted-foreground">
-              Wybierz źródło danych o ruchu drogowym
-            </p>
-          </CardHeader>
-          <CardContent className="px-3 sm:px-6">
-            <div className="space-y-3">
-              <Label htmlFor="traffic-api" className="text-sm font-medium">
-                Rodzaj API / model ruchu
-              </Label>
-              <Select 
-                value={trafficApiPreference} 
-                onValueChange={handleTrafficApiChange}
-                disabled={savingApiPreference}
-              >
-                <SelectTrigger id="traffic-api" className="w-full">
-                  <SelectValue placeholder="Wybierz API" />
-                </SelectTrigger>
-                <SelectContent>
-                  {TRAFFIC_API_OPTIONS.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      <div className="flex flex-col items-start">
-                        <span className="font-medium">{option.label}</span>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground">
-                {TRAFFIC_API_OPTIONS.find(o => o.value === trafficApiPreference)?.description}
-              </p>
-              <div className="bg-muted/50 rounded-lg p-3 text-xs text-muted-foreground space-y-1">
-                <p><strong>Pesymistyczny</strong> - najdłuższy czas, zakłada maksymalne korki. Zalecany dla godzin 7-10 i 14-18.</p>
-                <p><strong>Uśredniony</strong> - średni czas na podstawie danych historycznych.</p>
-                <p><strong>Optymistyczny</strong> - najkrótszy czas, zakłada pusty ruch.</p>
-                <p><strong>Routes API</strong> - najnowsze API Google z danymi w czasie rzeczywistym.</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
         {/* Travel Times Card */}
         <Card>
           <CardHeader className="pb-4">
@@ -887,6 +786,11 @@ const Konto = () => {
                 <RefreshCw className={`w-4 h-4 ${refreshingTimes ? 'animate-spin' : ''}`} />
                 Oblicz czasy
               </Button>
+            </div>
+            <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg p-3 mt-4 text-xs sm:text-sm text-blue-800 dark:text-blue-200">
+              <p>
+                W tej sekcji znajdują się realne czasy przejazdu z poprzedniego tygodnia dla Twojej trasy z domu do pracy i z pracy do domu w zadanych przedziałach czasowych. Po pierwszym tygodniu używania możesz tutaj dla każdego dnia zobaczyć o której godzinie najlepiej wyjechać do pracy i o której wracać z pracy, by omijać korki. W każdym kafelku znajduje się godzina i minuta wyjazdu i czas dojazdu.
+              </p>
             </div>
           </CardHeader>
           <CardContent className="px-3 sm:px-6">
@@ -1025,6 +929,53 @@ const Konto = () => {
                 })}
               </div>
             )}
+          </CardContent>
+        </Card>
+
+        {/* Traffic API Settings Card */}
+        <Card>
+          <CardHeader className="pb-4">
+            <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+              <Settings className="w-5 h-5 shrink-0 text-primary" />
+              Ustawienia API ruchu
+            </CardTitle>
+            <p className="text-xs sm:text-sm text-muted-foreground">
+              Wybierz źródło danych o ruchu drogowym
+            </p>
+          </CardHeader>
+          <CardContent className="px-3 sm:px-6">
+            <div className="space-y-3">
+              <Label htmlFor="traffic-api" className="text-sm font-medium">
+                Rodzaj API / model ruchu
+              </Label>
+              <Select 
+                value={trafficApiPreference} 
+                onValueChange={handleTrafficApiChange}
+                disabled={savingApiPreference}
+              >
+                <SelectTrigger id="traffic-api" className="w-full">
+                  <SelectValue placeholder="Wybierz API" />
+                </SelectTrigger>
+                <SelectContent>
+                  {TRAFFIC_API_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      <div className="flex flex-col items-start">
+                        <span className="font-medium">{option.label}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                {TRAFFIC_API_OPTIONS.find(o => o.value === trafficApiPreference)?.description}
+              </p>
+              <div className="bg-muted/50 rounded-lg p-3 text-xs text-muted-foreground space-y-1">
+                <p><strong>Pesymistyczny</strong> - najdłuższy czas, zakłada maksymalne korki. Zalecany dla godzin 7-10 i 14-18.</p>
+                <p><strong>Uśredniony</strong> - średni czas na podstawie danych historycznych.</p>
+                <p><strong>Optymistyczny</strong> - najkrótszy czas, zakłada pusty ruch.</p>
+                <p><strong>Routes API</strong> - najnowsze API Google z danymi w czasie rzeczywistym.</p>
+              </div>
+            </div>
           </CardContent>
         </Card>
       </main>

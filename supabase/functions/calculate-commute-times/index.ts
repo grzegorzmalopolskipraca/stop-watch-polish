@@ -480,7 +480,7 @@ async function getTravelDuration(
   apiKey: string,
   // deno-lint-ignore no-explicit-any
   supabase: any,
-  trafficApi: TrafficApiType = 'distance_matrix_pessimistic'
+  trafficApi: TrafficApiType = 'routes_api'
 ): Promise<number | null> {
   console.log(`Getting travel duration using: ${trafficApi}`);
   
@@ -721,7 +721,7 @@ serve(async (req) => {
       // Priority: request body > user profile preference > default (pessimistic)
       const userTrafficApi: TrafficApiType = requestedTrafficApi || 
         (profile.traffic_api_preference as TrafficApiType) || 
-        'distance_matrix_pessimistic';
+        'routes_api';
       
       console.log(`User ${profile.user_id}: Using traffic API: ${userTrafficApi}`);
 

@@ -1051,9 +1051,9 @@ const Index = () => {
       <header className="sticky top-0 z-10 bg-card border-b border-border shadow-sm">
         <div className="container max-w-2xl mx-auto px-4 py-4">
           {/* Login Button */}
-          <div className="flex items-center justify-end gap-2 mb-2 flex-wrap">
-            <span className="text-xs sm:text-sm text-muted-foreground">
-              Już działa! Zaloguj się do prywatnego asystenta przejazdu do pracy:
+          <div className="flex items-center justify-end gap-2 mb-2">
+            <span className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">
+              Skorzystaj z prywatnego asystenta drogowego:
             </span>
             <Link to="/auth">
               <Button 

@@ -1053,7 +1053,7 @@ const Index = () => {
           {/* Login Button */}
           <div className="flex items-center justify-end gap-2 mb-2">
             <span className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">
-              Skorzystaj z prywatnego asystenta drogowego:
+              Skorzystaj z prywatnego asystenta:
             </span>
             <Link to="/auth">
               <Button 

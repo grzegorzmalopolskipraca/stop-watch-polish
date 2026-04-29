@@ -51,6 +51,8 @@ import { pl } from "date-fns/locale";
 import { ArrowUp, ArrowDown, Bell, BellOff, ThumbsUp, Coffee, Pizza, Download, Share2, Printer, Users, Baby, Calendar, Activity, AlertTriangle, Bike, MessageSquare, HelpCircle } from "lucide-react";
 import { subscribeToOneSignal, unsubscribeFromOneSignal, isOneSignalSubscribed } from "@/utils/onesignal";
 import { predictTrafficIntervals, groupIntervalsIntoRanges } from "@/utils/trafficPrediction";
+import Seo from "@/components/Seo";
+import { streetToSlug } from "@/utils/streetSlug";
 
 const STREETS = [
   "Borowska",

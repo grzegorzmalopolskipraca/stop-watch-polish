@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="pl">
+<html lang="pl-PL">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
@@ -8,19 +8,62 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="eJedzie.pl" />
     <meta name="theme-color" content="#3b82f6" />
+    <meta name="format-detection" content="telephone=no" />
     <link rel="apple-touch-icon" href="/icon-192.png" />
-    <title>Czy ulica stoi? - Społecznościowe raporty ruchu</title>
-    <meta name="description" content="Sprawdź aktualny stan ruchu na ulicach w Twojej okolicy. Społecznościowa aplikacja do raportowania korków i płynności ruchu." />
-    <meta name="author" content="Lovable" />
+    <link rel="canonical" href="https://ejedzie.pl/" />
 
-    <meta property="og:title" content="Czy ulica stoi? - Raporty ruchu" />
-    <meta property="og:description" content="Społecznościowa aplikacja do sprawdzania stanu ruchu na ulicach" />
+    <title>Korki Wrocław na żywo — eJedzie.pl | Ruch, wypadki, utrudnienia</title>
+    <meta name="description" content="Sprawdź korki we Wrocławiu na żywo. Społecznościowe raporty ruchu, wypadki, utrudnienia, objazdy i prognozy przejazdu na 14 ulicach. Powiadomienia push." />
+    <meta name="keywords" content="korki Wrocław, ruch drogowy Wrocław, wypadki Wrocław, utrudnienia Wrocław, objazdy Wrocław, czy ulica stoi, eJedzie, korki na żywo, prognoza ruchu Wrocław" />
+    <meta name="author" content="Grzegorz Małopolski" />
+    <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1" />
+
+    <!-- Local SEO -->
+    <meta name="geo.region" content="PL-DS" />
+    <meta name="geo.placename" content="Wrocław" />
+    <meta name="geo.position" content="51.107883;17.038538" />
+    <meta name="ICBM" content="51.107883, 17.038538" />
+
+    <!-- Open Graph -->
+    <meta property="og:title" content="Korki Wrocław na żywo — eJedzie.pl" />
+    <meta property="og:description" content="Społecznościowe raporty ruchu, wypadki, utrudnienia i prognozy przejazdu we Wrocławiu." />
     <meta property="og:type" content="website" />
-    <meta property="og:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
+    <meta property="og:url" content="https://ejedzie.pl/" />
+    <meta property="og:image" content="https://ejedzie.pl/icon-512.png" />
+    <meta property="og:locale" content="pl_PL" />
+    <meta property="og:site_name" content="eJedzie.pl" />
 
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:site" content="@lovable_dev" />
-    <meta name="twitter:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
+    <meta name="twitter:title" content="Korki Wrocław na żywo — eJedzie.pl" />
+    <meta name="twitter:description" content="Społecznościowe raporty ruchu, wypadki i utrudnienia we Wrocławiu." />
+    <meta name="twitter:image" content="https://ejedzie.pl/icon-512.png" />
+
+    <!-- Performance hints -->
+    <link rel="preconnect" href="https://www.googletagmanager.com" crossorigin />
+    <link rel="preconnect" href="https://pagead2.googlesyndication.com" crossorigin />
+    <link rel="preconnect" href="https://cdn.onesignal.com" crossorigin />
+    <link rel="preconnect" href="https://talqitzvchxggkqnnmbf.supabase.co" crossorigin />
+    <link rel="dns-prefetch" href="https://www.google-analytics.com" />
+
+    <!-- Structured data: WebSite + SearchAction -->
+    <script type="application/ld+json">
+    {"@context":"https://schema.org","@type":"WebSite","name":"eJedzie.pl","alternateName":"Czy ulica stoi?","url":"https://ejedzie.pl/","inLanguage":"pl-PL","potentialAction":{"@type":"SearchAction","target":"https://ejedzie.pl/?street={search_term_string}","query-input":"required name=search_term_string"}}
+    </script>
+
+    <!-- Structured data: Organization -->
+    <script type="application/ld+json">
+    {"@context":"https://schema.org","@type":"Organization","name":"eJedzie.pl","url":"https://ejedzie.pl/","logo":"https://ejedzie.pl/icon-512.png","email":"grzegorzmalopolskipraca@gmail.com","founder":{"@type":"Person","name":"Grzegorz Małopolski"},"sameAs":["https://pl.linkedin.com/in/grzegorz-ma%C5%82opolski-7aa25016b"],"areaServed":{"@type":"City","name":"Wrocław"}}
+    </script>
+
+    <!-- Structured data: WebApplication -->
+    <script type="application/ld+json">
+    {"@context":"https://schema.org","@type":"WebApplication","name":"eJedzie.pl — Korki Wrocław","url":"https://ejedzie.pl/","applicationCategory":"TravelApplication","operatingSystem":"Web","browserRequirements":"Requires JavaScript","offers":{"@type":"Offer","price":"0","priceCurrency":"PLN"},"areaServed":{"@type":"City","name":"Wrocław"},"inLanguage":"pl-PL"}
+    </script>
+
+    <!-- Structured data: FAQPage -->
+    <script type="application/ld+json">
+    {"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"Jak sprawdzić korki we Wrocławiu?","acceptedAnswer":{"@type":"Answer","text":"Wejdź na ejedzie.pl, wybierz swoją ulicę i kierunek (do centrum / od centrum). Zobaczysz aktualny stan ruchu, raporty społeczności i prognozę na najbliższą godzinę."}},{"@type":"Question","name":"Czy aplikacja eJedzie.pl jest darmowa?","acceptedAnswer":{"@type":"Answer","text":"Tak, eJedzie.pl jest w pełni darmowa. Możesz zgłaszać korki, wypadki i utrudnienia oraz otrzymywać powiadomienia push bez opłat."}},{"@type":"Question","name":"Jakie ulice we Wrocławiu są monitorowane?","acceptedAnswer":{"@type":"Answer","text":"Borowska, Buforowa, Grabiszyńska, Grota Roweckiego, Hallera, Karkonoska, Ołtaszyńska, Opolska, Parafialna, Powstańców Śląskich, Radosna, Sudecka, Ślężna i Zwycięska."}},{"@type":"Question","name":"Jak otrzymywać powiadomienia o wypadkach i utrudnieniach?","acceptedAnswer":{"@type":"Answer","text":"Włącz powiadomienia push dla wybranej ulicy — dostaniesz alert, gdy ktoś zgłosi korek, wypadek lub utrudnienie."}},{"@type":"Question","name":"Skąd pochodzą dane o ruchu?","acceptedAnswer":{"@type":"Answer","text":"Z dwóch źródeł: zgłoszeń społeczności kierowców z Wrocławia oraz Google Routes API (czas i prędkość przejazdu w czasie rzeczywistym)."}},{"@type":"Question","name":"Czy mogę zaplanować dojazd do pracy?","acceptedAnswer":{"@type":"Answer","text":"Tak. Po zalogowaniu w sekcji Konto ustawisz harmonogram i adresy — eJedzie.pl pokaże najlepsze godziny wyjazdu, aby omijać korki."}}]}
+    </script>
     
     <!-- Google tag (gtag.js) -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-H86458DTN6"></script>

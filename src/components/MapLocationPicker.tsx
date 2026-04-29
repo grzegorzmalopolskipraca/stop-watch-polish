@@ -9,16 +9,8 @@ declare global {
   interface Window {
     google?: any;
   }
-  // eslint-disable-next-line @typescript-eslint/no-namespace
-  namespace google {
-    namespace maps {
-      type Map = any;
-      type Marker = any;
-      type LatLngLiteral = { lat: number; lng: number };
-      type MapMouseEvent = any;
-      type Geocoder = any;
-    }
-  }
+  // eslint-disable-next-line no-var
+  var google: any;
 }
 
 interface MapLocationPickerProps {

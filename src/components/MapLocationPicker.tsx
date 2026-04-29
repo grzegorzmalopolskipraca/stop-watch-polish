@@ -7,9 +7,17 @@ import { MapPin, Crosshair, Search, Loader2 } from 'lucide-react';
 // Declare google maps types
 declare global {
   interface Window {
-    google?: {
-      maps: typeof google.maps;
-    };
+    google?: any;
+  }
+  // eslint-disable-next-line @typescript-eslint/no-namespace
+  namespace google {
+    namespace maps {
+      type Map = any;
+      type Marker = any;
+      type LatLngLiteral = { lat: number; lng: number };
+      type MapMouseEvent = any;
+      type Geocoder = any;
+    }
   }
 }
 

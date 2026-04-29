@@ -478,7 +478,7 @@ const Konto = () => {
     try {
       const { error } = await supabase
         .from('commute_schedule')
-        .update({ [field]: value })
+        .update({ [field]: value } as never)
         .eq('id', dayId);
 
       if (error) throw error;

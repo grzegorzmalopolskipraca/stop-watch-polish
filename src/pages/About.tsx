@@ -1,10 +1,16 @@
 import { Link } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import Seo from "@/components/Seo";
 
 const About = () => {
   return (
     <div className="min-h-screen bg-background">
+      <Seo
+        title="O projekcie eJedzie.pl — pomoc sąsiedzka i mniej korków we Wrocławiu"
+        description="Misja eJedzie.pl: społecznościowe raporty ruchu, mniej korków, mniej spalin i mniej stresu na drogach Wrocławia."
+        canonical="https://ejedzie.pl/o-projekcie"
+      />
       <div className="container max-w-4xl mx-auto px-4 py-8">
         <Link to="/">
           <Button variant="ghost" className="mb-6">

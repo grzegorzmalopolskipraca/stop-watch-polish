@@ -1085,7 +1085,7 @@ const Index = () => {
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
               {/* Question with inline select */}
               <div className="flex items-center gap-2 flex-wrap">
-                <h1 className="text-xl font-bold whitespace-nowrap">Czy</h1>
+                <span className="text-xl font-bold whitespace-nowrap">Czy</span>
                 <Select value={selectedStreet} onValueChange={setSelectedStreet}>
                   <SelectTrigger className="w-auto min-w-[180px] h-10 text-base font-bold">
                     <SelectValue />
@@ -1098,7 +1098,7 @@ const Index = () => {
                     ))}
                   </SelectContent>
                 </Select>
-                <h1 className="text-xl font-bold whitespace-nowrap">stoi?</h1>
+                <span className="text-xl font-bold whitespace-nowrap">stoi?</span>
               </div>
 
               {/* Direction Buttons - shown on desktop only */}

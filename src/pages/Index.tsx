@@ -1735,6 +1735,16 @@ const Index = () => {
             Statystyki
           </Link>
         </div>
+        {/* SEO: indexable links to per-street pages (hidden visually) */}
+        <nav aria-label="Monitorowane ulice we Wrocławiu" className="sr-only">
+          <ul>
+            {STREETS.map((s) => (
+              <li key={s}>
+                <Link to={`/ulica/${streetToSlug(s)}`}>Korki {s} Wrocław</Link>
+              </li>
+            ))}
+          </ul>
+        </nav>
       </footer>
       
       {/* Install Dialog */}

@@ -11,6 +11,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
+import Seo from "@/components/Seo";
 
 const COLORS = ['#8b5cf6', '#06b6d4', '#10b981', '#f59e0b', '#ef4444', '#ec4899', '#6366f1', '#14b8a6', '#f97316', '#84cc16'];
 const GRADIENT_COLORS = [
@@ -824,6 +825,11 @@ const Statystyki = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <Seo
+        title="Statystyki ruchu Wrocław — eJedzie.pl"
+        description="Statystyki korków, prędkości i raportów ruchu we Wrocławiu. Dane z ostatnich dni i tygodni dla 14 monitorowanych ulic."
+        canonical="https://ejedzie.pl/statystyki"
+      />
       {/* Header */}
       <header className="bg-card border-b border-border sticky top-0 z-10">
         <div className="container mx-auto px-4 py-4">

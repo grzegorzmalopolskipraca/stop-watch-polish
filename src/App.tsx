@@ -16,6 +16,7 @@ import Kupon from "./pages/Kupon";
 import Auth from "./pages/Auth";
 import Konto from "./pages/Konto";
 import Errors from "./pages/Errors";
+import StreetPage from "./pages/StreetPage";
 
 const queryClient = new QueryClient();
 
@@ -38,6 +39,7 @@ const App = () => (
           <Route path="/auth" element={<Auth />} />
           <Route path="/konto" element={<Konto />} />
           <Route path="/errors" element={<Errors />} />
+          <Route path="/ulica/:slug" element={<StreetPage />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

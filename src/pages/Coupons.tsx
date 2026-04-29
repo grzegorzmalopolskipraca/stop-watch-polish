@@ -1,3 +1,4 @@
+import Seo from "@/components/Seo";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -553,6 +554,7 @@ export default function Coupons() {
 
   return (
     <div className="min-h-screen bg-background p-8">
+      <Seo title="Kupony — eJedzie.pl" description="Zarządzanie kuponami." noindex />
       <div className="max-w-7xl mx-auto space-y-8">
         <div className="flex items-center justify-between">
           <h1 className="text-3xl font-bold text-foreground">Coupon Management System</h1>

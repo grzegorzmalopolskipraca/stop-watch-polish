@@ -16,6 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import Seo from "@/components/Seo";
 
 // Traffic API options with descriptions
 const TRAFFIC_API_OPTIONS = [
@@ -478,7 +479,7 @@ const Konto = () => {
     try {
       const { error } = await supabase
         .from('commute_schedule')
-        .update({ [field]: value })
+        .update({ [field]: value } as never)
         .eq('id', dayId);
 
       if (error) throw error;
@@ -532,6 +533,7 @@ const Konto = () => {
 
   return (
     <div className="min-h-screen bg-background overflow-x-hidden">
+      <Seo title="Moje konto — eJedzie.pl" description="Panel użytkownika eJedzie.pl." noindex />
       {/* Header */}
       <header className="bg-card border-b border-border p-3 sm:p-4">
         <div className="max-w-4xl mx-auto flex items-center justify-between gap-2">

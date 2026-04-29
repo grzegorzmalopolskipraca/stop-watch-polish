@@ -10,6 +10,7 @@ import { ConsoleViewer } from "@/components/ConsoleViewer";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import { AdminLoginForm } from "@/components/AdminLoginForm";
 import { AdminAccessDenied } from "@/components/AdminAccessDenied";
+import Seo from "@/components/Seo";
 
 const Push = () => {
   const { user, isAdmin, isLoading, signOut } = useAdminAuth();
@@ -1035,6 +1036,7 @@ const Push = () => {
 
   return (
     <div className="min-h-screen bg-background p-4">
+      <Seo title="Powiadomienia push — eJedzie.pl" description="Zarządzanie powiadomieniami push." noindex />
       <div className="max-w-2xl mx-auto space-y-6 py-8">
         <div className="flex justify-end">
           <Button variant="outline" onClick={signOut}>

@@ -2,10 +2,16 @@ import { Link } from "react-router-dom";
 import { ArrowLeft, Linkedin, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import Seo from "@/components/Seo";
 
 const Contact = () => {
   return (
     <div className="min-h-screen bg-background">
+      <Seo
+        title="Kontakt — eJedzie.pl | Korki Wrocław"
+        description="Skontaktuj się z autorem eJedzie.pl. Sugestie, ulepszenia i zgłoszenia dotyczące monitoringu korków we Wrocławiu."
+        canonical="https://ejedzie.pl/kontakt"
+      />
       <div className="container max-w-4xl mx-auto px-4 py-8">
         <Link to="/">
           <Button variant="ghost" className="mb-6">

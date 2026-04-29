@@ -1,10 +1,16 @@
 import { Link } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import Seo from "@/components/Seo";
 
 const TermsAndPrivacy = () => {
   return (
     <div className="min-h-screen bg-background">
+      <Seo
+        title="Regulamin i polityka prywatności — eJedzie.pl"
+        description="Regulamin korzystania z eJedzie.pl oraz polityka prywatności użytkowników serwisu o korkach we Wrocławiu."
+        canonical="https://ejedzie.pl/regulamin"
+      />
       <div className="container max-w-4xl mx-auto px-4 py-8">
         <Link to="/">
           <Button variant="ghost" className="mb-6">

@@ -1,5 +1,6 @@
-import { useLocation } from "react-router-dom";
+import { useLocation, Link } from "react-router-dom";
 import { useEffect } from "react";
+import Seo from "@/components/Seo";
 
 const NotFound = () => {
   const location = useLocation();
@@ -10,12 +11,17 @@ const NotFound = () => {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gray-100">
+      <Seo
+        title="Strona nie znaleziona — eJedzie.pl"
+        description="Ta strona nie istnieje. Wróć do eJedzie.pl, aby sprawdzić korki we Wrocławiu."
+        noindex
+      />
       <div className="text-center">
         <h1 className="mb-4 text-4xl font-bold">404</h1>
-        <p className="mb-4 text-xl text-gray-600">Oops! Page not found</p>
-        <a href="/" className="text-blue-500 underline hover:text-blue-700">
-          Return to Home
-        </a>
+        <p className="mb-4 text-xl text-gray-600">Strona nie została znaleziona</p>
+        <Link to="/" className="text-blue-500 underline hover:text-blue-700">
+          Wróć na stronę główną
+        </Link>
       </div>
     </div>
   );

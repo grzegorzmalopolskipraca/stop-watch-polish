@@ -51,6 +51,8 @@ import { pl } from "date-fns/locale";
 import { ArrowUp, ArrowDown, Bell, BellOff, ThumbsUp, Coffee, Pizza, Download, Share2, Printer, Users, Baby, Calendar, Activity, AlertTriangle, Bike, MessageSquare, HelpCircle } from "lucide-react";
 import { subscribeToOneSignal, unsubscribeFromOneSignal, isOneSignalSubscribed } from "@/utils/onesignal";
 import { predictTrafficIntervals, groupIntervalsIntoRanges } from "@/utils/trafficPrediction";
+import Seo from "@/components/Seo";
+import { streetToSlug } from "@/utils/streetSlug";
 
 const STREETS = [
   "Borowska",
@@ -1045,8 +1047,18 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <Seo
+        title={`Korki ${selectedStreet} Wrocław na żywo — eJedzie.pl`}
+        description={`Sprawdź aktualne korki, wypadki i utrudnienia na ulicy ${selectedStreet} we Wrocławiu. Społecznościowe raporty ruchu i prognoza przejazdu.`}
+        canonical="https://ejedzie.pl/"
+        keywords={`korki Wrocław, korki ${selectedStreet}, ruch ${selectedStreet} Wrocław, wypadki Wrocław, utrudnienia Wrocław`}
+      />
+      {/* SEO-only semantic heading (visually hidden) */}
+      <h1 className="sr-only">
+        Korki we Wrocławiu na żywo — aktualny ruch, wypadki i utrudnienia na ulicy {selectedStreet}
+      </h1>
       <RssTicker onIncidentsChange={setActiveIncidents} />
-      
+
       {/* Sticky Header */}
       <header className="sticky top-0 z-10 bg-card border-b border-border shadow-sm">
         <div className="container max-w-2xl mx-auto px-4 py-4">
@@ -1073,7 +1085,7 @@ const Index = () => {
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
               {/* Question with inline select */}
               <div className="flex items-center gap-2 flex-wrap">
-                <h1 className="text-xl font-bold whitespace-nowrap">Czy</h1>
+                <span className="text-xl font-bold whitespace-nowrap">Czy</span>
                 <Select value={selectedStreet} onValueChange={setSelectedStreet}>
                   <SelectTrigger className="w-auto min-w-[180px] h-10 text-base font-bold">
                     <SelectValue />
@@ -1086,7 +1098,7 @@ const Index = () => {
                     ))}
                   </SelectContent>
                 </Select>
-                <h1 className="text-xl font-bold whitespace-nowrap">stoi?</h1>
+                <span className="text-xl font-bold whitespace-nowrap">stoi?</span>
               </div>
 
               {/* Direction Buttons - shown on desktop only */}
@@ -1723,6 +1735,16 @@ const Index = () => {
             Statystyki
           </Link>
         </div>
+        {/* SEO: indexable links to per-street pages (hidden visually) */}
+        <nav aria-label="Monitorowane ulice we Wrocławiu" className="sr-only">
+          <ul>
+            {STREETS.map((s) => (
+              <li key={s}>
+                <Link to={`/ulica/${streetToSlug(s)}`}>Korki {s} Wrocław</Link>
+              </li>
+            ))}
+          </ul>
+        </nav>
       </footer>
       
       {/* Install Dialog */}

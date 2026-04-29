@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { Mail, Lock, User, ArrowLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import Seo from '@/components/Seo';
 
 const Auth = () => {
   const [email, setEmail] = useState('');
@@ -151,6 +152,7 @@ const Auth = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <Seo title="Logowanie — eJedzie.pl" description="Zaloguj się do eJedzie.pl." noindex />
       {/* Header */}
       <header className="bg-card border-b border-border p-4">
         <div className="max-w-4xl mx-auto flex items-center gap-4">

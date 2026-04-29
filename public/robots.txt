@@ -12,3 +12,10 @@ Allow: /
 
 User-agent: *
 Allow: /
+Disallow: /konto
+Disallow: /auth
+Disallow: /kupon
+Disallow: /push
+Disallow: /errors
+
+Sitemap: https://ejedzie.pl/sitemap.xml

@@ -4,13 +4,25 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { MapPin, Crosshair, Search, Loader2 } from 'lucide-react';
 
-// Declare google maps types
+// Declare google maps types (loose typing — script loaded at runtime)
 declare global {
   interface Window {
     google?: any;
   }
   // eslint-disable-next-line no-var
   var google: any;
+  // eslint-disable-next-line @typescript-eslint/no-namespace
+  namespace google {
+    // eslint-disable-next-line @typescript-eslint/no-namespace
+    namespace maps {
+      type Map = any;
+      type Marker = any;
+      type LatLngLiteral = { lat: number; lng: number };
+      type MapMouseEvent = any;
+      type Geocoder = any;
+      type Animation = any;
+    }
+  }
 }
 
 interface MapLocationPickerProps {

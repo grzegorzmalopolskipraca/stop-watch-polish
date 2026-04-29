@@ -1047,8 +1047,18 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <Seo
+        title={`Korki ${selectedStreet} Wrocław na żywo — eJedzie.pl`}
+        description={`Sprawdź aktualne korki, wypadki i utrudnienia na ulicy ${selectedStreet} we Wrocławiu. Społecznościowe raporty ruchu i prognoza przejazdu.`}
+        canonical="https://ejedzie.pl/"
+        keywords={`korki Wrocław, korki ${selectedStreet}, ruch ${selectedStreet} Wrocław, wypadki Wrocław, utrudnienia Wrocław`}
+      />
+      {/* SEO-only semantic heading (visually hidden) */}
+      <h1 className="sr-only">
+        Korki we Wrocławiu na żywo — aktualny ruch, wypadki i utrudnienia na ulicy {selectedStreet}
+      </h1>
       <RssTicker onIncidentsChange={setActiveIncidents} />
-      
+
       {/* Sticky Header */}
       <header className="sticky top-0 z-10 bg-card border-b border-border shadow-sm">
         <div className="container max-w-2xl mx-auto px-4 py-4">

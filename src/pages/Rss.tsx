@@ -10,6 +10,7 @@ import { formatDistanceToNow } from "date-fns";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import { AdminLoginForm } from "@/components/AdminLoginForm";
 import { AdminAccessDenied } from "@/components/AdminAccessDenied";
+import Seo from "@/components/Seo";
 
 interface RssItem {
   id: string;
@@ -374,6 +375,11 @@ const Rss = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <Seo
+        title="Aktualności drogowe Wrocław — RSS | eJedzie.pl"
+        description="Najnowsze aktualności o ruchu, wypadkach i utrudnieniach we Wrocławiu z lokalnych źródeł RSS."
+        canonical="https://ejedzie.pl/rss"
+      />
       <RssTicker />
 
       <div className="p-8">

@@ -11,6 +11,7 @@ import { Mail, Lock, User, ArrowLeft } from 'lucide-react';
 import { lovable } from '@/integrations/lovable';
 import { Link } from 'react-router-dom';
 import Seo from '@/components/Seo';
+import { POST_AUTH_DESTINATION_KEY } from '@/utils/postAuthRedirect';
 
 const Auth = () => {
   const [email, setEmail] = useState('');
@@ -121,11 +122,15 @@ const Auth = () => {
   const handleGoogleLogin = async () => {
     setGoogleLoading(true);
     try {
+      // Lovable returns the OAuth flow to the site root, so remember where the
+      // user intended to go before leaving for Google.
+      sessionStorage.setItem(POST_AUTH_DESTINATION_KEY, '/konto');
       const result = await lovable.auth.signInWithOAuth('google', {
         redirect_uri: window.location.origin,
       });
 
       if (result.error) {
+        sessionStorage.removeItem(POST_AUTH_DESTINATION_KEY);
         toast({
           title: 'Błąd logowania',
           description: result.error instanceof Error
@@ -145,6 +150,7 @@ const Auth = () => {
       // Session is set — the onAuthStateChange listener navigates to /konto
       setGoogleLoading(false);
     } catch (error) {
+      sessionStorage.removeItem(POST_AUTH_DESTINATION_KEY);
       toast({
         title: 'Błąd logowania',
         description: error instanceof Error

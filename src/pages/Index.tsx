@@ -1062,16 +1062,16 @@ const Index = () => {
       <header className="sticky top-0 z-10 bg-card border-b border-border shadow-sm">
         <div className="container max-w-2xl mx-auto px-4 py-4">
           {/* Login Button */}
-          <div className="flex items-center gap-1 mb-4">
+          <div className="mb-4 flex items-center gap-2 rounded-lg border border-traffic-jedzie/30 bg-traffic-jedzie/10 p-2 shadow-sm">
             <Link to="/auth">
               <Button 
-                className="bg-traffic-jedzie hover:bg-traffic-jedzie/90 text-traffic-jedzie-foreground"
+                className="whitespace-nowrap bg-traffic-jedzie font-semibold text-traffic-jedzie-foreground shadow-sm hover:bg-traffic-jedzie/90"
                 size="sm"
               >
                 Zaloguj się
               </Button>
             </Link>
-            <p className="min-w-0 flex-1 text-left text-sm text-muted-foreground sm:text-base">
+            <p className="min-w-0 flex-1 text-left text-sm font-semibold leading-snug text-foreground sm:text-base">
               i zobacz, o której zajedziesz do pracy najszybciej.
             </p>
           </div>

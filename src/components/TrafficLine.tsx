@@ -42,7 +42,7 @@ const FRUSTRATION_TEXTS: Record<number, string> = {
   10: "Armagedon, tylko bez efektów specjalnych.",
   11: "Mam déjà vu z wczorajszego korka.",
   12: "Rozważam teleportację.",
-  13: 'Google Maps: "Za 200 metrów korek." Ja: "Nie żartuj."',
+  13: 'TomTom: "Za 200 metrów korek." Ja: "Nie żartuj."',
   14: "Jak to możliwe, że ślimak mnie wyprzedza?",
   15: "Dostanę pierdolca, ale przynajmniej ekologicznie.",
   16: "Medytuję na temat sensu kierunkowskazów.",

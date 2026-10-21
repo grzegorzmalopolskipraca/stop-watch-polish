@@ -20,32 +20,35 @@ serve(async (req) => {
       );
     }
 
-    const apiKey = Deno.env.get('GOOGLE_MAPS_API_KEY');
+    const apiKey = Deno.env.get('TOMTOM_API_KEY');
     if (!apiKey) {
       return new Response(
-        JSON.stringify({ error: 'Google Maps API key not configured' }),
+        JSON.stringify({ error: 'TomTom API key not configured' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Use Google Geocoding API to validate and format the address
-    const geocodeUrl = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&key=${apiKey}&language=pl&region=pl`;
-    
-    const response = await fetch(geocodeUrl);
+    const geocodeUrl = new URL(`https://api.tomtom.com/search/2/geocode/${encodeURIComponent(address.trim())}.json`);
+    geocodeUrl.searchParams.set('key', apiKey);
+    geocodeUrl.searchParams.set('language', 'pl-PL');
+    geocodeUrl.searchParams.set('countrySet', 'PL');
+    geocodeUrl.searchParams.set('limit', '1');
+
+    const response = await fetch(geocodeUrl, { signal: AbortSignal.timeout(10000) });
     const data = await response.json();
 
-    if (data.status === 'OK' && data.results && data.results.length > 0) {
+    if (response.ok && data.results?.length > 0) {
       const result = data.results[0];
       return new Response(
         JSON.stringify({
           success: true,
-          formatted_address: result.formatted_address,
-          place_id: result.place_id,
-          location: result.geometry.location,
+          formatted_address: result.address?.freeformAddress ?? result.address?.localName ?? address.trim(),
+          place_id: result.id,
+          location: { lat: result.position.lat, lng: result.position.lon },
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
-    } else if (data.status === 'ZERO_RESULTS') {
+    } else if (response.ok) {
       return new Response(
         JSON.stringify({ 
           success: false, 
@@ -54,7 +57,7 @@ serve(async (req) => {
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     } else {
-      console.error('Geocoding API error:', data.status, data.error_message);
+      console.error('TomTom geocoding API error:', response.status, data);
       return new Response(
         JSON.stringify({ 
           success: false, 

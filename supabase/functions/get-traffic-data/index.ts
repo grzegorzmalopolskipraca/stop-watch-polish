@@ -151,7 +151,8 @@ serve(async (req) => {
       console.log(`[get-traffic-data] Skipping rate limit for internal call`);
     }
     
-    // Provider chain: TomTom -> Google Routes -> stale cache -> graceful "unavailable"
+    // TomTom is the only live traffic provider. If it is unavailable, use the
+    // last cached reading or return an unavailable result to the UI.
     type RouteResult = { distanceMeters: number; durationSeconds: number; staticDurationSeconds: number };
 
     const fetchTomTom = async (): Promise<RouteResult> => {
@@ -176,43 +177,13 @@ serve(async (req) => {
       };
     };
 
-    const fetchGoogle = async (): Promise<RouteResult> => {
-      const apiKey = Deno.env.get('GOOGLE_MAPS_API_KEY');
-      if (!apiKey) throw new Error('Google key not configured');
-      const res = await fetch('https://routes.googleapis.com/directions/v2:computeRoutes', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Goog-Api-Key': apiKey,
-          'X-Goog-FieldMask': 'routes.distanceMeters,routes.duration,routes.staticDuration',
-        },
-        body: JSON.stringify({
-          origin: { location: { latLng: { latitude: origin.lat, longitude: origin.lng } } },
-          destination: { location: { latLng: { latitude: destination.lat, longitude: destination.lng } } },
-          travelMode: 'DRIVE',
-          routingPreference: 'TRAFFIC_AWARE',
-        }),
-        signal: AbortSignal.timeout(15000),
-      });
-      if (!res.ok) throw new Error(`Google ${res.status}: ${(await res.text()).slice(0, 200)}`);
-      const d = await res.json();
-      const r = d.routes?.[0];
-      if (!r) throw new Error('Google: no routes');
-      const dur = parseInt(String(r.duration || '0').replace('s', ''), 10);
-      const stat = parseInt(String(r.staticDuration || r.duration || '0').replace('s', ''), 10);
-      return { distanceMeters: r.distanceMeters ?? cachedDistance ?? 0, durationSeconds: dur, staticDurationSeconds: stat || dur };
-    };
-
     let result: RouteResult | null = null;
-    for (const [name, fn] of [['TomTom', fetchTomTom], ['Google Routes', fetchGoogle]] as const) {
-      try {
-        const t = Date.now();
-        result = await fn();
-        console.log(`[get-traffic-data] ${name} OK (${Date.now() - t}ms)`);
-        break;
-      } catch (e) {
-        console.error(`[get-traffic-data] ${name} failed:`, (e as Error).message);
-      }
+    try {
+      const t = Date.now();
+      result = await fetchTomTom();
+      console.log(`[get-traffic-data] TomTom OK (${Date.now() - t}ms)`);
+    } catch (e) {
+      console.error('[get-traffic-data] TomTom failed:', (e as Error).message);
     }
 
     if (!result) {

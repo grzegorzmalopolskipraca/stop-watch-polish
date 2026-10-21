@@ -12,6 +12,18 @@ interface WeatherRequest {
   street?: string;
 }
 
+interface TomTomHour {
+  dateTime: string;
+  dateTimeLocal?: string;
+  temperature?: number;
+  weatherCode?: string;
+  windSpeed?: number;
+  precipitationProbability?: number;
+  precipitation?: number;
+  pressure?: number;
+  relativeHumidity?: number;
+}
+
 interface WeatherSlot {
   timeFrom: string;
   timeTo: string;
@@ -19,313 +31,139 @@ interface WeatherSlot {
   rainfallMillis: number;
 }
 
-const CACHE_DURATION_MS = 2 * 60 * 1000; // 2 minutes - keep forecast fresh and current
+const CACHE_DURATION_MS = 2 * 60 * 1000;
 
-function interpolateWeatherData(hour1: any, hour2: any, intervalMinutes: number): WeatherSlot[] {
-  const slots: WeatherSlot[] = [];
-  
-  // Parse precipitation data correctly from Google Weather API structure
-  const rain1 = hour1.precipitation?.qpf?.quantity || 0;
-  const rain2 = hour2.precipitation?.qpf?.quantity || 0;
-  const prob1 = (hour1.precipitation?.probability?.percent || 0) / 100; // Convert percent to 0-1 range
-  const prob2 = (hour2.precipitation?.probability?.percent || 0) / 100;
-  
-  console.log(`[get-weather-forecast] Interpolating between hours:`, {
-    hour1: { rain: rain1, prob: prob1 * 100 },
-    hour2: { rain: rain2, prob: prob2 * 100 }
-  });
-  
-  const time1 = new Date(hour1.interval.startTime);
-  const time2 = new Date(hour2.interval.startTime);
-  
-  // Create 3 slots of 20 minutes each for the hour
-  for (let i = 0; i < 3; i++) {
-    const slotStart = new Date(time1.getTime() + i * 20 * 60 * 1000);
-    const slotEnd = new Date(slotStart.getTime() + 20 * 60 * 1000);
-    
-    // Linear interpolation based on position within the hour
-    const position = i / 3;
-    const interpolatedRain = rain1 + (rain2 - rain1) * position;
-    const interpolatedProb = prob1 + (prob2 - prob1) * position;
-    
-    // Calculate rain for 20-minute period (divide hourly by 3)
-    const slotRain = interpolatedRain / 3;
-    
-    slots.push({
-      timeFrom: `${slotStart.getHours().toString().padStart(2, '0')}:${slotStart.getMinutes().toString().padStart(2, '0')}`,
-      timeTo: `${slotEnd.getHours().toString().padStart(2, '0')}:${slotEnd.getMinutes().toString().padStart(2, '0')}`,
-      rainPercent: Math.round(interpolatedProb * 100),
-      rainfallMillis: Math.round(slotRain * 10) / 10, // Round to 1 decimal
-    });
+function addMinutes(time: string, minutes: number): string {
+  const [hours, mins] = time.split(':').map(Number);
+  const total = (hours * 60 + mins + minutes) % (24 * 60);
+  return `${Math.floor(total / 60).toString().padStart(2, '0')}:${(total % 60).toString().padStart(2, '0')}`;
+}
+
+function createSlots(hours: TomTomHour[], now: Date): WeatherSlot[] {
+  const upcoming = hours
+    .filter((hour) => Number.isFinite(Date.parse(hour.dateTime)) && Date.parse(hour.dateTime) >= now.getTime())
+    .slice(0, 5);
+
+  const slots: Array<WeatherSlot & { endTimestamp: number }> = [];
+  for (let index = 0; index < upcoming.length; index++) {
+    const current = upcoming[index];
+    const next = upcoming[index + 1] ?? current;
+    const start = current.dateTimeLocal?.slice(11, 16) ?? new Date(current.dateTime).toISOString().slice(11, 16);
+    const rainNow = current.precipitation ?? 0;
+    const rainNext = next.precipitation ?? rainNow;
+    const probabilityNow = current.precipitationProbability ?? 0;
+    const probabilityNext = next.precipitationProbability ?? probabilityNow;
+
+    for (let part = 0; part < 3; part++) {
+      const ratio = part / 3;
+      const rainfall = rainNow + (rainNext - rainNow) * ratio;
+      const rainPercent = probabilityNow + (probabilityNext - probabilityNow) * ratio;
+      const timeFrom = addMinutes(start, part * 20);
+      slots.push({
+        timeFrom,
+        timeTo: addMinutes(timeFrom, 20),
+        rainPercent: Math.round(rainPercent),
+        rainfallMillis: Math.round((rainfall / 3) * 10) / 10,
+        endTimestamp: Date.parse(current.dateTime) + (part + 1) * 20 * 60 * 1000,
+      });
+    }
   }
-  
-  return slots;
+
+  return slots
+    .filter((slot) => slot.endTimestamp > now.getTime() && slot.endTimestamp <= now.getTime() + 2 * 60 * 60 * 1000)
+    .slice(0, 12)
+    .map(({ timeFrom, timeTo, rainPercent, rainfallMillis }) => ({ timeFrom, timeTo, rainPercent, rainfallMillis }));
 }
 
 serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
-  }
+  if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
 
   try {
     const { latitude, longitude, street }: WeatherRequest = await req.json();
-    
-    console.log('[get-weather-forecast] Request for:', { latitude, longitude, street });
-    
-    // Initialize Supabase client
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
-    
-    // Check database cache first
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude) || latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
+      return new Response(JSON.stringify({ error: 'Valid latitude and longitude are required' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
     if (street) {
-      const { data: cachedData, error: cacheError } = await supabase
+      const { data: cached } = await supabase
         .from('weather_cache')
         .select('weather_data, cached_at')
         .eq('street', street)
         .single();
-      
-      if (!cacheError && cachedData) {
-        const cachedAt = new Date(cachedData.cached_at).getTime();
-        const now = Date.now();
-        const cacheAgeMinutes = Math.floor((now - cachedAt) / 1000 / 60);
-        
-        console.log(`[get-weather-forecast] Cache found - Age: ${cacheAgeMinutes} minutes, Limit: ${CACHE_DURATION_MS / 1000 / 60} minutes`);
-        
-        if ((now - cachedAt) < CACHE_DURATION_MS) {
-          console.log('[get-weather-forecast] Cache is fresh, but will fetch new data for accuracy');
-          console.log('[get-weather-forecast] Cached data timestamp:', cachedData.cached_at);
-          // Don't return cached data - always fetch fresh for accuracy
-        } else {
-          console.log('[get-weather-forecast] Cache is stale, fetching fresh data');
-        }
-      } else {
-        console.log('[get-weather-forecast] No cache found or cache error:', cacheError?.message);
+      if (cached && Date.now() - new Date(cached.cached_at).getTime() < CACHE_DURATION_MS) {
+        return new Response(JSON.stringify(cached.weather_data), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
       }
     }
-    
-    const apiKey = Deno.env.get('GOOGLE_MAPS_API_KEY');
-    if (!apiKey) {
-      console.error('[get-weather-forecast] Google Maps API key not configured');
-      throw new Error('Google Maps API key not configured');
+
+    const apiKey = Deno.env.get('TOMTOM_API_KEY');
+    if (!apiKey) throw new Error('TOMTOM_API_KEY is not configured');
+
+    const url = new URL('https://api.tomtom.com/weatherforecast/v1/hourly');
+    url.searchParams.set('lat', String(latitude));
+    url.searchParams.set('lon', String(longitude));
+    url.searchParams.set('forecastHours', '5');
+    url.searchParams.set('key', apiKey);
+
+    const upstream = await fetch(url, { signal: AbortSignal.timeout(15000) });
+    if (!upstream.ok) {
+      const errorText = (await upstream.text()).slice(0, 300);
+      console.error('[get-weather-forecast] TomTom Weather API failed:', upstream.status, errorText);
+      throw new Error(`TomTom Weather API returned ${upstream.status}`);
     }
 
-    console.log('[get-weather-forecast] Calling Google Weather API');
+    const data = await upstream.json();
+    const hours: TomTomHour[] = data?.data?.hourlyWeatherInfo ?? [];
+    if (hours.length < 2) throw new Error('TomTom returned insufficient hourly forecast data');
 
-    // Call Google Weather API
-    const url = 'https://weather.googleapis.com/v1/forecast/hours:lookup';
-    const params = new URLSearchParams({
-      key: apiKey,
-      'location.latitude': latitude.toString(),
-      'location.longitude': longitude.toString(),
-    });
-
-    let data: any;
-    const response = await fetch(`${url}?${params.toString()}`);
-    console.log('[get-weather-forecast] Weather API HTTP status:', response.status);
-
-    if (response.ok) {
-      data = await response.json();
-    } else {
-      const errorText = await response.text();
-      console.warn('[get-weather-forecast] Google Weather failed, falling back to Open-Meteo:', response.status, errorText);
-      // Fallback: Open-Meteo (free, no key) mapped to Google's forecastHours shape
-      const om = await fetch(
-        `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}` +
-        `&hourly=temperature_2m,precipitation,precipitation_probability,relative_humidity_2m,wind_speed_10m,pressure_msl,visibility,weather_code` +
-        `&timezone=UTC&forecast_days=2`,
-        { signal: AbortSignal.timeout(15000) }
-      );
-      if (!om.ok) {
-        throw new Error(`Weather API error: Google ${response.status}, Open-Meteo ${om.status}`);
-      }
-      const omData = await om.json();
-      const h = omData.hourly;
-      data = {
-        forecastHours: h.time.map((t: string, i: number) => ({
-          interval: { startTime: new Date(t + 'Z').toISOString() },
-          precipitation: {
-            qpf: { quantity: h.precipitation?.[i] ?? 0 },
-            probability: { percent: h.precipitation_probability?.[i] ?? 0 },
-          },
-          temperature: { degrees: h.temperature_2m?.[i] ?? null },
-          relativeHumidity: h.relative_humidity_2m?.[i] ?? null,
-          wind: { speed: { value: h.wind_speed_10m?.[i] ?? null } },
-          airPressure: { meanSeaLevelMillibars: h.pressure_msl?.[i] ?? null },
-          visibility: { distance: h.visibility?.[i] != null ? h.visibility[i] / 1000 : null },
-          weatherCondition: { type: h.weather_code?.[i] != null ? `WMO_${h.weather_code[i]}` : null },
-        })),
-      };
-    }
-    console.log('[get-weather-forecast] ===== RAW WEATHER API RESPONSE =====');
-    console.log('[get-weather-forecast] Full response structure:', JSON.stringify(data, null, 2));
-    
-    if (!data.forecastHours || !Array.isArray(data.forecastHours)) {
-      console.error('[get-weather-forecast] No forecast hours in response');
-      throw new Error('No forecast data available');
-    }
-
-    console.log('[get-weather-forecast] Total forecast hours received:', data.forecastHours.length);
-
-    // Get current time and filter for next 4 hours to ensure enough slots after client filtering
-    const currentTime = new Date();
-    const fourHoursLater = new Date(currentTime.getTime() + 4 * 60 * 60 * 1000);
-    
-    console.log('[get-weather-forecast] Current time:', currentTime.toISOString());
-    console.log('[get-weather-forecast] Filtering for next 4 hours until:', fourHoursLater.toISOString());
-    
-    const relevantHours = data.forecastHours.filter((hour: any) => {
-      const hourTime = new Date(hour.interval.startTime);
-      return hourTime >= currentTime && hourTime <= fourHoursLater;
-    }).slice(0, 5); // Get up to 5 hours for better interpolation (creates 12 slots)
-
-    console.log('[get-weather-forecast] Found', relevantHours.length, 'relevant hours');
-    
-    // Log detailed precipitation data for each relevant hour
-    relevantHours.forEach((hour: any, idx: number) => {
-      console.log(`[get-weather-forecast] Hour ${idx + 1}:`, {
-        time: hour.interval.startTime,
-        precipitation_mm: hour.precipitation?.qpf?.quantity || 0,
-        precipitation_prob_percent: hour.precipitation?.probability?.percent || 0,
-        temperature_c: hour.temperature?.degrees || 'N/A',
-        humidity_percent: hour.relativeHumidity || 'N/A',
-        wind_speed_kmh: hour.wind?.speed?.value || 'N/A',
-        pressure_mb: hour.airPressure?.meanSeaLevelMillibars || 'N/A',
-        visibility_km: hour.visibility?.distance || 'N/A',
-        raw_precipitation_object: JSON.stringify(hour.precipitation || {}),
-        weather_condition: hour.weatherCondition?.type || 'N/A'
-      });
-    });
-
-    if (relevantHours.length < 2) {
-      console.error('[get-weather-forecast] Not enough forecast data');
-      throw new Error('Insufficient forecast data');
-    }
-
-    // Create 20-minute slots
-    const allSlots: WeatherSlot[] = [];
-    
-    for (let i = 0; i < relevantHours.length - 1; i++) {
-      const slots = interpolateWeatherData(relevantHours[i], relevantHours[i + 1], 20);
-      allSlots.push(...slots);
-    }
-
-    // Filter slots to only those within the next 2 hours from NOW (current execution time)
-    const now = new Date(); // Get fresh current time
-    const twoHoursLater = new Date(now.getTime() + 2 * 60 * 60 * 1000);
-    
-    console.log('[get-weather-forecast] Current time for filtering:', now.toISOString());
-    console.log('[get-weather-forecast] Will show slots until:', twoHoursLater.toISOString());
-    
-    const filteredSlots = allSlots.filter(slot => {
-      // Parse the END time of the slot (timeTo)
-      const [hoursTo, minutesTo] = slot.timeTo.split(':').map(Number);
-      const slotEndTime = new Date(now);
-      slotEndTime.setHours(hoursTo, minutesTo, 0, 0);
-      
-      // Handle day boundary for end time
-      if (hoursTo < now.getHours() || (hoursTo === now.getHours() && minutesTo <= now.getMinutes())) {
-        slotEndTime.setDate(slotEndTime.getDate() + 1);
-      }
-      
-      // Include slot if its END time is in the future (allows current partially-elapsed slots)
-      const isFuture = slotEndTime > now;
-      console.log(`[get-weather-forecast] Slot ${slot.timeFrom}-${slot.timeTo}: ends at ${slotEndTime.toISOString()} - ${isFuture ? 'INCLUDED' : 'EXCLUDED'}`);
-      
-      return isFuture;
-    });
-    
-    console.log(`[get-weather-forecast] Filtered ${filteredSlots.length} future slots from ${allSlots.length} total slots`);
-    
-    // Always return at least 6 slots for 2 hours coverage, up to 12 slots for 4 hours
-    const finalSlots = filteredSlots.slice(0, 12);
-
-    // Sort by best weather conditions (lowest rain probability, then lowest rainfall)
-    const sortedSlots = [...finalSlots].sort((a, b) => {
-      if (a.rainPercent !== b.rainPercent) {
-        return a.rainPercent - b.rainPercent;
-      }
-      return a.rainfallMillis - b.rainfallMillis;
-    });
-
-    console.log('[get-weather-forecast] ===== FINAL PROCESSED SLOTS =====');
-    console.log('[get-weather-forecast] Generated', sortedSlots.length, 'slots for 2 hours');
-    sortedSlots.forEach((slot, idx) => {
-      console.log(`[get-weather-forecast] Slot ${idx + 1}:`, {
-        time: `${slot.timeFrom} - ${slot.timeTo}`,
-        rain_percent: slot.rainPercent,
-        rainfall_mm: slot.rainfallMillis
-      });
-    });
-    
-    // Extract current weather conditions from the first relevant hour
-    const currentHour = relevantHours[0];
-    const currentConditions = {
-      temperature: currentHour.temperature?.degrees || null,
-      condition: currentHour.weatherCondition?.type || null,
-      humidity: currentHour.relativeHumidity || null,
-      windSpeed: currentHour.wind?.speed?.value || null,
-      pressure: currentHour.airPressure?.meanSeaLevelMillibars || null,
-      visibility: currentHour.visibility?.distance ? currentHour.visibility.distance * 1000 : null, // Convert km to meters
-    };
-    
-    console.log('[get-weather-forecast] Current weather conditions:', currentConditions);
-    
-    // Add metadata and current conditions to response
-    const responseWithMeta = {
-      slots: sortedSlots,
-      currentConditions,
+    const now = new Date();
+    const slots = createSlots(hours, now);
+    const currentHour = hours.find((hour) => Date.parse(hour.dateTime) >= now.getTime()) ?? hours[0];
+    const responseData = {
+      slots,
+      currentConditions: {
+        temperature: currentHour.temperature ?? null,
+        condition: currentHour.weatherCode ?? null,
+        humidity: currentHour.relativeHumidity ?? null,
+        windSpeed: currentHour.windSpeed == null ? null : Math.round(currentHour.windSpeed * 3.6),
+        pressure: currentHour.pressure ?? null,
+        visibility: null,
+      },
       meta: {
         location: { latitude, longitude, street },
         generatedAt: new Date().toISOString(),
-        source: 'Google Weather API',
-        dataFreshness: 'live'
-      }
+        source: 'TomTom Weather API',
+        dataFreshness: 'live',
+      },
     };
 
-    // Cache the results in database
     if (street) {
-      const { error: upsertError } = await supabase
-        .from('weather_cache')
-        .upsert({
-          street,
-          latitude,
-          longitude,
-          weather_data: responseWithMeta,
-          cached_at: new Date().toISOString(),
-        }, {
-          onConflict: 'street'
-        });
-      
-      if (upsertError) {
-        console.error('[get-weather-forecast] Error caching weather data:', upsertError);
-      } else {
-        console.log('[get-weather-forecast] Weather data cached in database');
-      }
+      const { error } = await supabase.from('weather_cache').upsert({
+        street,
+        latitude,
+        longitude,
+        weather_data: responseData,
+        cached_at: new Date().toISOString(),
+      }, { onConflict: 'street' });
+      if (error) console.error('[get-weather-forecast] Failed to cache forecast:', error.message);
     }
 
-    // Clean old cache entries (older than 1 hour)
-    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
-    await supabase
-      .from('weather_cache')
-      .delete()
-      .lt('cached_at', oneHourAgo);
-
-    return new Response(
-      JSON.stringify(responseWithMeta),
-      { 
-        status: 200, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-      }
-    );
+    await supabase.from('weather_cache').delete().lt('cached_at', new Date(Date.now() - 60 * 60 * 1000).toISOString());
+    return new Response(JSON.stringify(responseData), {
+      status: 200,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
   } catch (error) {
-    console.error('Error in get-weather-forecast function:', error);
-    return new Response(
-      JSON.stringify({ error: (error as Error).message }),
-      { 
-        status: 500, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-      }
-    );
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    console.error('[get-weather-forecast] Request failed:', message);
+    return new Response(JSON.stringify({ error: message }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
   }
 });

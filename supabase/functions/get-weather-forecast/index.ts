@@ -120,16 +120,43 @@ serve(async (req) => {
       'location.longitude': longitude.toString(),
     });
 
+    let data: any;
     const response = await fetch(`${url}?${params.toString()}`);
     console.log('[get-weather-forecast] Weather API HTTP status:', response.status);
 
-    if (!response.ok) {
+    if (response.ok) {
+      data = await response.json();
+    } else {
       const errorText = await response.text();
-      console.error('[get-weather-forecast] Weather API error:', response.status, errorText);
-      throw new Error(`Weather API error: ${response.status} - ${errorText}`);
+      console.warn('[get-weather-forecast] Google Weather failed, falling back to Open-Meteo:', response.status, errorText);
+      // Fallback: Open-Meteo (free, no key) mapped to Google's forecastHours shape
+      const om = await fetch(
+        `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}` +
+        `&hourly=temperature_2m,precipitation,precipitation_probability,relative_humidity_2m,wind_speed_10m,pressure_msl,visibility,weather_code` +
+        `&timezone=UTC&forecast_days=2`,
+        { signal: AbortSignal.timeout(15000) }
+      );
+      if (!om.ok) {
+        throw new Error(`Weather API error: Google ${response.status}, Open-Meteo ${om.status}`);
+      }
+      const omData = await om.json();
+      const h = omData.hourly;
+      data = {
+        forecastHours: h.time.map((t: string, i: number) => ({
+          interval: { startTime: new Date(t + 'Z').toISOString() },
+          precipitation: {
+            qpf: { quantity: h.precipitation?.[i] ?? 0 },
+            probability: { percent: h.precipitation_probability?.[i] ?? 0 },
+          },
+          temperature: { degrees: h.temperature_2m?.[i] ?? null },
+          relativeHumidity: h.relative_humidity_2m?.[i] ?? null,
+          wind: { speed: { value: h.wind_speed_10m?.[i] ?? null } },
+          airPressure: { meanSeaLevelMillibars: h.pressure_msl?.[i] ?? null },
+          visibility: { distance: h.visibility?.[i] != null ? h.visibility[i] / 1000 : null },
+          weatherCondition: { type: h.weather_code?.[i] != null ? `WMO_${h.weather_code[i]}` : null },
+        })),
+      };
     }
-
-    const data = await response.json();
     console.log('[get-weather-forecast] ===== RAW WEATHER API RESPONSE =====');
     console.log('[get-weather-forecast] Full response structure:', JSON.stringify(data, null, 2));
     

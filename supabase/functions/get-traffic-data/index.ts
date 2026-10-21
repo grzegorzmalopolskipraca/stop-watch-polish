@@ -151,43 +151,84 @@ serve(async (req) => {
       console.log(`[get-traffic-data] Skipping rate limit for internal call`);
     }
     
-    const apiKey = Deno.env.get('TOMTOM_API_KEY');
-    if (!apiKey) {
-      console.error('[get-traffic-data] TOMTOM_API_KEY is not configured');
-      throw new Error('TomTom API key not configured');
+    // Provider chain: TomTom -> Google Routes -> stale cache -> graceful "unavailable"
+    type RouteResult = { distanceMeters: number; durationSeconds: number; staticDurationSeconds: number };
+
+    const fetchTomTom = async (): Promise<RouteResult> => {
+      const apiKey = Deno.env.get('TOMTOM_API_KEY');
+      if (!apiKey) throw new Error('TomTom API key not configured');
+      const locations = `${origin.lat},${origin.lng}:${destination.lat},${destination.lng}`;
+      const url = new URL(`https://api.tomtom.com/routing/1/calculateRoute/${locations}/json`);
+      url.searchParams.set('key', apiKey);
+      url.searchParams.set('traffic', 'true');
+      url.searchParams.set('computeTravelTimeFor', 'all');
+      url.searchParams.set('routeType', 'fastest');
+      url.searchParams.set('travelMode', 'car');
+      const res = await fetch(url.toString(), { signal: AbortSignal.timeout(15000) });
+      if (!res.ok) throw new Error(`TomTom ${res.status}: ${(await res.text()).slice(0, 200)}`);
+      const d = await res.json();
+      const s = d.routes?.[0]?.summary;
+      if (!s) throw new Error('TomTom: no routes');
+      return {
+        distanceMeters: s.lengthInMeters,
+        durationSeconds: s.travelTimeInSeconds,
+        staticDurationSeconds: s.noTrafficTravelTimeInSeconds || s.travelTimeInSeconds,
+      };
+    };
+
+    const fetchGoogle = async (): Promise<RouteResult> => {
+      const apiKey = Deno.env.get('GOOGLE_MAPS_API_KEY');
+      if (!apiKey) throw new Error('Google key not configured');
+      const res = await fetch('https://routes.googleapis.com/directions/v2:computeRoutes', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Goog-Api-Key': apiKey,
+          'X-Goog-FieldMask': 'routes.distanceMeters,routes.duration,routes.staticDuration',
+        },
+        body: JSON.stringify({
+          origin: { location: { latLng: { latitude: origin.lat, longitude: origin.lng } } },
+          destination: { location: { latLng: { latitude: destination.lat, longitude: destination.lng } } },
+          travelMode: 'DRIVE',
+          routingPreference: 'TRAFFIC_AWARE',
+        }),
+        signal: AbortSignal.timeout(15000),
+      });
+      if (!res.ok) throw new Error(`Google ${res.status}: ${(await res.text()).slice(0, 200)}`);
+      const d = await res.json();
+      const r = d.routes?.[0];
+      if (!r) throw new Error('Google: no routes');
+      const dur = parseInt(String(r.duration || '0').replace('s', ''), 10);
+      const stat = parseInt(String(r.staticDuration || r.duration || '0').replace('s', ''), 10);
+      return { distanceMeters: r.distanceMeters ?? cachedDistance ?? 0, durationSeconds: dur, staticDurationSeconds: stat || dur };
+    };
+
+    let result: RouteResult | null = null;
+    for (const [name, fn] of [['TomTom', fetchTomTom], ['Google Routes', fetchGoogle]] as const) {
+      try {
+        const t = Date.now();
+        result = await fn();
+        console.log(`[get-traffic-data] ${name} OK (${Date.now() - t}ms)`);
+        break;
+      } catch (e) {
+        console.error(`[get-traffic-data] ${name} failed:`, (e as Error).message);
+      }
     }
 
-    console.log('[get-traffic-data] Calling TomTom Routing API');
-    const locations = `${origin.lat},${origin.lng}:${destination.lat},${destination.lng}`;
-    const url = new URL(`https://api.tomtom.com/routing/1/calculateRoute/${locations}/json`);
-    url.searchParams.set('key', apiKey);
-    url.searchParams.set('traffic', 'true');
-    url.searchParams.set('computeTravelTimeFor', 'all');
-    url.searchParams.set('routeType', 'fastest');
-    url.searchParams.set('travelMode', 'car');
-
-    const gStart = Date.now();
-    const response = await fetch(url.toString(), { signal: AbortSignal.timeout(30000) });
-    const gEnd = Date.now();
-    console.log('[get-traffic-data] TomTom Routing API status:', response.status, `latency: ${gEnd - gStart}ms`);
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('[get-traffic-data] TomTom Routing API error:', response.status, errorText);
-      throw new Error(`TomTom Routing API error: ${response.status} - ${errorText}`);
+    if (!result) {
+      if (cachedData?.traffic_data) {
+        console.warn('[get-traffic-data] All providers failed, serving stale cache');
+        return new Response(JSON.stringify({ ...cachedData.traffic_data, stale: true }), {
+          status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      console.warn('[get-traffic-data] All providers failed, no cache');
+      return new Response(JSON.stringify({ routes: [], status: 'UNAVAILABLE' }), {
+        status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
-    const data = await response.json();
-    
-    if (!data.routes || data.routes.length === 0 || !data.routes[0].summary) {
-      console.warn('[get-traffic-data] No routes returned');
-      throw new Error('No routes found');
-    }
-
-    const route = data.routes[0];
-    const distanceMeters = route.summary.lengthInMeters;
-    const durationSeconds = route.summary.travelTimeInSeconds;
-    const staticDurationSeconds = route.summary.noTrafficTravelTimeInSeconds || durationSeconds;
+    const { distanceMeters, durationSeconds, staticDurationSeconds } = result;
 
     console.log('[get-traffic-data] API data -> distance:', distanceMeters, 'duration:', durationSeconds);
 

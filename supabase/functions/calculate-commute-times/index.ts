@@ -28,6 +28,8 @@ interface Profile {
 interface CommuteSchedule {
   user_id: string;
   day_of_week: number;
+  is_commute_day: boolean;
+  work_hours: number;
   to_work_start: string;
   to_work_end: string;
   from_work_start: string;
@@ -592,6 +594,11 @@ serve(async (req) => {
       }
 
       const schedule = schedules[0] as CommuteSchedule;
+
+      if (!schedule.is_commute_day) {
+        console.log(`User ${profile.user_id}: No commute scheduled for day ${currentDayOfWeek}`);
+        continue;
+      }
       
       // Determine which slots to process
       let toWorkSlots: string[] = [];

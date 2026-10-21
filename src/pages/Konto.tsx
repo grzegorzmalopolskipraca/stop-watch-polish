@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { LogOut, Save, MapPin, Briefcase, Clock, Search, CheckCircle, Loader2, RefreshCw, Map, Crosshair, Car, Home, Building2, ArrowRight, TrendingDown, Calendar, Sun, Moon, Settings } from 'lucide-react';
+import { LogOut, Save, MapPin, Briefcase, Clock, Search, CheckCircle, Loader2, RefreshCw, Map, Crosshair, Car, Calendar, Settings } from 'lucide-react';
 import { User, Session } from '@supabase/supabase-js';
 import MapLocationPicker from '@/components/MapLocationPicker';
 import {
@@ -17,6 +17,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import Seo from "@/components/Seo";
+import { Slider } from '@/components/ui/slider';
 
 // Traffic API options with descriptions
 const TRAFFIC_API_OPTIONS = [
@@ -30,6 +31,8 @@ const TRAFFIC_API_OPTIONS = [
 interface CommuteSchedule {
   id: string;
   day_of_week: number;
+  is_commute_day: boolean;
+  work_hours: number;
   to_work_start: string;
   to_work_end: string;
   from_work_start: string;
@@ -51,32 +54,15 @@ interface TravelTime {
 }
 
 const DAYS_PL = ['Niedziela', 'Poniedziałek', 'Wtorek', 'Środa', 'Czwartek', 'Piątek', 'Sobota'];
-
-// Generate time slots for a range
-const generateTimeSlots = (startTime: string, endTime: string): string[] => {
-  const times: string[] = [];
-  const [startH, startM] = startTime.split(':').map(Number);
-  const [endH, endM] = endTime.split(':').map(Number);
-  
-  let currentMinutes = startH * 60 + startM;
-  const endMinutes = endH * 60 + endM;
-  
-  while (currentMinutes <= endMinutes) {
-    const hours = Math.floor(currentMinutes / 60);
-    const mins = currentMinutes % 60;
-    times.push(`${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`);
-    currentMinutes += 10;
-  }
-  
-  return times;
-};
-
-// Find min time for green coloring
-const getMinTime = (times: { time: string; minutes: number | null }[]) => {
-  const validTimes = times.filter(t => t.minutes !== null);
-  if (validTimes.length === 0) return Infinity;
-  return Math.min(...validTimes.map(t => t.minutes!));
-};
+const WEEKDAYS_FIRST = [
+  { day: 1, label: 'Pon' },
+  { day: 2, label: 'Wt' },
+  { day: 3, label: 'Śr' },
+  { day: 4, label: 'Czw' },
+  { day: 5, label: 'Pt' },
+  { day: 6, label: 'Sob' },
+  { day: 0, label: 'Ndz' },
+];
 
 const Konto = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -92,6 +78,7 @@ const Konto = () => {
   const [homeLocation, setHomeLocation] = useState<AddressLocation | null>(null);
   const [workLocation, setWorkLocation] = useState<AddressLocation | null>(null);
   const [schedule, setSchedule] = useState<CommuteSchedule[]>([]);
+  const [savingSchedule, setSavingSchedule] = useState(false);
   const [travelTimes, setTravelTimes] = useState<TravelTime[]>([]);
   const [refreshingTimes, setRefreshingTimes] = useState(false);
   const [showHomeMapPicker, setShowHomeMapPicker] = useState(false);
@@ -459,13 +446,16 @@ const Konto = () => {
     }
   };
 
-  // Auto-save schedule when changed
-  const saveScheduleItem = useCallback(async (dayId: string, field: string, value: string) => {
+  const saveSchedule = async (nextSchedule: CommuteSchedule[]) => {
+    if (!user) return;
+    setSavingSchedule(true);
     try {
       const { error } = await supabase
         .from('commute_schedule')
-        .update({ [field]: value } as never)
-        .eq('id', dayId);
+        .upsert(nextSchedule.map(day => ({
+          ...day,
+          user_id: user.id,
+        })), { onConflict: 'user_id,day_of_week' });
 
       if (error) throw error;
     } catch (error) {
@@ -475,37 +465,58 @@ const Konto = () => {
         description: 'Nie udało się zapisać harmonogramu.',
         variant: 'destructive',
       });
-    }
-  }, [toast]);
-
-  const updateSchedule = (dayIndex: number, field: keyof CommuteSchedule, value: string) => {
-    const day = schedule.find(d => d.day_of_week === dayIndex);
-    if (day) {
-      setSchedule(prev => prev.map(d => 
-        d.day_of_week === dayIndex ? { ...d, [field]: value } : d
-      ));
-      // Auto-save to database
-      saveScheduleItem(day.id, field, value);
+      await loadUserData(user.id);
+    } finally {
+      setSavingSchedule(false);
     }
   };
 
-  // Get travel time for a specific slot and day of week
-  const getTravelTimeForSlot = (direction: 'to_work' | 'from_work', time: string, dayOfWeek: number): number | null => {
-    const match = travelTimes.find(
-      t => t.direction === direction && 
-           t.departure_time.substring(0, 5) === time &&
-           t.day_of_week === dayOfWeek
-    );
-    return match ? match.travel_duration_minutes : null;
+  const updateWorkdays = (dayIndex: number) => {
+    const nextSchedule = schedule.map(day => day.day_of_week === dayIndex
+      ? { ...day, is_commute_day: !day.is_commute_day }
+      : day);
+    setSchedule(nextSchedule);
+    void saveSchedule(nextSchedule);
   };
 
-  // Generate travel time data for display for a specific day
-  const getDisplayTravelTimes = (startTime: string, endTime: string, direction: 'to_work' | 'from_work', dayOfWeek: number) => {
-    const slots = generateTimeSlots(startTime, endTime);
-    return slots.map(time => ({
-      time,
-      minutes: getTravelTimeForSlot(direction, time, dayOfWeek),
+  const updateSharedSchedule = (change: { to_work_start?: string; to_work_end?: string; work_hours?: number }, persist = true) => {
+    if (schedule.length === 0) return;
+    const current = schedule.find(day => day.day_of_week === 1) ?? schedule[0];
+    let toWorkStart = change.to_work_start ?? current.to_work_start.slice(0, 5);
+    let toWorkEnd = change.to_work_end ?? current.to_work_end.slice(0, 5);
+    const workHours = change.work_hours ?? current.work_hours ?? 8;
+
+    const toMinutes = (time: string) => {
+      const [hours, minutes] = time.split(':').map(Number);
+      return hours * 60 + minutes;
+    };
+    if (toMinutes(toWorkStart) > toMinutes(toWorkEnd)) {
+      if (change.to_work_start) toWorkEnd = toWorkStart;
+      else toWorkStart = toWorkEnd;
+    }
+    const formatTime = (minutes: number) => {
+      const clampedMinutes = Math.min(minutes, 23 * 60 + 59);
+      return `${Math.floor(clampedMinutes / 60).toString().padStart(2, '0')}:${(clampedMinutes % 60).toString().padStart(2, '0')}`;
+    };
+    const fromWorkStart = formatTime(toMinutes(toWorkStart) + (workHours - 1) * 60);
+    const fromWorkEnd = formatTime(toMinutes(toWorkEnd) + (workHours + 1) * 60);
+    const nextSchedule = schedule.map(day => ({
+      ...day,
+      to_work_start: toWorkStart,
+      to_work_end: toWorkEnd,
+      from_work_start: fromWorkStart,
+      from_work_end: fromWorkEnd,
+      work_hours: workHours,
     }));
+    setSchedule(nextSchedule);
+    if (persist) void saveSchedule(nextSchedule);
+  };
+
+  const getBestTravelTime = (direction: TravelTime['direction'], dayOfWeek: number) => {
+    const dayTimes = travelTimes.filter(time => time.direction === direction && time.day_of_week === dayOfWeek);
+    return dayTimes.reduce<TravelTime | null>((best, current) => (
+      !best || current.travel_duration_minutes < best.travel_duration_minutes ? current : best
+    ), null);
   };
 
   if (loading) {
@@ -651,101 +662,106 @@ const Konto = () => {
           </CardContent>
         </Card>
 
-        {/* Schedule Card */}
+        {/* Shared weekly schedule */}
         <Card>
-          <CardHeader className="pb-4">
+          <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
               <Calendar className="w-5 h-5 shrink-0 text-primary" />
               Harmonogram tygodniowy
             </CardTitle>
-            <p className="text-xs sm:text-sm text-muted-foreground">
-              Określ przedziały czasowe, kiedy planujesz dojazd do pracy i powrót
-            </p>
           </CardHeader>
-          <CardContent className="px-3 sm:px-6">
+          <CardContent className="space-y-5 px-4 sm:px-6">
             <div className="space-y-3">
-              {schedule.map((day) => {
-                const isWeekend = day.day_of_week === 0 || day.day_of_week === 6;
-                return (
-                  <div 
-                    key={day.id} 
-                    className={`border rounded-xl p-4 transition-all ${
-                      isWeekend 
-                        ? 'border-border/50 bg-muted/30 opacity-75' 
-                        : 'border-border bg-card hover:border-primary/30 hover:shadow-sm'
-                    }`}
-                  >
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-                      {/* Day name */}
-                      <div className="flex items-center gap-3 sm:w-32">
-                        <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${
-                          isWeekend ? 'bg-muted' : 'bg-primary/10'
-                        }`}>
-                          <span className={`text-sm font-bold ${isWeekend ? 'text-muted-foreground' : 'text-primary'}`}>
-                            {DAYS_PL[day.day_of_week].substring(0, 2)}
-                          </span>
-                        </div>
-                        <span className={`font-medium text-sm ${isWeekend ? 'text-muted-foreground' : ''}`}>
-                          {DAYS_PL[day.day_of_week]}
-                        </span>
-                      </div>
-                      
-                      {/* Time inputs */}
-                      <div className="flex flex-1 flex-col sm:flex-row gap-4">
-                        {/* To work */}
-                        <div className="flex-1 space-y-2">
-                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                            <Sun className="w-3.5 h-3.5" />
-                            <span>Do pracy</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Input
-                              type="time"
-                              value={day.to_work_start}
-                              onChange={(e) => updateSchedule(day.day_of_week, 'to_work_start', e.target.value)}
-                              className="flex-1 text-sm h-9 text-center"
-                            />
-                            <ArrowRight className="w-4 h-4 text-muted-foreground shrink-0" />
-                            <Input
-                              type="time"
-                              value={day.to_work_end}
-                              onChange={(e) => updateSchedule(day.day_of_week, 'to_work_end', e.target.value)}
-                              className="flex-1 text-sm h-9 text-center"
-                            />
-                          </div>
-                        </div>
-                        
-                        {/* From work */}
-                        <div className="flex-1 space-y-2">
-                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                            <Moon className="w-3.5 h-3.5" />
-                            <span>Z pracy</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Input
-                              type="time"
-                              value={day.from_work_start}
-                              onChange={(e) => updateSchedule(day.day_of_week, 'from_work_start', e.target.value)}
-                              className="flex-1 text-sm h-9 text-center"
-                            />
-                            <ArrowRight className="w-4 h-4 text-muted-foreground shrink-0" />
-                            <Input
-                              type="time"
-                              value={day.from_work_end}
-                              onChange={(e) => updateSchedule(day.day_of_week, 'from_work_end', e.target.value)}
-                              className="flex-1 text-sm h-9 text-center"
-                            />
-                          </div>
-                        </div>
-                      </div>
+              <p className="text-sm font-medium">W jakie dni jeździsz do pracy:</p>
+              <div className="grid grid-cols-7 gap-2">
+                {WEEKDAYS_FIRST.map(({ day, label }) => {
+                  const daySchedule = schedule.find(item => item.day_of_week === day);
+                  const selected = daySchedule?.is_commute_day ?? (day >= 1 && day <= 5);
+                  return (
+                    <button
+                      key={day}
+                      type="button"
+                      aria-pressed={selected}
+                      aria-label={`${DAYS_PL[day]}${selected ? ', wybrany' : ', niewybrany'}`}
+                      disabled={savingSchedule || !daySchedule}
+                      onClick={() => updateWorkdays(day)}
+                      className={`mx-auto flex h-10 w-10 items-center justify-center rounded-full text-[11px] font-semibold transition-colors sm:h-11 sm:w-11 sm:text-xs ${
+                        selected
+                          ? 'bg-primary text-primary-foreground shadow-sm'
+                          : 'border border-border bg-background text-muted-foreground hover:border-primary/50 hover:text-foreground'
+                      } focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60`}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {schedule.length > 0 && (() => {
+              const settings = schedule.find(day => day.day_of_week === 1) ?? schedule[0];
+              const start = settings.to_work_start.slice(0, 5);
+              const end = settings.to_work_end.slice(0, 5);
+              const workHours = settings.work_hours || 8;
+              return (
+                <>
+                  <div className="space-y-2">
+                    <Label>Przedział wyjazdu do pracy</Label>
+                    <div className="flex items-center gap-3">
+                      <Input
+                        aria-label="Wyjazd do pracy od"
+                        type="time"
+                        value={start}
+                        disabled={savingSchedule}
+                        onChange={(event) => updateSharedSchedule({ to_work_start: event.target.value })}
+                        className="h-10 text-center"
+                      />
+                      <span className="text-sm text-muted-foreground">do</span>
+                      <Input
+                        aria-label="Wyjazd do pracy do"
+                        type="time"
+                        value={end}
+                        disabled={savingSchedule}
+                        onChange={(event) => updateSharedSchedule({ to_work_end: event.target.value })}
+                        className="h-10 text-center"
+                      />
                     </div>
                   </div>
-                );
-              })}
-            </div>
-            <p className="text-xs text-muted-foreground text-center mt-4 flex items-center justify-center gap-1">
-              <CheckCircle className="w-3 h-3 text-green-500" />
-              Zmiany zapisują się automatycznie
+
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <Label htmlFor="work-hours-slider">Ile godzin spędzasz w pracy?</Label>
+                      <span className="min-w-16 rounded-full bg-primary/10 px-3 py-1 text-center text-sm font-semibold text-primary">
+                        {workHours} godz.
+                      </span>
+                    </div>
+                    <Slider
+                      id="work-hours-slider"
+                      min={1}
+                      max={12}
+                      step={1}
+                      value={[workHours]}
+                      disabled={savingSchedule}
+                      aria-label="Liczba godzin w pracy"
+                      onValueChange={([value]) => updateSharedSchedule({ work_hours: value }, false)}
+                      onValueCommit={([value]) => updateSharedSchedule({ work_hours: value })}
+                    />
+                    <div className="flex justify-between text-xs text-muted-foreground">
+                      <span>1 godz.</span>
+                      <span>12 godz.</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Zakres powrotu: {settings.from_work_start.slice(0, 5)}–{settings.from_work_end.slice(0, 5)}
+                      {' '}(od {Math.max(0, workHours - 1)} do {workHours + 1} godz. po wyjeździe)
+                    </p>
+                  </div>
+                </>
+              );
+            })()}
+
+            <p className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground" aria-live="polite">
+              {savingSchedule ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle className="h-3.5 w-3.5 text-green-500" />}
+              {savingSchedule ? 'Zapisywanie…' : 'Zmiany zapisują się automatycznie'}
             </p>
           </CardContent>
         </Card>
@@ -760,7 +776,7 @@ const Konto = () => {
                   Przewidywany czas dojazdu
                 </CardTitle>
                 <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-                  Najkrótszy czas podświetlony na zielono • {TRAFFIC_API_OPTIONS.find(o => o.value === trafficApiPreference)?.label}
+                  Najlepsze odnotowane godziny wyjazdu według dnia
                 </p>
               </div>
               <Button
@@ -774,15 +790,10 @@ const Konto = () => {
                 Oblicz czasy
               </Button>
             </div>
-            <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg p-3 mt-4 text-xs sm:text-sm text-blue-800 dark:text-blue-200">
-              <p>
-                W tej sekcji znajdują się realne czasy przejazdu z poprzedniego tygodnia dla Twojej trasy z domu do pracy i z pracy do domu w zadanych przedziałach czasowych. Po pierwszym tygodniu używania możesz tutaj dla każdego dnia zobaczyć o której godzinie najlepiej wyjechać do pracy i o której wracać z pracy, by omijać korki. W każdym kafelku znajduje się godzina i minuta wyjazdu i czas dojazdu.
-              </p>
-            </div>
           </CardHeader>
           <CardContent className="px-3 sm:px-6">
             {!homeAddressValidated || !workAddressValidated ? (
-              <div className="text-center py-8 sm:py-12 space-y-3">
+              <div className="text-center py-5 space-y-2">
                 <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center mx-auto">
                   <MapPin className="w-8 h-8 text-muted-foreground/50" />
                 </div>
@@ -791,129 +802,45 @@ const Konto = () => {
                 </p>
               </div>
             ) : travelTimes.length === 0 ? (
-              <div className="text-center py-8 sm:py-12 space-y-3">
+              <div className="text-center py-5 space-y-2">
                 <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
                   <Clock className="w-8 h-8 text-primary/50" />
                 </div>
                 <p className="text-muted-foreground text-sm px-4">
-                  Kliknij "Oblicz czasy" aby zobaczyć przewidywane czasy dojazdu
+                  Kliknij „Oblicz czasy”, aby rozpocząć zbieranie danych dla każdego dnia.
                 </p>
               </div>
             ) : (
-              <div className="space-y-4">
-                {schedule.map((day) => {
-                  const toWorkTimes = getDisplayTravelTimes(day.to_work_start, day.to_work_end, 'to_work', day.day_of_week);
-                  const fromWorkTimes = getDisplayTravelTimes(day.from_work_start, day.from_work_end, 'from_work', day.day_of_week);
-                  const toWorkMin = getMinTime(toWorkTimes);
-                  const fromWorkMin = getMinTime(fromWorkTimes);
-                  const hasToWorkData = toWorkTimes.some(t => t.minutes !== null);
-                  const hasFromWorkData = fromWorkTimes.some(t => t.minutes !== null);
-
-                  return (
-                    <div key={day.id} className="border border-border rounded-xl overflow-hidden">
-                      {/* Day header */}
-                      <div className="bg-muted/30 px-4 py-2.5 border-b border-border flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                          <span className="text-xs font-bold text-primary">
-                            {DAYS_PL[day.day_of_week].substring(0, 2)}
+              <div className="divide-y divide-border">
+                <div className="grid grid-cols-[64px_1fr_1fr] items-center gap-2 pb-2 text-[11px] font-medium text-muted-foreground sm:grid-cols-[100px_1fr_1fr] sm:text-xs">
+                  <span>Dzień</span>
+                  <span>Do pracy</span>
+                  <span>Z pracy</span>
+                </div>
+                {schedule
+                  .filter(day => day.is_commute_day || travelTimes.some(time => time.day_of_week === day.day_of_week))
+                  .sort((a, b) => WEEKDAYS_FIRST.findIndex(item => item.day === a.day_of_week) - WEEKDAYS_FIRST.findIndex(item => item.day === b.day_of_week))
+                  .map(day => {
+                    const toWork = getBestTravelTime('to_work', day.day_of_week);
+                    const fromWork = getBestTravelTime('from_work', day.day_of_week);
+                    return (
+                      <div key={day.id} className="grid grid-cols-[64px_1fr_1fr] items-center gap-2 py-2.5 sm:grid-cols-[100px_1fr_1fr]">
+                        <span className="text-xs font-semibold sm:text-sm">{DAYS_PL[day.day_of_week]}</span>
+                        <div className="min-w-0 rounded-lg bg-blue-500/5 px-2 py-2 sm:px-3">
+                          <span className="block truncate text-sm font-semibold">
+                            {toWork ? toWork.departure_time.slice(0, 5) : '—'}
+                            {toWork && <span className="ml-1 text-xs font-normal text-muted-foreground">· {toWork.travel_duration_minutes} min</span>}
                           </span>
                         </div>
-                        <span className="font-medium text-sm">{DAYS_PL[day.day_of_week]}</span>
-                      </div>
-                      
-                      <div className="p-4 space-y-4">
-                        {/* To Work */}
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              <div className="w-6 h-6 rounded-full bg-blue-500/10 flex items-center justify-center">
-                                <Building2 className="w-3.5 h-3.5 text-blue-600" />
-                              </div>
-                              <span className="text-xs sm:text-sm font-medium">Do pracy</span>
-                            </div>
-                            <span className="text-xs text-muted-foreground">
-                              {day.to_work_start} - {day.to_work_end}
-                            </span>
-                          </div>
-                          {hasToWorkData ? (
-                            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
-                              {toWorkTimes.filter(t => t.minutes !== null).map((slot, idx) => {
-                                const isMin = slot.minutes === toWorkMin;
-                                return (
-                                  <div 
-                                    key={idx}
-                                    className={`relative rounded-lg p-2 text-center transition-all ${
-                                      isMin 
-                                        ? 'bg-green-500/15 ring-2 ring-green-500/30' 
-                                        : 'bg-muted/50 hover:bg-muted'
-                                    }`}
-                                  >
-                                    {isMin && (
-                                      <TrendingDown className="absolute -top-1 -right-1 w-4 h-4 text-green-600 bg-background rounded-full" />
-                                    )}
-                                    <p className="text-[10px] sm:text-xs text-muted-foreground">{slot.time}</p>
-                                    <p className={`text-sm sm:text-base font-bold ${isMin ? 'text-green-600' : ''}`}>
-                                      {slot.minutes}
-                                      <span className="text-[10px] sm:text-xs font-normal text-muted-foreground ml-0.5">min</span>
-                                    </p>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          ) : (
-                            <p className="text-xs text-muted-foreground italic">Brak danych - kliknij "Oblicz czasy"</p>
-                          )}
-                        </div>
-
-                        {/* Divider */}
-                        <div className="border-t border-dashed border-border" />
-
-                        {/* From Work */}
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              <div className="w-6 h-6 rounded-full bg-orange-500/10 flex items-center justify-center">
-                                <Home className="w-3.5 h-3.5 text-orange-600" />
-                              </div>
-                              <span className="text-xs sm:text-sm font-medium">Z pracy</span>
-                            </div>
-                            <span className="text-xs text-muted-foreground">
-                              {day.from_work_start} - {day.from_work_end}
-                            </span>
-                          </div>
-                          {hasFromWorkData ? (
-                            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
-                              {fromWorkTimes.filter(t => t.minutes !== null).map((slot, idx) => {
-                                const isMin = slot.minutes === fromWorkMin;
-                                return (
-                                  <div 
-                                    key={idx}
-                                    className={`relative rounded-lg p-2 text-center transition-all ${
-                                      isMin 
-                                        ? 'bg-green-500/15 ring-2 ring-green-500/30' 
-                                        : 'bg-muted/50 hover:bg-muted'
-                                    }`}
-                                  >
-                                    {isMin && (
-                                      <TrendingDown className="absolute -top-1 -right-1 w-4 h-4 text-green-600 bg-background rounded-full" />
-                                    )}
-                                    <p className="text-[10px] sm:text-xs text-muted-foreground">{slot.time}</p>
-                                    <p className={`text-sm sm:text-base font-bold ${isMin ? 'text-green-600' : ''}`}>
-                                      {slot.minutes}
-                                      <span className="text-[10px] sm:text-xs font-normal text-muted-foreground ml-0.5">min</span>
-                                    </p>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          ) : (
-                            <p className="text-xs text-muted-foreground italic">Brak danych - kliknij "Oblicz czasy"</p>
-                          )}
+                        <div className="min-w-0 rounded-lg bg-orange-500/5 px-2 py-2 sm:px-3">
+                          <span className="block truncate text-sm font-semibold">
+                            {fromWork ? fromWork.departure_time.slice(0, 5) : '—'}
+                            {fromWork && <span className="ml-1 text-xs font-normal text-muted-foreground">· {fromWork.travel_duration_minutes} min</span>}
+                          </span>
                         </div>
                       </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
               </div>
             )}
           </CardContent>

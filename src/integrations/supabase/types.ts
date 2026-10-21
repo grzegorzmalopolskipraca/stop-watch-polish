@@ -102,10 +102,12 @@ export type Database = {
           from_work_end: string
           from_work_start: string
           id: string
+          is_commute_day: boolean
           to_work_end: string
           to_work_start: string
           updated_at: string
           user_id: string
+          work_hours: number
         }
         Insert: {
           created_at?: string
@@ -113,10 +115,12 @@ export type Database = {
           from_work_end?: string
           from_work_start?: string
           id?: string
+          is_commute_day?: boolean
           to_work_end?: string
           to_work_start?: string
           updated_at?: string
           user_id: string
+          work_hours?: number
         }
         Update: {
           created_at?: string
@@ -124,10 +128,12 @@ export type Database = {
           from_work_end?: string
           from_work_start?: string
           id?: string
+          is_commute_day?: boolean
           to_work_end?: string
           to_work_start?: string
           updated_at?: string
           user_id?: string
+          work_hours?: number
         }
         Relationships: []
       }

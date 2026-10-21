@@ -6,27 +6,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { LogOut, Save, MapPin, Briefcase, Clock, Search, CheckCircle, Loader2, RefreshCw, Map, Crosshair, Car, Calendar, Settings } from 'lucide-react';
+import { LogOut, Save, MapPin, Briefcase, Clock, Search, CheckCircle, Loader2, RefreshCw, Map, Crosshair, Car } from 'lucide-react';
 import { User, Session } from '@supabase/supabase-js';
 import MapLocationPicker from '@/components/MapLocationPicker';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import Seo from "@/components/Seo";
 import { Slider } from '@/components/ui/slider';
-
-// Traffic API options with descriptions
-const TRAFFIC_API_OPTIONS = [
-  {
-    value: 'tomtom',
-    label: 'TomTom Traffic',
-    description: 'Czasy przejazdu wyliczane z bieżącym ruchem drogowym TomTom.'
-  }
-];
 
 interface CommuteSchedule {
   id: string;
@@ -84,8 +68,6 @@ const Konto = () => {
   const [showHomeMapPicker, setShowHomeMapPicker] = useState(false);
   const [showWorkMapPicker, setShowWorkMapPicker] = useState(false);
   const [gettingCurrentLocation, setGettingCurrentLocation] = useState<'home' | 'work' | null>(null);
-  const [trafficApiPreference, setTrafficApiPreference] = useState('tomtom');
-  const [savingApiPreference, setSavingApiPreference] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -123,8 +105,6 @@ const Konto = () => {
       if (profile) {
         setHomeAddress(profile.home_address || '');
         setWorkAddress(profile.work_address || '');
-        // Load traffic API preference
-        setTrafficApiPreference('tomtom');
         // If addresses exist, consider them validated
         if (profile.home_address) setHomeAddressValidated(true);
         if (profile.work_address) setWorkAddressValidated(true);
@@ -210,9 +190,9 @@ const Konto = () => {
     
     try {
       // Call the edge function with force=true to bypass interval check and fill missing slots
-      // Pass the traffic API preference so the edge function uses the correct API/model
+      // Always use the TomTom traffic provider.
       const { data, error } = await supabase.functions.invoke('calculate-commute-times', {
-        body: { force: true, fillMissing: true, trafficApi: trafficApiPreference }
+        body: { force: true, fillMissing: true, trafficApi: 'tomtom' }
       });
       
       if (error) {
@@ -230,10 +210,9 @@ const Konto = () => {
       // Reload travel times from database
       await loadTravelTimes(user.id);
       
-      const apiLabel = TRAFFIC_API_OPTIONS.find(o => o.value === trafficApiPreference)?.label || trafficApiPreference;
       const slotsInfo = data?.slots?.length > 0 
-        ? `Obliczono ${data.processed} czasów (${apiLabel}): ${data.slots.join(', ')}.`
-        : `Obliczono ${data?.processed || 0} czasów dojazdu (${apiLabel}).`;
+        ? `Obliczono ${data.processed} czasów (TomTom Traffic): ${data.slots.join(', ')}.`
+        : `Obliczono ${data?.processed || 0} czasów dojazdu (TomTom Traffic).`;
       
       toast({
         title: 'Odświeżono',
@@ -248,37 +227,6 @@ const Konto = () => {
       });
     } finally {
       setRefreshingTimes(false);
-    }
-  };
-
-  const handleTrafficApiChange = async (value: string) => {
-    if (!user) return;
-    
-    setTrafficApiPreference(value);
-    setSavingApiPreference(true);
-    
-    try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ traffic_api_preference: value })
-        .eq('user_id', user.id);
-      
-      if (error) throw error;
-      
-      const apiLabel = TRAFFIC_API_OPTIONS.find(o => o.value === value)?.label || value;
-      toast({
-        title: 'Zapisano',
-        description: `Wybrano: ${apiLabel}. Kliknij "Oblicz czasy" aby przeliczyć.`,
-      });
-    } catch (error) {
-      console.error('Error saving traffic API preference:', error);
-      toast({
-        title: 'Błąd',
-        description: 'Nie udało się zapisać preferencji API.',
-        variant: 'destructive',
-      });
-    } finally {
-      setSavingApiPreference(false);
     }
   };
 
@@ -512,11 +460,17 @@ const Konto = () => {
     if (persist) void saveSchedule(nextSchedule);
   };
 
-  const getBestTravelTime = (direction: TravelTime['direction'], dayOfWeek: number) => {
-    const dayTimes = travelTimes.filter(time => time.direction === direction && time.day_of_week === dayOfWeek);
-    return dayTimes.reduce<TravelTime | null>((best, current) => (
-      !best || current.travel_duration_minutes < best.travel_duration_minutes ? current : best
-    ), null);
+  const getBestTravelTimes = (direction: TravelTime['direction'], dayOfWeek: number) => {
+    const dayTimes = travelTimes
+      .filter(time => time.direction === direction && time.day_of_week === dayOfWeek)
+      .sort((a, b) => a.travel_duration_minutes - b.travel_duration_minutes || a.departure_time.localeCompare(b.departure_time));
+    const seenDepartureTimes = new Set<string>();
+    return dayTimes.filter(time => {
+      const departureTime = time.departure_time.slice(0, 5);
+      if (seenDepartureTimes.has(departureTime)) return false;
+      seenDepartureTimes.add(departureTime);
+      return true;
+    }).slice(0, 3);
   };
 
   if (loading) {
@@ -550,20 +504,12 @@ const Konto = () => {
       <main className="max-w-4xl mx-auto p-3 sm:p-4 space-y-4 sm:space-y-6">
         {/* Title */}
         <div className="text-center py-4 sm:py-6">
-          <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-foreground px-2">Prywatny asystent dojazdu do pracy</h2>
-          <p className="text-muted-foreground mt-2 text-sm sm:text-base break-all px-2">
-            Zalogowany jako: {user?.email}
-          </p>
+          <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-foreground px-2">Znajdź najlepszą godzinę wyjazdu do pracy</h2>
+          <p className="text-muted-foreground mt-2 text-sm sm:text-base px-2">Oszczędzaj czas, paliwo i nerwy</p>
         </div>
 
         {/* Address Card */}
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <MapPin className="w-5 h-5" />
-              Moje adresy
-            </CardTitle>
-          </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="home-address" className="flex items-center gap-2 text-sm">
@@ -664,12 +610,6 @@ const Konto = () => {
 
         {/* Shared weekly schedule */}
         <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
-              <Calendar className="w-5 h-5 shrink-0 text-primary" />
-              Harmonogram tygodniowy
-            </CardTitle>
-          </CardHeader>
           <CardContent className="space-y-5 px-4 sm:px-6">
             <div className="space-y-3">
               <p className="text-sm font-medium">W jakie dni jeździsz do pracy:</p>
@@ -687,8 +627,8 @@ const Konto = () => {
                       onClick={() => updateWorkdays(day)}
                       className={`mx-auto flex h-10 w-10 items-center justify-center rounded-full text-[11px] font-semibold transition-colors sm:h-11 sm:w-11 sm:text-xs ${
                         selected
-                          ? 'bg-primary text-primary-foreground shadow-sm'
-                          : 'border border-border bg-background text-muted-foreground hover:border-primary/50 hover:text-foreground'
+                          ? 'bg-black text-white shadow-sm dark:bg-white dark:text-black'
+                          : 'border border-gray-300 bg-white text-black hover:bg-gray-50 dark:border-gray-600 dark:bg-black dark:text-white dark:hover:bg-gray-900'
                       } focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60`}
                     >
                       {label}
@@ -814,80 +754,39 @@ const Konto = () => {
               <div className="divide-y divide-border">
                 <div className="grid grid-cols-[64px_1fr_1fr] items-center gap-2 pb-2 text-[11px] font-medium text-muted-foreground sm:grid-cols-[100px_1fr_1fr] sm:text-xs">
                   <span>Dzień</span>
-                  <span>Do pracy</span>
-                  <span>Z pracy</span>
+                  <span>Do pracy · godz. / min</span>
+                  <span>Z pracy · godz. / min</span>
                 </div>
                 {schedule
                   .filter(day => day.is_commute_day || travelTimes.some(time => time.day_of_week === day.day_of_week))
                   .sort((a, b) => WEEKDAYS_FIRST.findIndex(item => item.day === a.day_of_week) - WEEKDAYS_FIRST.findIndex(item => item.day === b.day_of_week))
                   .map(day => {
-                    const toWork = getBestTravelTime('to_work', day.day_of_week);
-                    const fromWork = getBestTravelTime('from_work', day.day_of_week);
+                    const toWork = getBestTravelTimes('to_work', day.day_of_week);
+                    const fromWork = getBestTravelTimes('from_work', day.day_of_week);
+                    const renderTimes = (times: TravelTime[], direction: 'to_work' | 'from_work') => (
+                      <div className={`min-w-0 rounded-lg px-2 py-2 sm:px-3 ${direction === 'to_work' ? 'bg-blue-500/5' : 'bg-orange-500/5'}`}>
+                        {times.length ? (
+                          <ol className="space-y-1">
+                            {times.map((time, index) => (
+                              <li key={`${time.departure_time}-${time.travel_duration_minutes}`} className={`flex items-center justify-between gap-1 rounded px-1.5 py-0.5 text-xs sm:text-sm ${index === 0 ? 'bg-green-600/10 font-semibold text-green-700 dark:text-green-400' : 'text-foreground'}`}>
+                                <span>{time.departure_time.slice(0, 5)}</span>
+                                <span className="whitespace-nowrap text-[10px] font-normal text-muted-foreground sm:text-xs">{time.travel_duration_minutes} min</span>
+                              </li>
+                            ))}
+                          </ol>
+                        ) : <span className="text-sm text-muted-foreground">—</span>}
+                      </div>
+                    );
                     return (
                       <div key={day.id} className="grid grid-cols-[64px_1fr_1fr] items-center gap-2 py-2.5 sm:grid-cols-[100px_1fr_1fr]">
                         <span className="text-xs font-semibold sm:text-sm">{DAYS_PL[day.day_of_week]}</span>
-                        <div className="min-w-0 rounded-lg bg-blue-500/5 px-2 py-2 sm:px-3">
-                          <span className="block truncate text-sm font-semibold">
-                            {toWork ? toWork.departure_time.slice(0, 5) : '—'}
-                            {toWork && <span className="ml-1 text-xs font-normal text-muted-foreground">· {toWork.travel_duration_minutes} min</span>}
-                          </span>
-                        </div>
-                        <div className="min-w-0 rounded-lg bg-orange-500/5 px-2 py-2 sm:px-3">
-                          <span className="block truncate text-sm font-semibold">
-                            {fromWork ? fromWork.departure_time.slice(0, 5) : '—'}
-                            {fromWork && <span className="ml-1 text-xs font-normal text-muted-foreground">· {fromWork.travel_duration_minutes} min</span>}
-                          </span>
-                        </div>
+                        {renderTimes(toWork, 'to_work')}
+                        {renderTimes(fromWork, 'from_work')}
                       </div>
                     );
                   })}
               </div>
             )}
-          </CardContent>
-        </Card>
-
-        {/* Traffic API Settings Card */}
-        <Card>
-          <CardHeader className="pb-4">
-            <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
-              <Settings className="w-5 h-5 shrink-0 text-primary" />
-              Ustawienia API ruchu
-            </CardTitle>
-            <p className="text-xs sm:text-sm text-muted-foreground">
-              Wybierz źródło danych o ruchu drogowym
-            </p>
-          </CardHeader>
-          <CardContent className="px-3 sm:px-6">
-            <div className="space-y-3">
-              <Label htmlFor="traffic-api" className="text-sm font-medium">
-                Źródło danych o ruchu
-              </Label>
-              <Select 
-                value={trafficApiPreference} 
-                onValueChange={handleTrafficApiChange}
-                disabled={savingApiPreference}
-              >
-                <SelectTrigger id="traffic-api" className="w-full">
-                  <SelectValue placeholder="TomTom Traffic" />
-                </SelectTrigger>
-                <SelectContent>
-                  {TRAFFIC_API_OPTIONS.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      <div className="flex flex-col items-start">
-                        <span className="font-medium">{option.label}</span>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground">
-                {TRAFFIC_API_OPTIONS.find(o => o.value === trafficApiPreference)?.description}
-              </p>
-              <div className="bg-muted/50 rounded-lg p-3 text-xs text-muted-foreground space-y-1">
-                <p>TomTom wyznacza trasę i szacowany czas przejazdu z uwzględnieniem bieżącego ruchu.</p>
-                <p>Odświeżanie jest buforowane, aby ograniczyć liczbę zapytań do bezpłatnego limitu API.</p>
-              </div>
-            </div>
           </CardContent>
         </Card>
       </main>

@@ -1,8 +1,11 @@
+import { useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { POST_AUTH_DESTINATION_KEY } from "@/utils/postAuthRedirect";
 import Index from "./pages/Index";
 import About from "./pages/About";
 import TermsAndPrivacy from "./pages/TermsAndPrivacy";
@@ -20,12 +23,40 @@ import StreetPage from "./pages/StreetPage";
 
 const queryClient = new QueryClient();
 
+const PostAuthRedirect = () => {
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const redirectToPendingDestination = (hasUser: boolean) => {
+      if (!hasUser || sessionStorage.getItem(POST_AUTH_DESTINATION_KEY) !== "/konto") {
+        return;
+      }
+
+      sessionStorage.removeItem(POST_AUTH_DESTINATION_KEY);
+      navigate("/konto", { replace: true });
+    };
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      redirectToPendingDestination(Boolean(session?.user));
+    });
+
+    void supabase.auth.getSession().then(({ data: { session } }) => {
+      redirectToPendingDestination(Boolean(session?.user));
+    });
+
+    return () => subscription.unsubscribe();
+  }, [navigate]);
+
+  return null;
+};
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />
       <Sonner />
       <BrowserRouter>
+        <PostAuthRedirect />
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/o-projekcie" element={<About />} />

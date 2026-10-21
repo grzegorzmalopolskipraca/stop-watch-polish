@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { Mail, Lock, User, ArrowLeft } from 'lucide-react';
+import { lovable } from '@/integrations/lovable';
 import { Link } from 'react-router-dom';
 import Seo from '@/components/Seo';
 
@@ -120,14 +121,29 @@ const Auth = () => {
   const handleGoogleLogin = async () => {
     setGoogleLoading(true);
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: `${window.location.origin}/konto`,
-        },
+      const result = await lovable.auth.signInWithOAuth('google', {
+        redirect_uri: window.location.origin,
       });
 
-      if (error) throw error;
+      if (result.error) {
+        toast({
+          title: 'Błąd logowania',
+          description: result.error instanceof Error
+            ? result.error.message
+            : 'Nie udało się rozpocząć logowania przez Google.',
+          variant: 'destructive',
+        });
+        setGoogleLoading(false);
+        return;
+      }
+
+      if (result.redirected) {
+        // Browser redirects to Google — nothing else to do here
+        return;
+      }
+
+      // Session is set — the onAuthStateChange listener navigates to /konto
+      setGoogleLoading(false);
     } catch (error) {
       toast({
         title: 'Błąd logowania',
@@ -137,23 +153,6 @@ const Auth = () => {
         variant: 'destructive',
       });
       setGoogleLoading(false);
-    }
-  };
-
-  const handleFacebookLogin = async () => {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'facebook',
-      options: {
-        redirectTo: `${window.location.origin}/konto`,
-      },
-    });
-
-    if (error) {
-      toast({
-        title: 'Błąd logowania',
-        description: 'Logowanie przez Facebook nie jest jeszcze skonfigurowane.',
-        variant: 'destructive',
-      });
     }
   };
 

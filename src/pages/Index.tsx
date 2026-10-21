@@ -1,6 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { User } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import {
@@ -1063,13 +1062,12 @@ const Index = () => {
       <header className="sticky top-0 z-10 bg-card border-b border-border shadow-sm">
         <div className="container max-w-2xl mx-auto px-4 py-4">
           {/* Login Button */}
-          <div className="flex items-center gap-1 mb-2">
+          <div className="flex items-center gap-1 mb-4">
             <Link to="/auth">
               <Button 
                 className="bg-traffic-jedzie hover:bg-traffic-jedzie/90 text-traffic-jedzie-foreground"
                 size="sm"
               >
-                <User className="w-4 h-4 mr-2" />
                 Zaloguj się
               </Button>
             </Link>

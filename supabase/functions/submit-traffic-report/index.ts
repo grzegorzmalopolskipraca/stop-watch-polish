@@ -20,7 +20,7 @@ const reportSchema = z.object({
   status: z.enum(VALID_STATUSES as [string, ...string[]]),
   userFingerprint: z.string().min(1).max(100),
   direction: z.enum(VALID_DIRECTIONS as [string, ...string[]]),
-  speed: z.number().nullable().optional(), // Real speed from Google API passed from frontend
+  speed: z.number().nullable().optional(), // Real speed from TomTom API passed from frontend
 });
 
 // Rate limiting: max 1 report per user per street per direction per 1 minute

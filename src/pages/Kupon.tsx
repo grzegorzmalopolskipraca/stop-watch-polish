@@ -296,16 +296,16 @@ export default function Kupon() {
     }
   };
 
-  const openGoogleMaps = () => {
+  const openOpenStreetMap = () => {
     if (!coupon || !location?.street) {
       toast.error("Brak danych lokalizacji");
       return;
     }
 
     const query = encodeURIComponent(`${coupon.local_name}, ${location.street}, Polska`);
-    const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${query}`;
+    const mapUrl = `https://www.openstreetmap.org/search?query=${query}`;
 
-    window.open(googleMapsUrl, '_blank');
+    window.open(mapUrl, '_blank', 'noopener,noreferrer');
   };
 
   useEffect(() => {
@@ -441,7 +441,7 @@ export default function Kupon() {
               </div>
               {location?.street && (
                 <Button
-                  onClick={openGoogleMaps}
+                  onClick={openOpenStreetMap}
                   variant="outline"
                   size="sm"
                   className="mt-6"

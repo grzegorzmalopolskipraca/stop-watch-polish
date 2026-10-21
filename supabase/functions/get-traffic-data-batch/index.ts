@@ -30,30 +30,22 @@ interface RouteResult {
 }
 
 // Dynamic cache duration based on time of day
-// Rush hours: shorter cache for fresh data
-// Off-peak: longer cache to save costs
+// TomTom's free tier is limited. Cache daytime traffic for an hour and
+// overnight traffic for three hours to constrain automated API usage.
 function getCacheDuration(): number {
   const now = new Date();
   const hour = now.getHours();
   const minutes = now.getMinutes();
   const timeInMinutes = hour * 60 + minutes;
 
-  // Rush hours: 6:30 AM (390 min) - 8:00 PM (1200 min) - fresh data matters
+  // Daytime: 6:30 AM (390 min) - 8:00 PM (1200 min)
   if (timeInMinutes >= 390 && timeInMinutes < 1200) {
-    return 10 * 60 * 1000; // 10 minutes
+    return 60 * 60 * 1000; // 60 minutes
   }
 
-  // Off-peak: 8:00 PM - 6:30 AM - slower traffic changes
-  return 30 * 60 * 1000; // 30 minutes
+  // Overnight: traffic changes less often.
+  return 3 * 60 * 60 * 1000; // 3 hours
 }
-
-// Distance Matrix API limit: 25 elements per request for free tier, 625 for pay-as-you-go
-// When we send N origins × N destinations, we get N² elements
-// To stay within limits, we need to batch carefully
-// For 25 element limit: sqrt(25) ≈ 5 routes per batch (5×5=25 elements)
-// For 625 element limit: sqrt(625) = 25 routes per batch (25×25=625 elements)
-// Using conservative batch size of 10 to stay well within limits (10×10=100 elements)
-const BATCH_SIZE = 10;
 
 // Create a cache key from route coordinates
 function createCacheKey(origin: { lat: number; lng: number }, destination: { lat: number; lng: number }): string {
@@ -161,19 +153,16 @@ serve(async (req) => {
 
     console.log(`[Batch] Cache hits: ${cachedResults.length}, API calls needed: ${uncachedRoutes.length}`);
 
-    // Step 2: Fetch uncached routes using Distance Matrix API
+    // Step 2: Fetch uncached routes using TomTom Routing API
     const apiResults: RouteResult[] = [];
 
     if (uncachedRoutes.length > 0) {
-      const apiKey = Deno.env.get('GOOGLE_MAPS_API_KEY');
+      const apiKey = Deno.env.get('TOMTOM_API_KEY');
       if (!apiKey) {
-        console.error('[Batch] GOOGLE_MAPS_API_KEY not found in environment');
-        throw new Error('Google Maps API key not configured');
+        console.error('[Batch] TOMTOM_API_KEY not found in environment');
+        throw new Error('TomTom API key not configured');
       }
-      console.log(`[Batch] API key found, length: ${apiKey.length} chars`);
-
-      // Process routes individually using new Routes API
-      // The new API doesn't support batch requests like Distance Matrix did
+      console.log('[Batch] TomTom API key found');
 
       for (let i = 0; i < uncachedRoutes.length; i++) {
         const route = uncachedRoutes[i];
@@ -188,52 +177,19 @@ serve(async (req) => {
           console.log(`[Batch ${routeNumber}/${totalRoutes}] Using cached distance: ${cachedDistance}m for ${route.street}`);
         }
 
-        console.log(`[Batch ${routeNumber}/${totalRoutes}] Calling Routes API for ${route.street || 'route'} (${route.direction || ''})`);
-
-        const url = 'https://routes.googleapis.com/directions/v2:computeRoutes';
-        
-        const requestBody = {
-          origin: {
-            location: {
-              latLng: {
-                latitude: route.origin.lat,
-                longitude: route.origin.lng
-              }
-            }
-          },
-          destination: {
-            location: {
-              latLng: {
-                latitude: route.destination.lat,
-                longitude: route.destination.lng
-              }
-            }
-          },
-          travelMode: 'DRIVE',
-          routingPreference: 'TRAFFIC_AWARE',
-          computeAlternativeRoutes: false,
-          routeModifiers: {
-            avoidTolls: false,
-            avoidHighways: false,
-            avoidFerries: false
-          },
-          languageCode: 'pl',
-          units: 'METRIC'
-        };
-
+        console.log(`[Batch ${routeNumber}/${totalRoutes}] Calling TomTom Routing API for ${route.street || 'route'} (${route.direction || ''})`);
+        const locations = `${route.origin.lat},${route.origin.lng}:${route.destination.lat},${route.destination.lng}`;
+        const url = new URL(`https://api.tomtom.com/routing/1/calculateRoute/${locations}/json`);
+        url.searchParams.set('key', apiKey);
+        url.searchParams.set('traffic', 'true');
+        url.searchParams.set('computeTravelTimeFor', 'all');
+        url.searchParams.set('routeType', 'fastest');
+        url.searchParams.set('travelMode', 'car');
         const gStart = Date.now();
-        const response = await fetch(url, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-Goog-Api-Key': apiKey,
-            'X-Goog-FieldMask': 'routes.duration,routes.distanceMeters,routes.staticDuration'
-          },
-          body: JSON.stringify(requestBody)
-        });
+        const response = await fetch(url.toString(), { signal: AbortSignal.timeout(30000) });
         const gEnd = Date.now();
 
-        console.log(`[Batch ${routeNumber}/${totalRoutes}] Routes API: ${response.status}, ${gEnd - gStart}ms`);
+        console.log(`[Batch ${routeNumber}/${totalRoutes}] TomTom Routing API: ${response.status}, ${gEnd - gStart}ms`);
 
         if (!response.ok) {
           const errorText = await response.text();
@@ -251,7 +207,7 @@ serve(async (req) => {
 
         const data = await response.json();
 
-        if (!data.routes || data.routes.length === 0) {
+        if (!data.routes || data.routes.length === 0 || !data.routes[0].summary) {
           console.error(`[Batch ${routeNumber}/${totalRoutes}] ❌ No routes returned`);
           apiResults.push({
             origin: route.origin,
@@ -266,9 +222,9 @@ serve(async (req) => {
 
         const routeData = data.routes[0];
         
-        const distanceMeters = routeData.distanceMeters;
-        const durationSeconds = parseInt(routeData.duration?.replace('s', '') || '0');
-        const staticDurationSeconds = parseInt(routeData.staticDuration?.replace('s', '') || '0');
+        const distanceMeters = routeData.summary.lengthInMeters;
+        const durationSeconds = routeData.summary.travelTimeInSeconds;
+        const staticDurationSeconds = routeData.summary.noTrafficTravelTimeInSeconds || durationSeconds;
         
         // Cache distance permanently if not already cached
         const cacheKey = createCacheKey(route.origin, route.destination);
@@ -346,8 +302,8 @@ serve(async (req) => {
     // Combine cached and API results
     const allResults = [...cachedResults, ...apiResults];
 
-    // Clean old cache entries (older than max cache duration - use 60 min to be safe)
-    const maxCacheDuration = 60 * 60 * 1000; // 60 minutes
+    // Keep entries long enough for the three-hour overnight cache window.
+    const maxCacheDuration = 4 * 60 * 60 * 1000;
     const cacheExpiryCutoff = new Date(Date.now() - maxCacheDuration).toISOString();
     await supabase
       .from('traffic_cache')
@@ -357,7 +313,7 @@ serve(async (req) => {
     const totalTime = Date.now() - funcStart;
     const apiCalls = uncachedRoutes.length; // Each route is now a separate API call
     console.log(`[Batch] Completed in ${totalTime}ms. Total: ${allResults.length}, Cached: ${cachedResults.length}, API: ${apiResults.length}`);
-    console.log(`[Batch] API calls made: ${apiCalls}, Cost saved: $${(cachedResults.length * 0.005).toFixed(3)}, API cost: $${(apiCalls * 0.005).toFixed(3)}`);
+    console.log(`[Batch] TomTom API calls made: ${apiCalls}`);
 
     return new Response(
       JSON.stringify({

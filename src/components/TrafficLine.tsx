@@ -192,7 +192,7 @@ export const TrafficLine = ({ street, direction, width = "100%", onSpeedUpdate, 
           const route = json.routes[0];
           console.log(`[TrafficLine] Route data:`, route);
           
-          // Get traffic-aware duration and distance from Directions API response
+          // Get traffic-aware duration and distance from the route response
           const leg = route.legs?.[0];
           if (!leg) {
             console.warn(`[TrafficLine] No leg data in route. Setting level=medium.`);

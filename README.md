@@ -83,6 +83,8 @@ This project is built with:
 
 📚 **Full tech stack documentation**: See [`10devs/TECHNOLOGY.md`](./10devs/TECHNOLOGY.md)
 
+**Traffic data**: TomTom Routing API. See [`TOMTOM_TRAFFIC.md`](./TOMTOM_TRAFFIC.md) for key setup, Supabase deployment, and quota guidance.
+
 ---
 
 ## 🔧 CI/CD Pipeline

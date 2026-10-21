@@ -21,24 +21,9 @@ import Seo from "@/components/Seo";
 // Traffic API options with descriptions
 const TRAFFIC_API_OPTIONS = [
   {
-    value: 'distance_matrix_pessimistic',
-    label: 'Pesymistyczny (zalecany)',
-    description: 'Uwzględnia największe korki - najbardziej realistyczny w godzinach szczytu'
-  },
-  {
-    value: 'distance_matrix_best_guess',
-    label: 'Uśredniony',
-    description: 'Średni czas na podstawie danych historycznych'
-  },
-  {
-    value: 'distance_matrix_optimistic',
-    label: 'Optymistyczny',
-    description: 'Zakłada minimalny ruch - najkrótszy możliwy czas'
-  },
-  {
-    value: 'routes_api',
-    label: 'Google Routes API',
-    description: 'Nowsze API z danymi w czasie rzeczywistym (TRAFFIC_AWARE)'
+    value: 'tomtom',
+    label: 'TomTom Traffic',
+    description: 'Czasy przejazdu wyliczane z bieżącym ruchem drogowym TomTom.'
   }
 ];
 
@@ -112,7 +97,7 @@ const Konto = () => {
   const [showHomeMapPicker, setShowHomeMapPicker] = useState(false);
   const [showWorkMapPicker, setShowWorkMapPicker] = useState(false);
   const [gettingCurrentLocation, setGettingCurrentLocation] = useState<'home' | 'work' | null>(null);
-  const [trafficApiPreference, setTrafficApiPreference] = useState('routes_api');
+  const [trafficApiPreference, setTrafficApiPreference] = useState('tomtom');
   const [savingApiPreference, setSavingApiPreference] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -152,7 +137,7 @@ const Konto = () => {
         setHomeAddress(profile.home_address || '');
         setWorkAddress(profile.work_address || '');
         // Load traffic API preference
-        setTrafficApiPreference(profile.traffic_api_preference || 'routes_api');
+        setTrafficApiPreference('tomtom');
         // If addresses exist, consider them validated
         if (profile.home_address) setHomeAddressValidated(true);
         if (profile.work_address) setWorkAddressValidated(true);
@@ -948,7 +933,7 @@ const Konto = () => {
           <CardContent className="px-3 sm:px-6">
             <div className="space-y-3">
               <Label htmlFor="traffic-api" className="text-sm font-medium">
-                Rodzaj API / model ruchu
+                Źródło danych o ruchu
               </Label>
               <Select 
                 value={trafficApiPreference} 
@@ -956,7 +941,7 @@ const Konto = () => {
                 disabled={savingApiPreference}
               >
                 <SelectTrigger id="traffic-api" className="w-full">
-                  <SelectValue placeholder="Wybierz API" />
+                  <SelectValue placeholder="TomTom Traffic" />
                 </SelectTrigger>
                 <SelectContent>
                   {TRAFFIC_API_OPTIONS.map((option) => (
@@ -972,10 +957,8 @@ const Konto = () => {
                 {TRAFFIC_API_OPTIONS.find(o => o.value === trafficApiPreference)?.description}
               </p>
               <div className="bg-muted/50 rounded-lg p-3 text-xs text-muted-foreground space-y-1">
-                <p><strong>Pesymistyczny</strong> - najdłuższy czas, zakłada maksymalne korki. Zalecany dla godzin 7-10 i 14-18.</p>
-                <p><strong>Uśredniony</strong> - średni czas na podstawie danych historycznych.</p>
-                <p><strong>Optymistyczny</strong> - najkrótszy czas, zakłada pusty ruch.</p>
-                <p><strong>Routes API</strong> - najnowsze API Google z danymi w czasie rzeczywistym.</p>
+                <p>TomTom wyznacza trasę i szacowany czas przejazdu z uwzględnieniem bieżącego ruchu.</p>
+                <p>Odświeżanie jest buforowane, aby ograniczyć liczbę zapytań do bezpłatnego limitu API.</p>
               </div>
             </div>
           </CardContent>

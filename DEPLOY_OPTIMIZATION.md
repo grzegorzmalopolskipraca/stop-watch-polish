@@ -1,5 +1,7 @@
 # Quick Deployment Guide - Google Maps API Optimization
 
+> Historical Google Maps instructions. Current traffic provider setup is documented in [TOMTOM_TRAFFIC.md](./TOMTOM_TRAFFIC.md); do not use the Google traffic secret or deployment steps below for the current code.
+
 ## ⚡ Quick Start (5 minutes)
 
 ### Step 1: Deploy Functions

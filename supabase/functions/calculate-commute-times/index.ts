@@ -263,215 +263,9 @@ function shouldSkipExecution(status: ServiceStatus | null): boolean {
   return false;
 }
 
-// Traffic API type for different calculation methods
-type TrafficApiType = 'distance_matrix_pessimistic' | 'distance_matrix_best_guess' | 'distance_matrix_optimistic' | 'routes_api';
+// All commute estimates use TomTom live traffic.
+type TrafficApiType = 'tomtom';
 
-// Get travel duration using Google Distance Matrix API with retry
-async function getTravelDurationDistanceMatrix(
-  originLat: number,
-  originLng: number,
-  destLat: number,
-  destLng: number,
-  apiKey: string,
-  // deno-lint-ignore no-explicit-any
-  supabase: any,
-  trafficModel: 'best_guess' | 'pessimistic' | 'optimistic' = 'pessimistic',
-  retries: number = 3
-): Promise<number | null> {
-  for (let attempt = 1; attempt <= retries; attempt++) {
-    try {
-      const url = `https://maps.googleapis.com/maps/api/distancematrix/json?origins=${originLat},${originLng}&destinations=${destLat},${destLng}&mode=driving&departure_time=now&traffic_model=${trafficModel}&key=${apiKey}`;
-      
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 30000);
-      
-      const response = await fetch(url, { signal: controller.signal });
-      clearTimeout(timeoutId);
-      
-      const data = await response.json();
-      
-      console.log(`Distance Matrix (${trafficModel}) response (attempt ${attempt}):`, JSON.stringify(data));
-      
-      if (data.status === 'OK' && data.rows?.[0]?.elements?.[0]?.status === 'OK') {
-        const element = data.rows[0].elements[0];
-        const durationSeconds = element.duration_in_traffic?.value || element.duration?.value;
-        if (durationSeconds) {
-          const minutes = Math.round(durationSeconds / 60);
-          console.log(`Distance Matrix result: ${minutes} min (traffic_model: ${trafficModel})`);
-          return minutes;
-        }
-      }
-      
-      // Handle specific API errors
-      if (data.status === 'OVER_QUERY_LIMIT' || data.status === 'OVER_DAILY_LIMIT') {
-        await logError(supabase, SERVICE_NAME, 'API_RATE_LIMIT', 
-          `Google Maps API rate limit exceeded: ${data.status}`, 
-          { response: data, attempt, origin: `${originLat},${originLng}`, dest: `${destLat},${destLng}` }
-        );
-        if (attempt < retries) {
-          await new Promise(resolve => setTimeout(resolve, 5000 * attempt));
-          continue;
-        }
-        return null;
-      }
-      
-      if (data.status === 'REQUEST_DENIED') {
-        await logError(supabase, SERVICE_NAME, 'API_AUTH_ERROR', 
-          `Google Maps API request denied: ${data.error_message || 'Unknown reason'}`, 
-          { response: data }
-        );
-        return null;
-      }
-      
-      if (data.status !== 'OK' || data.rows?.[0]?.elements?.[0]?.status !== 'OK') {
-        await logError(supabase, SERVICE_NAME, 'API_ERROR', 
-          `Distance Matrix API returned error status`, 
-          { response: data, origin: `${originLat},${originLng}`, dest: `${destLat},${destLng}` }
-        );
-        
-        if (attempt < retries && ['UNKNOWN_ERROR', 'INVALID_REQUEST'].includes(data.status)) {
-          await new Promise(resolve => setTimeout(resolve, 2000 * attempt));
-          continue;
-        }
-        return null;
-      }
-      
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      console.error(`Error calling Distance Matrix API (attempt ${attempt}):`, error);
-      
-      if (errorMessage.includes('abort') || errorMessage.includes('timeout')) {
-        await logError(supabase, SERVICE_NAME, 'API_TIMEOUT', 
-          `Request to Google Maps API timed out`, 
-          { error: errorMessage, attempt }
-        );
-      } else {
-        await logError(supabase, SERVICE_NAME, 'API_NETWORK_ERROR', 
-          `Network error while calling Google Maps API: ${errorMessage}`, 
-          { error: errorMessage, attempt }
-        );
-      }
-      
-      if (attempt < retries) {
-        await new Promise(resolve => setTimeout(resolve, 2000 * attempt));
-        continue;
-      }
-      return null;
-    }
-  }
-  
-  return null;
-}
-
-// Get travel duration using Google Routes API (newer, real-time traffic)
-async function getTravelDurationRoutesApi(
-  originLat: number,
-  originLng: number,
-  destLat: number,
-  destLng: number,
-  apiKey: string,
-  // deno-lint-ignore no-explicit-any
-  supabase: any,
-  retries: number = 3
-): Promise<number | null> {
-  for (let attempt = 1; attempt <= retries; attempt++) {
-    try {
-      const url = 'https://routes.googleapis.com/directions/v2:computeRoutes';
-      
-      const requestBody = {
-        origin: {
-          location: {
-            latLng: {
-              latitude: originLat,
-              longitude: originLng
-            }
-          }
-        },
-        destination: {
-          location: {
-            latLng: {
-              latitude: destLat,
-              longitude: destLng
-            }
-          }
-        },
-        travelMode: 'DRIVE',
-        routingPreference: 'TRAFFIC_AWARE_OPTIMAL', // Most accurate real-time traffic
-        computeAlternativeRoutes: false,
-        routeModifiers: {
-          avoidTolls: false,
-          avoidHighways: false,
-          avoidFerries: false
-        },
-        languageCode: 'pl',
-        units: 'METRIC'
-      };
-
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 30000);
-
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Goog-Api-Key': apiKey,
-          'X-Goog-FieldMask': 'routes.duration,routes.distanceMeters,routes.staticDuration'
-        },
-        body: JSON.stringify(requestBody),
-        signal: controller.signal
-      });
-      clearTimeout(timeoutId);
-
-      const data = await response.json();
-      console.log(`Routes API response (attempt ${attempt}):`, JSON.stringify(data));
-
-      if (data.routes && data.routes.length > 0) {
-        const route = data.routes[0];
-        // Duration is in format "123s" (seconds)
-        const durationStr = route.duration || route.staticDuration;
-        if (durationStr) {
-          const seconds = parseInt(durationStr.replace('s', ''));
-          const minutes = Math.round(seconds / 60);
-          console.log(`Routes API result: ${minutes} min (TRAFFIC_AWARE_OPTIMAL)`);
-          return minutes;
-        }
-      }
-
-      // Handle errors
-      if (data.error) {
-        await logError(supabase, SERVICE_NAME, 'ROUTES_API_ERROR',
-          `Routes API error: ${data.error.message}`,
-          { response: data, attempt }
-        );
-        
-        if (attempt < retries) {
-          await new Promise(resolve => setTimeout(resolve, 2000 * attempt));
-          continue;
-        }
-        return null;
-      }
-
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      console.error(`Error calling Routes API (attempt ${attempt}):`, error);
-      
-      await logError(supabase, SERVICE_NAME, 'ROUTES_API_NETWORK_ERROR',
-        `Network error calling Routes API: ${errorMessage}`,
-        { error: errorMessage, attempt }
-      );
-      
-      if (attempt < retries) {
-        await new Promise(resolve => setTimeout(resolve, 2000 * attempt));
-        continue;
-      }
-      return null;
-    }
-  }
-  
-  return null;
-}
-
-// Main function to get travel duration based on API preference
 async function getTravelDuration(
   originLat: number,
   originLng: number,
@@ -480,23 +274,51 @@ async function getTravelDuration(
   apiKey: string,
   // deno-lint-ignore no-explicit-any
   supabase: any,
-  trafficApi: TrafficApiType = 'routes_api'
+  _trafficApi: TrafficApiType = 'tomtom'
 ): Promise<number | null> {
-  console.log(`Getting travel duration using: ${trafficApi}`);
-  
-  switch (trafficApi) {
-    case 'distance_matrix_pessimistic':
-      return getTravelDurationDistanceMatrix(originLat, originLng, destLat, destLng, apiKey, supabase, 'pessimistic');
-    case 'distance_matrix_best_guess':
-      return getTravelDurationDistanceMatrix(originLat, originLng, destLat, destLng, apiKey, supabase, 'best_guess');
-    case 'distance_matrix_optimistic':
-      return getTravelDurationDistanceMatrix(originLat, originLng, destLat, destLng, apiKey, supabase, 'optimistic');
-    case 'routes_api':
-      return getTravelDurationRoutesApi(originLat, originLng, destLat, destLng, apiKey, supabase);
-    default:
-      console.log(`Unknown traffic API: ${trafficApi}, falling back to pessimistic`);
-      return getTravelDurationDistanceMatrix(originLat, originLng, destLat, destLng, apiKey, supabase, 'pessimistic');
+  const locations = `${originLat},${originLng}:${destLat},${destLng}`;
+  const url = new URL(`https://api.tomtom.com/routing/1/calculateRoute/${locations}/json`);
+  url.searchParams.set('key', apiKey);
+  url.searchParams.set('traffic', 'true');
+  url.searchParams.set('computeTravelTimeFor', 'all');
+  url.searchParams.set('routeType', 'fastest');
+  url.searchParams.set('travelMode', 'car');
+
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      const response = await fetch(url.toString(), { signal: AbortSignal.timeout(30000) });
+      const data = await response.json();
+      if (!response.ok) {
+        const message = data?.error?.description || data?.error?.message || `HTTP ${response.status}`;
+        await logError(supabase, SERVICE_NAME, response.status === 429 ? 'API_RATE_LIMIT' : 'TOMTOM_API_ERROR',
+          `TomTom Routing API returned ${response.status}: ${message}`, { status: response.status, attempt });
+        if (response.status === 429 || response.status >= 500) {
+          if (attempt < 3) {
+            await new Promise(resolve => setTimeout(resolve, 1500 * attempt));
+            continue;
+          }
+        }
+        return null;
+      }
+
+      const durationSeconds = data?.routes?.[0]?.summary?.travelTimeInSeconds;
+      if (typeof durationSeconds === 'number' && durationSeconds > 0) {
+        return Math.round(durationSeconds / 60);
+      }
+      await logError(supabase, SERVICE_NAME, 'TOMTOM_API_ERROR',
+        'TomTom response did not include a route travel time', { attempt, response: data });
+      return null;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      await logError(supabase, SERVICE_NAME, 'TOMTOM_API_NETWORK_ERROR',
+        `Error calling TomTom Routing API: ${errorMessage}`, { error: errorMessage, attempt });
+      if (attempt < 3) {
+        await new Promise(resolve => setTimeout(resolve, 1500 * attempt));
+      }
+    }
   }
+
+  return null;
 }
 
 // Get missing time slots that need to be calculated
@@ -581,7 +403,7 @@ serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const googleMapsApiKey = Deno.env.get("GOOGLE_MAPS_API_KEY");
+    const tomtomApiKey = Deno.env.get("TOMTOM_API_KEY");
 
     supabase = createClient(supabaseUrl, supabaseServiceKey);
 
@@ -621,14 +443,14 @@ serve(async (req) => {
       );
     }
 
-    if (!googleMapsApiKey) {
-      console.error("GOOGLE_MAPS_API_KEY is not configured");
+    if (!tomtomApiKey) {
+      console.error("TOMTOM_API_KEY is not configured");
       await logError(supabase, SERVICE_NAME, 'CONFIG_ERROR', 
-        'GOOGLE_MAPS_API_KEY is not configured', {}
+        'TOMTOM_API_KEY is not configured', {}
       );
       await updateServiceStatus(supabase, false, serviceStatus);
       return new Response(
-        JSON.stringify({ error: "Google Maps API key not configured" }),
+        JSON.stringify({ error: "TomTom API key not configured" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -721,7 +543,7 @@ serve(async (req) => {
       // Priority: request body > user profile preference > default (pessimistic)
       const userTrafficApi: TrafficApiType = requestedTrafficApi || 
         (profile.traffic_api_preference as TrafficApiType) || 
-        'routes_api';
+        'tomtom';
       
       console.log(`User ${profile.user_id}: Using traffic API: ${userTrafficApi}`);
 
@@ -734,7 +556,7 @@ serve(async (req) => {
           profile.home_lng!,
           profile.work_lat!,
           profile.work_lng!,
-          googleMapsApiKey,
+          tomtomApiKey,
           supabase,
           userTrafficApi
         );
@@ -787,7 +609,7 @@ serve(async (req) => {
           profile.work_lng!,
           profile.home_lat!,
           profile.home_lng!,
-          googleMapsApiKey,
+          tomtomApiKey,
           supabase,
           userTrafficApi
         );

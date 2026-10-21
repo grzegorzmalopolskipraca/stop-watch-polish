@@ -12,21 +12,21 @@ interface TrafficRequest {
 }
 
 // Dynamic cache duration based on time of day
-// Rush hours: shorter cache for fresh data
-// Off-peak: longer cache to save costs
+// TomTom's free tier is limited. Keep route requests cached for at least one
+// hour during the day and three hours overnight.
 function getCacheDuration(): number {
   const now = new Date();
   const hour = now.getHours();
   const minutes = now.getMinutes();
   const timeInMinutes = hour * 60 + minutes;
 
-  // Rush hours: 6:30 AM (390 min) - 8:00 PM (1200 min) - fresh data matters
+  // Daytime: 6:30 AM (390 min) - 8:00 PM (1200 min)
   if (timeInMinutes >= 390 && timeInMinutes < 1200) {
-    return 10 * 60 * 1000; // 10 minutes
+    return 60 * 60 * 1000; // 60 minutes
   }
 
-  // Off-peak: 8:00 PM - 6:30 AM - slower traffic changes
-  return 30 * 60 * 1000; // 30 minutes
+  // Overnight: traffic changes less often.
+  return 3 * 60 * 60 * 1000; // 3 hours
 }
 
 // Create a cache key from route coordinates
@@ -151,75 +151,43 @@ serve(async (req) => {
       console.log(`[get-traffic-data] Skipping rate limit for internal call`);
     }
     
-    const apiKey = Deno.env.get('GOOGLE_MAPS_API_KEY');
+    const apiKey = Deno.env.get('TOMTOM_API_KEY');
     if (!apiKey) {
-      console.error('[get-traffic-data] Google Maps API key not configured');
-      throw new Error('Google Maps API key not configured');
+      console.error('[get-traffic-data] TOMTOM_API_KEY is not configured');
+      throw new Error('TomTom API key not configured');
     }
 
-    console.log('[get-traffic-data] Calling Google Routes API');
-
-    const url = 'https://routes.googleapis.com/directions/v2:computeRoutes';
-    
-    const requestBody = {
-      origin: {
-        location: {
-          latLng: {
-            latitude: origin.lat,
-            longitude: origin.lng
-          }
-        }
-      },
-      destination: {
-        location: {
-          latLng: {
-            latitude: destination.lat,
-            longitude: destination.lng
-          }
-        }
-      },
-      travelMode: 'DRIVE',
-      routingPreference: 'TRAFFIC_AWARE',
-      computeAlternativeRoutes: false,
-      routeModifiers: {
-        avoidTolls: false,
-        avoidHighways: false,
-        avoidFerries: false
-      },
-      languageCode: 'pl',
-      units: 'METRIC'
-    };
+    console.log('[get-traffic-data] Calling TomTom Routing API');
+    const locations = `${origin.lat},${origin.lng}:${destination.lat},${destination.lng}`;
+    const url = new URL(`https://api.tomtom.com/routing/1/calculateRoute/${locations}/json`);
+    url.searchParams.set('key', apiKey);
+    url.searchParams.set('traffic', 'true');
+    url.searchParams.set('computeTravelTimeFor', 'all');
+    url.searchParams.set('routeType', 'fastest');
+    url.searchParams.set('travelMode', 'car');
 
     const gStart = Date.now();
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Goog-Api-Key': apiKey,
-        'X-Goog-FieldMask': 'routes.duration,routes.distanceMeters,routes.staticDuration'
-      },
-      body: JSON.stringify(requestBody)
-    });
+    const response = await fetch(url.toString(), { signal: AbortSignal.timeout(30000) });
     const gEnd = Date.now();
-    console.log('[get-traffic-data] Routes API status:', response.status, `latency: ${gEnd - gStart}ms`);
+    console.log('[get-traffic-data] TomTom Routing API status:', response.status, `latency: ${gEnd - gStart}ms`);
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('[get-traffic-data] Routes API error:', response.status, errorText);
-      throw new Error(`Google Routes API error: ${response.status} - ${errorText}`);
+      console.error('[get-traffic-data] TomTom Routing API error:', response.status, errorText);
+      throw new Error(`TomTom Routing API error: ${response.status} - ${errorText}`);
     }
 
     const data = await response.json();
     
-    if (!data.routes || data.routes.length === 0) {
+    if (!data.routes || data.routes.length === 0 || !data.routes[0].summary) {
       console.warn('[get-traffic-data] No routes returned');
       throw new Error('No routes found');
     }
 
     const route = data.routes[0];
-    const distanceMeters = route.distanceMeters;
-    const durationSeconds = parseInt(route.duration?.replace('s', '') || '0');
-    const staticDurationSeconds = parseInt(route.staticDuration?.replace('s', '') || '0');
+    const distanceMeters = route.summary.lengthInMeters;
+    const durationSeconds = route.summary.travelTimeInSeconds;
+    const staticDurationSeconds = route.summary.noTrafficTravelTimeInSeconds || durationSeconds;
 
     console.log('[get-traffic-data] API data -> distance:', distanceMeters, 'duration:', durationSeconds);
 
@@ -278,7 +246,7 @@ serve(async (req) => {
       });
 
     // Clean old traffic cache entries
-    const maxCacheDuration = 60 * 60 * 1000;
+    const maxCacheDuration = 4 * 60 * 60 * 1000;
     const cacheExpiryCutoff = new Date(Date.now() - maxCacheDuration).toISOString();
     await supabase
       .from('traffic_cache')

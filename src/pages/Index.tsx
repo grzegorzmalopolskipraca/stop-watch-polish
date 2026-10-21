@@ -1063,7 +1063,7 @@ const Index = () => {
       <header className="sticky top-0 z-10 bg-card border-b border-border shadow-sm">
         <div className="container max-w-2xl mx-auto px-4 py-4">
           {/* Login Button */}
-          <div className="flex items-center justify-between gap-3 mb-2">
+          <div className="flex items-center gap-1 mb-2">
             <Link to="/auth">
               <Button 
                 className="bg-traffic-jedzie hover:bg-traffic-jedzie/90 text-traffic-jedzie-foreground"
@@ -1073,8 +1073,8 @@ const Index = () => {
                 Zaloguj się
               </Button>
             </Link>
-            <p className="min-w-0 text-right text-sm text-muted-foreground sm:text-base">
-              Zaloguj się i zobacz, o której godzinie najlepiej wyjeżdżać do pracy.
+            <p className="min-w-0 flex-1 text-left text-sm text-muted-foreground sm:text-base">
+              i zobacz, o której zajedziesz do pracy najszybciej.
             </p>
           </div>
           <div className="space-y-3">

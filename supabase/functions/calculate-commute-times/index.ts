@@ -9,6 +9,10 @@ const corsHeaders = {
 const SERVICE_NAME = 'calculate-commute-times';
 const DEFAULT_INTERVAL = 10;
 const FALLBACK_INTERVAL = 20;
+// The commute cron runs every 10 minutes. A 9-minute shared route cache
+// deduplicates users and missing-slot backfills while allowing each cron run
+// to get a fresh TomTom reading.
+const ROUTE_CACHE_TTL_MS = 9 * 60 * 1000;
 
 interface Profile {
   user_id: string;
@@ -266,6 +270,15 @@ function shouldSkipExecution(status: ServiceStatus | null): boolean {
 // All commute estimates use TomTom live traffic.
 type TrafficApiType = 'tomtom';
 
+function createRouteCacheKey(
+  originLat: number,
+  originLng: number,
+  destLat: number,
+  destLng: number,
+): string {
+  return `route_${originLat.toFixed(6)}_${originLng.toFixed(6)}_to_${destLat.toFixed(6)}_${destLng.toFixed(6)}`;
+}
+
 async function getTravelDuration(
   originLat: number,
   originLng: number,
@@ -274,8 +287,39 @@ async function getTravelDuration(
   apiKey: string,
   // deno-lint-ignore no-explicit-any
   supabase: any,
-  _trafficApi: TrafficApiType = 'tomtom'
+  _trafficApi: TrafficApiType,
+  requestCache: Map<string, { durationMinutes: number; cachedAt: number }>,
 ): Promise<number | null> {
+  const cacheKey = createRouteCacheKey(originLat, originLng, destLat, destLng);
+  const now = Date.now();
+  const inRequestCache = requestCache.get(cacheKey);
+  if (inRequestCache && now - inRequestCache.cachedAt < ROUTE_CACHE_TTL_MS) {
+    console.log(`[${SERVICE_NAME}] In-request route cache HIT (${cacheKey})`);
+    return inRequestCache.durationMinutes;
+  }
+
+  // Reuse the same route cache as street traffic and the automated monitor.
+  // It is deliberately shorter than the street cache so commute estimates
+  // remain current across the 10-minute cron schedule.
+  const { data: cachedRoute, error: cacheReadError } = await supabase
+    .from('traffic_cache')
+    .select('traffic_data, cached_at')
+    .eq('route_key', cacheKey)
+    .maybeSingle();
+
+  if (cacheReadError) {
+    console.warn(`[${SERVICE_NAME}] Could not read route cache:`, cacheReadError.message);
+  } else if (cachedRoute) {
+    const cachedAt = new Date(cachedRoute.cached_at).getTime();
+    const durationSeconds = cachedRoute.traffic_data?.routes?.[0]?.legs?.[0]?.duration_in_traffic?.value;
+    if (now - cachedAt < ROUTE_CACHE_TTL_MS && typeof durationSeconds === 'number' && durationSeconds > 0) {
+      const durationMinutes = Math.round(durationSeconds / 60);
+      requestCache.set(cacheKey, { durationMinutes, cachedAt });
+      console.log(`[${SERVICE_NAME}] Shared route cache HIT (age ${Math.round((now - cachedAt) / 1000)}s)`);
+      return durationMinutes;
+    }
+  }
+
   const locations = `${originLat},${originLng}:${destLat},${destLng}`;
   const url = new URL(`https://api.tomtom.com/routing/1/calculateRoute/${locations}/json`);
   url.searchParams.set('key', apiKey);
@@ -302,8 +346,37 @@ async function getTravelDuration(
       }
 
       const durationSeconds = data?.routes?.[0]?.summary?.travelTimeInSeconds;
-      if (typeof durationSeconds === 'number' && durationSeconds > 0) {
-        return Math.round(durationSeconds / 60);
+      const summary = data?.routes?.[0]?.summary;
+      if (typeof durationSeconds === 'number' && durationSeconds > 0 && typeof summary?.lengthInMeters === 'number') {
+        const staticDurationSeconds = summary.noTrafficTravelTimeInSeconds || durationSeconds;
+        const trafficData = {
+          routes: [{
+            legs: [{
+              distance: { value: summary.lengthInMeters, text: `${(summary.lengthInMeters / 1000).toFixed(1)} km` },
+              duration: { value: staticDurationSeconds, text: `${Math.round(staticDurationSeconds / 60)} min` },
+              duration_in_traffic: { value: durationSeconds, text: `${Math.round(durationSeconds / 60)} min` },
+            }],
+          }],
+          status: 'OK',
+        };
+        const cachedAt = Date.now();
+        const durationMinutes = Math.round(durationSeconds / 60);
+        const { error: cacheWriteError } = await supabase
+          .from('traffic_cache')
+          .upsert({
+            route_key: cacheKey,
+            origin_lat: originLat,
+            origin_lng: originLng,
+            destination_lat: destLat,
+            destination_lng: destLng,
+            traffic_data: trafficData,
+            cached_at: new Date(cachedAt).toISOString(),
+          }, { onConflict: 'route_key' });
+        if (cacheWriteError) {
+          console.warn(`[${SERVICE_NAME}] Could not save route cache:`, cacheWriteError.message);
+        }
+        requestCache.set(cacheKey, { durationMinutes, cachedAt });
+        return durationMinutes;
       }
       await logError(supabase, SERVICE_NAME, 'TOMTOM_API_ERROR',
         'TomTom response did not include a route travel time', { attempt, response: data });
@@ -494,6 +567,7 @@ serve(async (req) => {
     let processedCount = 0;
     const errors: string[] = [];
     const processedSlots: string[] = [];
+    const requestRouteCache = new Map<string, { durationMinutes: number; cachedAt: number }>();
 
     for (const profile of profiles as Profile[]) {
       // Get schedule for current day
@@ -558,7 +632,8 @@ serve(async (req) => {
           profile.work_lng!,
           tomtomApiKey,
           supabase,
-          userTrafficApi
+          userTrafficApi,
+          requestRouteCache
         );
         
         if (duration !== null) {
@@ -611,7 +686,8 @@ serve(async (req) => {
           profile.home_lng!,
           tomtomApiKey,
           supabase,
-          userTrafficApi
+          userTrafficApi,
+          requestRouteCache
         );
         
         if (duration !== null) {

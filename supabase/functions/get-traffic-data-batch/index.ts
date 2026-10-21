@@ -33,9 +33,15 @@ interface RouteResult {
 // TomTom's free tier is limited. Cache daytime traffic for an hour and
 // overnight traffic for three hours to constrain automated API usage.
 function getCacheDuration(): number {
-  const now = new Date();
-  const hour = now.getHours();
-  const minutes = now.getMinutes();
+  // Edge Functions run in UTC; use the application's local traffic timezone.
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Europe/Warsaw',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(new Date());
+  const hour = Number(parts.find((part) => part.type === 'hour')?.value ?? 0);
+  const minutes = Number(parts.find((part) => part.type === 'minute')?.value ?? 0);
   const timeInMinutes = hour * 60 + minutes;
 
   // Daytime: 6:30 AM (390 min) - 8:00 PM (1200 min)
@@ -81,7 +87,11 @@ serve(async (req) => {
 
     const cacheDuration = getCacheDuration();
     const cacheDurationMinutes = Math.floor(cacheDuration / (60 * 1000));
-    const currentHour = new Date().getHours();
+    const currentHour = Number(new Intl.DateTimeFormat('en-GB', {
+      timeZone: 'Europe/Warsaw',
+      hour: '2-digit',
+      hourCycle: 'h23',
+    }).formatToParts(new Date()).find((part) => part.type === 'hour')?.value ?? 0);
     const isRushHour = (currentHour >= 7 && currentHour <= 10) || (currentHour >= 16 && currentHour <= 19);
     console.log(`[Batch] Current time: ${currentHour}:00, Cache duration: ${cacheDurationMinutes}min (${isRushHour ? 'RUSH HOUR' : 'off-peak'})`);
 

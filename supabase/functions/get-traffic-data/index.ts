@@ -15,9 +15,15 @@ interface TrafficRequest {
 // TomTom's free tier is limited. Keep route requests cached for at least one
 // hour during the day and three hours overnight.
 function getCacheDuration(): number {
-  const now = new Date();
-  const hour = now.getHours();
-  const minutes = now.getMinutes();
+  // Edge Functions run in UTC; use the application's local traffic timezone.
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Europe/Warsaw',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(new Date());
+  const hour = Number(parts.find((part) => part.type === 'hour')?.value ?? 0);
+  const minutes = Number(parts.find((part) => part.type === 'minute')?.value ?? 0);
   const timeInMinutes = hour * 60 + minutes;
 
   // Daytime: 6:30 AM (390 min) - 8:00 PM (1200 min)

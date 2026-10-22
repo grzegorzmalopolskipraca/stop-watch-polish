@@ -65,10 +65,26 @@ export const WROCLAW_ROADS: RoadPage[] = catalogFile.roads.map((road) => {
 
 export const UNMONITORED_ROADS = WROCLAW_ROADS.filter((road) => !road.monitoredStreet);
 
+const ROADS_SORTED_BY_NAME = [...WROCLAW_ROADS].sort((left, right) =>
+  left.name.localeCompare(right.name, "pl-PL", { sensitivity: "base" }) || left.id.localeCompare(right.id),
+);
+
 export function getUnmonitoredRoadBySlug(slug: string): RoadPage | null {
   return UNMONITORED_ROADS.find((road) => road.pageSlug === slug) ?? null;
 }
 
 export function getRoadPageHref(road: RoadPage): string {
   return `/ulica/${road.pageSlug}/`;
+}
+
+export function getAdjacentRoads(road: RoadPage, count = 6): RoadPage[] {
+  const currentIndex = ROADS_SORTED_BY_NAME.findIndex((item) => item.id === road.id);
+  if (currentIndex < 0 || count <= 0) return [];
+
+  const beforeCount = Math.ceil(count / 2);
+  const afterCount = Math.floor(count / 2);
+  return [
+    ...ROADS_SORTED_BY_NAME.slice(Math.max(0, currentIndex - beforeCount), currentIndex),
+    ...ROADS_SORTED_BY_NAME.slice(currentIndex + 1, currentIndex + afterCount + 1),
+  ];
 }

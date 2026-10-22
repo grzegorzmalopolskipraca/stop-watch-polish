@@ -15,7 +15,9 @@ Odpowiadać na lokalne zapytania takie jak „korki Borowska Wrocław”, „ruc
 - Statystyki pochodzą z `traffic_reports` i `incident_reports`. Funkcja `get_street_seo_stats` zwraca historię dla monitorowanej ulicy, a `get_wroclaw_seo_stats` — miejskie podsumowanie i głosy w jednym odczycie.
 - Miejskie zestawienia liczą udział zapisów ze spowolnieniem według pory dnia i ulicy, zgłoszenia incydentów z ostatnich 12 miesięcy oraz głosy. Pokazują liczbę próbek i opisują ograniczony zakres monitoringu.
 - Wejście na stronę nie odpytuje TomTom ani modelu AI. Dane pochodzą wyłącznie z zapisanych raportów Supabase. React Query buforuje statystyki miejskie przez 30 minut, głosy przez 5 minut.
-- Strona drogi, która nie jest monitorowana, pozostaje `noindex` do uzyskania co najmniej 3 głosów. Dopiero wtedy ma unikalny sygnał zainteresowania mieszkańców. Te strony nie są umieszczane w sitemapie, dopóki są `noindex`; wszystkie są dostępne z katalogu. Zapobiega to wysyłaniu do indeksu tysięcy niemal pustych stron.
+- Wszystkie strony dróg mają `index,follow` i są dodawane do sitemap podczas builda. Każda ma odnośnik do katalogu, listę wszystkich monitorowanych ulic oraz do sześciu sąsiednich nazw z katalogu (do trzech przy krawędzi listy). Katalog zawiera bezpośrednie, crawlable linki do wszystkich stron, pogrupowane alfabetycznie.
+- `robots.txt` jawnie zezwala Googlebotowi i Bingbotowi na `/ulica/` oraz `/ulice-wroclawia/`; strony konta i zaplecza pozostają zablokowane dla crawlerów.
+- Sitemap i linki ułatwiają odkrycie adresów, ale nie gwarantują, że Google zaindeksuje każdą stronę. Monitoruj raporty indeksowania w Search Console i reaguj na ocenę jakości oraz realne dane z głosowań i statystyk.
 - Dla głosowania publiczne RPC zwraca wyłącznie nazwy dróg i liczniki. Odczyt `street_votes.voter_ips` został cofnięty rolom `anon` i `authenticated`.
 
 ## Wdrożenie
@@ -27,7 +29,7 @@ Przed udostępnieniem nowych funkcji należy zastosować obie migracje:
 
 Drugą migrację trzeba zastosować razem z aktualizacją Edge Function `submit-street-vote`; formularz głosowania nie wysyła już listy monitorowanych ulic z przeglądarki.
 
-Build tworzy katalog HTML dla wszystkich 2 384 dróg. Do `sitemap.xml` trafiają katalog i 14 monitorowanych stron; nieindeksowane jeszcze strony głosowania są odkrywane przez katalog. Po publikacji należy zastosować migracje i opublikować Edge Function, przesłać `https://ejedzie.pl/sitemap.xml` w Google Search Console oraz sprawdzić kilka URL-i narzędziem Inspekcja adresu URL.
+Build tworzy katalog HTML i wpisy sitemap dla wszystkich 2 384 dróg oraz katalogu. Po publikacji należy zastosować migracje i opublikować Edge Function, przesłać `https://ejedzie.pl/sitemap.xml` w Google Search Console oraz sprawdzić kilka URL-i narzędziem Inspekcja adresu URL.
 
 ## Kolejne kroki SEO
 

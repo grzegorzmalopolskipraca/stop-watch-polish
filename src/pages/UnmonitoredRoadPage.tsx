@@ -5,11 +5,8 @@ import RoadVoteCard from "@/components/RoadVoteCard";
 import WroclawTrafficInsights from "@/components/WroclawTrafficInsights";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { useWroclawSeoStats } from "@/hooks/useWroclawSeoStats";
-import { getUnmonitoredRoadBySlug } from "@/utils/wroclawRoadCatalog";
+import { getAdjacentRoads, getRoadPageHref, getUnmonitoredRoadBySlug } from "@/utils/wroclawRoadCatalog";
 import { STREET_SLUGS } from "@/utils/streetSlug";
-
-const MINIMUM_VOTES_FOR_INDEX = 3;
 
 function RoadNotFound() {
   return (
@@ -26,11 +23,10 @@ function RoadNotFound() {
 export default function UnmonitoredRoadPage() {
   const { slug = "" } = useParams();
   const road = getUnmonitoredRoadBySlug(slug);
-  const { data: stats } = useWroclawSeoStats(Boolean(road));
 
   if (!road) return <RoadNotFound />;
 
-  const currentVotes = stats?.votes.find((vote) => vote.street_name.trim().toLocaleLowerCase("pl-PL") === road.name.trim().toLocaleLowerCase("pl-PL"))?.votes ?? 0;
+  const adjacentRoads = getAdjacentRoads(road);
   const canonical = `https://ejedzie.pl/ulica/${road.pageSlug}/`;
   const title = `Korki i utrudnienia — ${road.displayName}, Wrocław | eJedzie.pl`;
   const description = `${road.displayName} nie jest jeszcze monitorowana przez eJedzie.pl. Zagłosuj na pomiary ruchu i sprawdź miejskie statystyki korków, remontów i zdarzeń drogowych.`;
@@ -63,8 +59,6 @@ export default function UnmonitoredRoadPage() {
         description={description}
         canonical={canonical}
         jsonLd={structuredData}
-        noindex={currentVotes < MINIMUM_VOTES_FOR_INDEX}
-        followWhenNoindex
       />
       <main className="mx-auto max-w-4xl space-y-7 px-4 py-5 pb-12 sm:space-y-9 sm:px-6 sm:py-8">
         <header className="space-y-4">
@@ -90,11 +84,24 @@ export default function UnmonitoredRoadPage() {
           <h2 className="text-xl font-semibold">Ulice już objęte monitoringiem</h2>
           <p className="text-sm leading-relaxed text-muted-foreground">Na tych stronach znajdziesz raporty zapisane bezpośrednio dla danej ulicy.</p>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-            {STREET_SLUGS.slice(0, 6).map((street) => (
+            {STREET_SLUGS.map((street) => (
               <Link key={street.slug} to={`/ulica/${street.slug}/`} className="flex min-h-11 items-center rounded-lg border bg-card px-3 py-2 text-sm hover:border-primary hover:text-primary">
                 Korki: {street.name}
               </Link>
             ))}
+          </div>
+          <div className="space-y-2 pt-2">
+            <h2 className="text-lg font-semibold">Więcej ulic i dróg z katalogu</h2>
+            <p className="text-sm leading-relaxed text-muted-foreground">Inne pozycje z wykazu, uporządkowane alfabetycznie:</p>
+            <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+              {adjacentRoads.map((relatedRoad) => (
+                <li key={relatedRoad.id}>
+                  <Link to={getRoadPageHref(relatedRoad)} className="flex min-h-11 items-center rounded-lg border bg-card px-3 py-2 text-sm hover:border-primary hover:text-primary">
+                    {relatedRoad.displayName}
+                  </Link>
+                </li>
+              ))}
+            </ul>
           </div>
           <Card className="bg-muted/30">
             <CardContent className="p-4 text-sm leading-relaxed text-muted-foreground">

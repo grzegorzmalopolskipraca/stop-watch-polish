@@ -46,11 +46,13 @@ try {
       ? entry.replace(/<lastmod>[^<]*<\/lastmod>/, `<lastmod>${today}</lastmod>`)
       : entry);
   const monitoredPaths = new Set(STREET_SLUGS.map(({ slug }) => `/ulica/${slug}`));
-  const sitemapPaths = [...monitoredPaths, "/ulice-wroclawia"];
+  const streetPaths = PRERENDER_PATHS.filter((routePath) => routePath.startsWith("/ulica/"));
+  const sitemapPaths = [...new Set([...streetPaths, "/ulice-wroclawia"])];
   const generatedEntries = sitemapPaths.map((routePath) => {
     const monitored = monitoredPaths.has(routePath);
-    const priority = routePath === "/ulice-wroclawia" ? "0.8" : "0.9";
-    const changefreq = monitored ? "daily" : "weekly";
+    const directory = routePath === "/ulice-wroclawia";
+    const priority = directory ? "0.8" : monitored ? "0.9" : "0.6";
+    const changefreq = monitored ? "daily" : directory ? "weekly" : "monthly";
     return `  <url>\n    <loc>https://ejedzie.pl${routePath}/</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>${changefreq}</changefreq>\n    <priority>${priority}</priority>\n  </url>`;
   });
   const openingTag = sitemap.match(/<urlset[^>]*>/)?.[0];

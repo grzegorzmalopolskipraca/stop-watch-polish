@@ -12,6 +12,7 @@ import MapLocationPicker from '@/components/MapLocationPicker';
 import Seo from "@/components/Seo";
 import { Slider } from '@/components/ui/slider';
 import { getBestTravelTimes, type CommuteTravelTimeRecord } from '@/utils/commuteTravelTimes';
+import SupportCard from '@/components/SupportCard';
 
 interface CommuteSchedule {
   id: string;
@@ -802,6 +803,10 @@ const Konto = () => {
           </CardContent>
         </Card>
       </main>
+
+      <div className="max-w-4xl mx-auto px-3 sm:px-4">
+        <SupportCard />
+      </div>
 
       {/* Footer */}
       <footer className="max-w-4xl mx-auto p-3 sm:p-4 mt-6 sm:mt-8 text-center text-xs sm:text-sm text-muted-foreground">

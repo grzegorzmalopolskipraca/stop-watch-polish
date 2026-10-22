@@ -52,24 +52,7 @@ import { ArrowUp, ArrowDown, Bell, BellOff, Download, Share2, Printer, Users, Ba
 import { subscribeToOneSignal, unsubscribeFromOneSignal, isOneSignalSubscribed } from "@/utils/onesignal";
 import { predictTrafficIntervals, groupIntervalsIntoRanges } from "@/utils/trafficPrediction";
 import Seo from "@/components/Seo";
-import { streetToSlug } from "@/utils/streetSlug";
-
-const STREETS = [
-  "Borowska",
-  "Buforowa",
-  "Grabiszyńska",
-  "Grota Roweckiego",
-  "Hallera",
-  "Karkonoska",
-  "Ołtaszyńska",
-  "Opolska",
-  "Parafialna",
-  "Powstańców Śląskich",
-  "Radosna",
-  "Sudecka",
-  "Ślężna",
-  "Zwycięska",
-];
+import { slugToStreet, STREETS, streetToSlug } from "@/utils/streetSlug";
 
 const STATUS_CONFIG = {
   stoi: {
@@ -99,6 +82,11 @@ interface Report {
 
 const Index = () => {
   const [selectedStreet, setSelectedStreet] = useState<string>(() => {
+    const requestedStreet = new URLSearchParams(window.location.search).get("street");
+    const streetFromLink = requestedStreet
+      ? slugToStreet(requestedStreet) ?? STREETS.find((street) => street.toLocaleLowerCase("pl-PL") === requestedStreet.toLocaleLowerCase("pl-PL"))
+      : null;
+    if (streetFromLink) return streetFromLink;
     const savedStreet = localStorage.getItem('selectedStreet');
     return savedStreet && STREETS.includes(savedStreet) ? savedStreet : "Zwycięska";
   });
@@ -1718,12 +1706,14 @@ const Index = () => {
             Statystyki
           </Link>
         </div>
-        {/* SEO: indexable links to per-street pages (hidden visually) */}
-        <nav aria-label="Monitorowane ulice we Wrocławiu" className="sr-only">
-          <ul>
-            {STREETS.map((s) => (
-              <li key={s}>
-                <Link to={`/ulica/${streetToSlug(s)}`}>Korki {s} Wrocław</Link>
+        <nav aria-label="Korki i raporty na monitorowanych ulicach Wrocławia" className="mt-5 border-t border-border px-4 pt-5">
+          <h2 className="mb-3 text-center text-base font-semibold">Sprawdź korki i raporty na ulicach Wrocławia</h2>
+          <ul className="mx-auto grid max-w-4xl grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-3 lg:grid-cols-4">
+            {STREETS.map((street) => (
+              <li key={street}>
+                <Link className="text-sm text-muted-foreground underline-offset-4 hover:text-primary hover:underline" to={`/ulica/${streetToSlug(street)}/`}>
+                  Korki na ul. {street}
+                </Link>
               </li>
             ))}
           </ul>

@@ -864,6 +864,12 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_street_seo_stats: {
+        Args: {
+          p_street: string
+        }
+        Returns: Json
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

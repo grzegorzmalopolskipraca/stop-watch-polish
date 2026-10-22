@@ -17,6 +17,27 @@ export const STREETS = [
 
 export type StreetName = (typeof STREETS)[number];
 
+const STREET_LOCATIVE_FORMS: Record<StreetName, string> = {
+  Borowska: "Borowskiej",
+  Buforowa: "Buforowej",
+  Grabiszyńska: "Grabiszyńskiej",
+  "Grota Roweckiego": "Grota Roweckiego",
+  Hallera: "Hallera",
+  Karkonoska: "Karkonoskiej",
+  Ołtaszyńska: "Ołtaszyńskiej",
+  Opolska: "Opolskiej",
+  Parafialna: "Parafialnej",
+  "Powstańców Śląskich": "Powstańców Śląskich",
+  Radosna: "Radosnej",
+  Sudecka: "Sudeckiej",
+  Ślężna: "Ślężnej",
+  Zwycięska: "Zwycięskiej",
+};
+
+export function streetInLocative(street: StreetName): string {
+  return STREET_LOCATIVE_FORMS[street];
+}
+
 const PL_MAP: Record<string, string> = {
   ą: "a", ć: "c", ę: "e", ł: "l", ń: "n", ó: "o", ś: "s", ż: "z", ź: "z",
   Ą: "a", Ć: "c", Ę: "e", Ł: "l", Ń: "n", Ó: "o", Ś: "s", Ż: "z", Ź: "z",

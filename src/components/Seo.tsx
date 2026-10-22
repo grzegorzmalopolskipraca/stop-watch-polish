@@ -5,6 +5,7 @@ interface SeoProps {
   description: string;
   canonical?: string;
   noindex?: boolean;
+  followWhenNoindex?: boolean;
   ogImage?: string;
   ogType?: string;
   jsonLd?: Record<string, unknown> | Record<string, unknown>[];
@@ -19,6 +20,7 @@ export const Seo = ({
   description,
   canonical,
   noindex = false,
+  followWhenNoindex = false,
   ogImage = DEFAULT_OG,
   ogType = "website",
   jsonLd,
@@ -37,7 +39,7 @@ export const Seo = ({
       <link rel="canonical" href={url} />
       <meta
         name="robots"
-        content={noindex ? "noindex,nofollow" : "index,follow,max-image-preview:large,max-snippet:-1"}
+        content={noindex ? (followWhenNoindex ? "noindex,follow" : "noindex,nofollow") : "index,follow,max-image-preview:large,max-snippet:-1"}
       />
       <meta property="og:title" content={fullTitle} />
       <meta property="og:description" content={desc} />

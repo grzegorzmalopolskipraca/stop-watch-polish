@@ -131,15 +131,11 @@ const Statystyki = () => {
     }
 
     // 2. Top voted streets
-    const { data: streetsData } = await supabase
-      .from("street_votes")
-      .select("*")
-      .order("votes", { ascending: false })
-      .limit(10);
+    const { data: streetsData } = await supabase.rpc("get_public_street_votes");
     
     if (streetsData) {
       setTopStreets(
-        streetsData.map((s) => ({
+        streetsData.slice(0, 10).map((s) => ({
           name: s.street_name,
           votes: s.votes,
         }))

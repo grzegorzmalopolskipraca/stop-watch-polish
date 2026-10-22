@@ -1,8 +1,22 @@
 User-agent: Googlebot
 Allow: /
+Allow: /ulica/
+Allow: /ulice-wroclawia/
+Disallow: /konto
+Disallow: /auth
+Disallow: /kupon
+Disallow: /push
+Disallow: /errors
 
 User-agent: Bingbot
 Allow: /
+Allow: /ulica/
+Allow: /ulice-wroclawia/
+Disallow: /konto
+Disallow: /auth
+Disallow: /kupon
+Disallow: /push
+Disallow: /errors
 
 User-agent: Twitterbot
 Allow: /

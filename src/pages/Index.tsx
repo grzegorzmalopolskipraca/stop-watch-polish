@@ -1686,7 +1686,7 @@ const Index = () => {
 
         {/* Street Voting */}
         <section>
-          <StreetVoting existingStreets={STREETS} />
+          <StreetVoting />
         </section>
 
         <div className="flex flex-wrap justify-center gap-4 mt-6 pt-4 pb-28 border-t border-border">
@@ -1706,8 +1706,11 @@ const Index = () => {
             Statystyki
           </Link>
         </div>
-        <nav aria-label="Korki i raporty na monitorowanych ulicach Wrocławia" className="mt-5 border-t border-border px-4 pt-5">
-          <h2 className="mb-3 text-center text-base font-semibold">Sprawdź korki i raporty na ulicach Wrocławia</h2>
+        <nav aria-label="Raporty ruchu na monitorowanych ulicach Wrocławia" className="mt-5 border-t border-border px-4 pt-5">
+          <h2 className="mb-2 text-center text-base font-semibold">Raporty z monitorowanych ulic Wrocławia</h2>
+          <p className="mb-4 text-center text-sm text-muted-foreground">
+            <Link to="/ulice-wroclawia/" className="font-medium text-primary hover:underline">Przeszukaj katalog wszystkich ulic i dróg Wrocławia</Link>
+          </p>
           <ul className="mx-auto grid max-w-4xl grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-3 lg:grid-cols-4">
             {STREETS.map((street) => (
               <li key={street}>

@@ -870,6 +870,17 @@ export type Database = {
         }
         Returns: Json
       }
+      get_wroclaw_seo_stats: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
+      get_public_street_votes: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          street_name: string
+          votes: number
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

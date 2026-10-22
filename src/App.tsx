@@ -21,7 +21,8 @@ const Kupon = lazy(() => import("./pages/Kupon"));
 const Auth = lazy(() => import("./pages/Auth"));
 const Konto = lazy(() => import("./pages/Konto"));
 const Errors = lazy(() => import("./pages/Errors"));
-const StreetPage = lazy(() => import("./pages/StreetPage"));
+const StreetPage = lazy(() => import("./pages/StreetRoute"));
+const WroclawRoadDirectory = lazy(() => import("./pages/WroclawRoadDirectory"));
 
 const queryClient = new QueryClient();
 
@@ -73,6 +74,7 @@ const App = () => (
             <Route path="/auth" element={<Auth />} />
             <Route path="/konto" element={<Konto />} />
             <Route path="/errors" element={<Errors />} />
+            <Route path="/ulice-wroclawia" element={<WroclawRoadDirectory />} />
             <Route path="/ulica/:slug" element={<StreetPage />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />

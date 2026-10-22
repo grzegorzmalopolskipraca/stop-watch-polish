@@ -43,6 +43,12 @@
     <priority>0.4</priority>
   </url>
   <url>
+    <loc>https://ejedzie.pl/ulice-wroclawia/</loc>
+    <lastmod>2026-10-22</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
     <loc>https://ejedzie.pl/ulica/borowska/</loc>
     <lastmod>2026-10-22</lastmod>
     <changefreq>hourly</changefreq>

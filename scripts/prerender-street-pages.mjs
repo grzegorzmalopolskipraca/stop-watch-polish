@@ -23,32 +23,40 @@ function removeExistingSeoTags(html) {
 try {
   const template = await readFile(path.join(distRoot, "index.html"), "utf8");
   const serverBundle = path.join(temporaryBuild, "ssg.js");
-  const { renderStreetPage, STREET_SLUGS } = await import(pathToFileURL(serverBundle).href);
+  const { renderPage, PRERENDER_PATHS, STREET_SLUGS } = await import(pathToFileURL(serverBundle).href);
 
-  for (const { slug } of STREET_SLUGS) {
-    const { markup, head } = renderStreetPage(slug);
+  for (const routePath of PRERENDER_PATHS) {
+    const { markup, head } = renderPage(routePath);
     const rootMarkup = `<div id="root" data-prerendered="true">${markup}</div>`;
     const html = removeExistingSeoTags(template)
       .replace('<div id="root"></div>', rootMarkup)
       .replace("</head>", `${head}\n</head>`);
-    const routeDirectory = path.join(distRoot, "ulica", slug);
+    const routeDirectory = path.join(distRoot, routePath.replace(/^\/+|\/+$/g, ""));
     await mkdir(routeDirectory, { recursive: true });
     await writeFile(path.join(routeDirectory, "index.html"), html);
   }
 
   const sitemapPath = path.join(distRoot, "sitemap.xml");
-  let sitemap = await readFile(sitemapPath, "utf8");
+  const sitemap = await readFile(sitemapPath, "utf8");
   const today = new Date().toISOString().slice(0, 10);
-  sitemap = sitemap.replace(/<url>[\s\S]*?<\/url>/g, (urlEntry) => {
-    if (urlEntry.includes("<loc>https://ejedzie.pl/</loc>")) {
-      return urlEntry.replace(/<lastmod>[^<]*<\/lastmod>/, `<lastmod>${today}</lastmod>`);
-    }
-    if (!urlEntry.includes("https://ejedzie.pl/ulica/")) return urlEntry;
-    return urlEntry
-      .replace(/(<loc>https:\/\/ejedzie\.pl\/ulica\/[^<]+?)(\/?)(<\/loc>)/, "$1/$3")
-      .replace(/<lastmod>[^<]*<\/lastmod>/, `<lastmod>${today}</lastmod>`);
+  const urlEntries = [...sitemap.matchAll(/<url>[\s\S]*?<\/url>/g)].map(([entry]) => entry);
+  const keptEntries = urlEntries
+    .filter((entry) => !entry.includes("https://ejedzie.pl/ulica/") && !entry.includes("https://ejedzie.pl/ulice-wroclawia/"))
+    .map((entry) => entry.includes("<loc>https://ejedzie.pl/</loc>")
+      ? entry.replace(/<lastmod>[^<]*<\/lastmod>/, `<lastmod>${today}</lastmod>`)
+      : entry);
+  const monitoredPaths = new Set(STREET_SLUGS.map(({ slug }) => `/ulica/${slug}`));
+  const sitemapPaths = [...monitoredPaths, "/ulice-wroclawia"];
+  const generatedEntries = sitemapPaths.map((routePath) => {
+    const monitored = monitoredPaths.has(routePath);
+    const priority = routePath === "/ulice-wroclawia" ? "0.8" : "0.9";
+    const changefreq = monitored ? "daily" : "weekly";
+    return `  <url>\n    <loc>https://ejedzie.pl${routePath}/</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>${changefreq}</changefreq>\n    <priority>${priority}</priority>\n  </url>`;
   });
-  await writeFile(sitemapPath, sitemap);
+  const openingTag = sitemap.match(/<urlset[^>]*>/)?.[0];
+  if (!openingTag) throw new Error("Invalid sitemap: missing urlset opening tag");
+  const updatedSitemap = `${openingTag}\n${[...keptEntries, ...generatedEntries].join("\n")}\n</urlset>\n`;
+  await writeFile(sitemapPath, updatedSitemap);
 } finally {
   await rm(temporaryBuild, { recursive: true, force: true });
 }

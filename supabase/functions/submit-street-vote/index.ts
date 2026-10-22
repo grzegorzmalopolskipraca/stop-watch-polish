@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.76.1';
 import { z } from 'https://deno.land/x/zod@v3.22.4/mod.ts';
+import { STREETS } from '../../../src/utils/streetSlug.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -9,7 +10,6 @@ const corsHeaders = {
 const streetVoteSchema = z.object({
   streetName: z.string().trim().min(1).max(100),
   userFingerprint: z.string().min(1),
-  existingStreets: z.array(z.string()),
 });
 
 // Check rate limit for blocked users
@@ -124,7 +124,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    const { streetName, userFingerprint, existingStreets } = validationResult.data;
+    const { streetName, userFingerprint } = validationResult.data;
 
     // Check if user is blocked
     const rateLimitCheck = await checkRateLimit(supabase, userFingerprint, 'street_vote_blocked');
@@ -165,8 +165,8 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Check if street already exists in main list
-    for (const existingStreet of existingStreets) {
+    // Use the server-side monitored list; never trust a list supplied by the browser.
+    for (const existingStreet of STREETS) {
       if (isSimilarStreet(streetName, existingStreet)) {
         return new Response(
           JSON.stringify({ error: 'Ta ulica już jest na liście lub istnieje podobna nazwa' }),

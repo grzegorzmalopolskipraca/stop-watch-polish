@@ -1,85 +1,35 @@
-import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { useEffect, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ThumbsUp, Share2 } from "lucide-react";
 import { toast } from "sonner";
+import {
+  getLocallyVotedStreets,
+  getOrCreateStreetVoteFingerprint,
+  hasLocallyVotedForStreet,
+  PUBLIC_STREET_VOTES_QUERY_KEY,
+  rememberStreetVote,
+  submitStreetVote,
+  usePublicStreetVotes,
+  WROCLAW_SEO_STATS_QUERY_KEY,
+} from "@/hooks/useStreetVotes";
 
-interface StreetVote {
-  id: string;
-  street_name: string;
-  votes: number;
-  voter_ips: string[];
-}
-
-interface StreetVotingProps {
-  existingStreets: string[];
-}
-
-export const StreetVoting = ({ existingStreets }: StreetVotingProps) => {
-  const [votes, setVotes] = useState<StreetVote[]>([]);
+export const StreetVoting = () => {
+  const queryClient = useQueryClient();
+  const { data: votes = [], isPending } = usePublicStreetVotes();
   const [newStreetName, setNewStreetName] = useState("");
-  const [userIp, setUserIp] = useState<string>("");
+  const [userFingerprint, setUserFingerprint] = useState("");
+  const [votedStreets, setVotedStreets] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Get user IP or fingerprint
   useEffect(() => {
-    const getOrCreateFingerprint = () => {
-      let fingerprint = localStorage.getItem("userFingerprint");
-      if (!fingerprint) {
-        fingerprint = `user_${Math.random().toString(36).substring(2, 15)}_${Date.now()}`;
-        localStorage.setItem("userFingerprint", fingerprint);
-      }
-      return fingerprint;
-    };
-    setUserIp(getOrCreateFingerprint());
+    setUserFingerprint(getOrCreateStreetVoteFingerprint());
+    setVotedStreets(getLocallyVotedStreets());
   }, []);
 
-  // Fetch votes
-  const fetchVotes = async () => {
-    try {
-      const { data, error } = await supabase
-        .from("street_votes")
-        .select("*")
-        .order("votes", { ascending: false });
-
-      if (error) throw error;
-      setVotes((data || []).map(vote => ({
-        ...vote,
-        voter_ips: (vote.voter_ips as string[]) || []
-      })));
-    } catch (error) {
-      console.error("Error fetching votes:", error);
-    }
-  };
-
-  useEffect(() => {
-    fetchVotes();
-
-    // Subscribe to realtime updates
-    const channel = supabase
-      .channel("street-votes-updates")
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "street_votes",
-        },
-        () => {
-          fetchVotes();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
-
-  // Add or vote for a street
-  const handleVote = async (streetName: string, isNewStreet: boolean = false) => {
-    if (!userIp) {
+  const handleVote = async (streetName: string, isNewStreet = false) => {
+    if (!userFingerprint) {
       toast.error("Nie można zidentyfikować użytkownika");
       return;
     }
@@ -87,34 +37,19 @@ export const StreetVoting = ({ existingStreets }: StreetVotingProps) => {
     setIsLoading(true);
 
     try {
-      // Handle voting with content filtering
-      const { data, error } = await supabase.functions.invoke('submit-street-vote', {
-        body: {
-          streetName: streetName,
-          userFingerprint: userIp,
-          existingStreets: existingStreets,
-        },
-      });
-
-      if (error) {
-        console.error("Error:", error);
-        throw error;
-      }
-
-      if (data?.error) {
-        toast.error(data.error);
-        setIsLoading(false);
-        return;
-      }
-
-      toast.success(data.message);
+      const result = await submitStreetVote(streetName, userFingerprint);
+      rememberStreetVote(streetName);
+      setVotedStreets((current) => [...current, streetName]);
+      toast.success(result.message);
       if (isNewStreet) {
         setNewStreetName("");
       }
-      await fetchVotes();
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: PUBLIC_STREET_VOTES_QUERY_KEY }),
+        queryClient.invalidateQueries({ queryKey: WROCLAW_SEO_STATS_QUERY_KEY }),
+      ]);
     } catch (error) {
-      console.error("Error voting:", error);
-      toast.error("Błąd podczas głosowania");
+      toast.error(error instanceof Error ? error.message : "Błąd podczas głosowania");
     } finally {
       setIsLoading(false);
     }
@@ -127,10 +62,6 @@ export const StreetVoting = ({ existingStreets }: StreetVotingProps) => {
       return;
     }
     handleVote(trimmedName, true);
-  };
-
-  const hasUserVoted = (vote: StreetVote): boolean => {
-    return vote.voter_ips.includes(userIp);
   };
 
   const handleShare = async () => {
@@ -186,14 +117,16 @@ export const StreetVoting = ({ existingStreets }: StreetVotingProps) => {
 
       {/* Votes list */}
       <div className="space-y-2 max-h-96 overflow-y-auto">
-        {votes.length === 0 ? (
+        {isPending ? (
+          <p className="py-4 text-center text-sm text-muted-foreground">Wczytujemy wyniki głosowania…</p>
+        ) : votes.length === 0 ? (
           <p className="text-center text-muted-foreground text-sm py-4">
             Brak głosów. Dodaj pierwszą ulicę!
           </p>
         ) : (
           votes.map((vote) => (
             <div
-              key={vote.id}
+              key={vote.street_name}
               className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
             >
               <span className="font-medium">{vote.street_name}</span>
@@ -203,13 +136,13 @@ export const StreetVoting = ({ existingStreets }: StreetVotingProps) => {
                 </span>
                 <Button
                   size="sm"
-                  variant={hasUserVoted(vote) ? "secondary" : "default"}
+                  variant={hasLocallyVotedForStreet(vote.street_name, votedStreets) ? "secondary" : "default"}
                   onClick={() => handleVote(vote.street_name)}
-                  disabled={isLoading || hasUserVoted(vote)}
+                  disabled={isLoading || hasLocallyVotedForStreet(vote.street_name, votedStreets)}
                   className="gap-1"
                 >
                   <ThumbsUp className="h-4 w-4" />
-                  {hasUserVoted(vote) ? "Zagłosowano" : "Głosuj"}
+                  {hasLocallyVotedForStreet(vote.street_name, votedStreets) ? "Zagłosowano" : "Głosuj"}
                 </Button>
               </div>
             </div>

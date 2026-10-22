@@ -190,11 +190,11 @@ function StreetPage() {
       <main className="min-h-screen bg-background px-4 py-10">
         <Seo title={title} description={description} canonical={canonical} noindex />
         <div className="mx-auto max-w-3xl">
-          <Link className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground" to="/">
-            <ArrowLeft className="h-4 w-4" /> Strona główna
+          <Link className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground" to="/ulice-wroclawia/">
+            <ArrowLeft className="h-4 w-4" /> Katalog ulic Wrocławia
           </Link>
-          <h1 className="mt-6 text-3xl font-bold">Nie znaleźliśmy tej ulicy</h1>
-          <p className="mt-2 text-muted-foreground">Zobacz raporty dla jednej z monitorowanych ulic we Wrocławiu.</p>
+          <h1 className="mt-6 text-3xl font-bold">Nie znaleźliśmy tej drogi</h1>
+          <p className="mt-2 text-muted-foreground">Wyszukaj ją w oficjalnym katalogu albo sprawdź raporty z monitorowanych ulic.</p>
           <ul className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3">
             {STREET_SLUGS.map((item) => (
               <li key={item.slug}><Link className="text-primary underline-offset-4 hover:underline" to={`/ulica/${item.slug}/`}>{item.name}</Link></li>

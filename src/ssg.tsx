@@ -4,19 +4,29 @@ import { renderToString } from "react-dom/server";
 import { HelmetProvider } from "react-helmet-async";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import StreetPage from "@/pages/StreetPage";
+import UnmonitoredRoadPage from "@/pages/UnmonitoredRoadPage";
+import WroclawRoadDirectory from "@/pages/WroclawRoadDirectory";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import RouteLoading from "@/components/RouteLoading";
-import { STREET_SLUGS } from "@/utils/streetSlug";
+import { slugToStreet, STREET_SLUGS } from "@/utils/streetSlug";
+import { UNMONITORED_ROADS } from "@/utils/wroclawRoadCatalog";
 
 type HelmetContext = { helmet?: Record<string, { toString: () => string }> };
 
 export { STREET_SLUGS };
+export const PRERENDER_PATHS = [
+  ...STREET_SLUGS.map(({ slug }) => `/ulica/${slug}`),
+  ...UNMONITORED_ROADS.map(({ pageSlug }) => `/ulica/${pageSlug}`),
+  "/ulice-wroclawia",
+];
 
-export function renderStreetPage(slug: string) {
+export function renderPage(path: string) {
   const helmetContext: HelmetContext = {};
   const queryClient = new QueryClient();
+  const slug = path.split("/").filter(Boolean).at(-1) ?? "";
+  const streetPage = slugToStreet(slug) ? <StreetPage /> : <UnmonitoredRoadPage />;
   const originalConsoleError = console.error;
   console.error = (...args: unknown[]) => {
     const message = args.map(String).join(" ");
@@ -31,10 +41,11 @@ export function renderStreetPage(slug: string) {
           <TooltipProvider>
             <Toaster />
             <Sonner />
-            <MemoryRouter initialEntries={[`/ulica/${slug}`]}>
+            <MemoryRouter initialEntries={[path]}>
               <Suspense fallback={<RouteLoading />}>
                 <Routes>
-                  <Route path="/ulica/:slug" element={<StreetPage />} />
+                  <Route path="/ulica/:slug" element={streetPage} />
+                  <Route path="/ulice-wroclawia" element={<WroclawRoadDirectory />} />
                 </Routes>
               </Suspense>
             </MemoryRouter>
@@ -54,4 +65,8 @@ export function renderStreetPage(slug: string) {
     : "";
 
   return { markup, head };
+}
+
+export function renderStreetPage(slug: string) {
+  return renderPage(`/ulica/${slug}`);
 }

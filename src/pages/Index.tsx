@@ -44,10 +44,11 @@ import { RssTicker } from "@/components/RssTicker";
 import { SmsSubscription } from "@/components/SmsSubscription";
 import { WeatherForecast } from "@/components/WeatherForecast";
 import { CommuteOptimizer } from "@/components/CommuteOptimizer";
+import SupportCard from "@/components/SupportCard";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format, startOfDay, addMinutes } from "date-fns";
 import { pl } from "date-fns/locale";
-import { ArrowUp, ArrowDown, Bell, BellOff, ThumbsUp, Coffee, Pizza, Download, Share2, Printer, Users, Baby, Calendar, Activity, AlertTriangle, Bike, MessageSquare, HelpCircle } from "lucide-react";
+import { ArrowUp, ArrowDown, Bell, BellOff, Download, Share2, Printer, Users, Baby, Calendar, Activity, AlertTriangle, Bike, MessageSquare, HelpCircle } from "lucide-react";
 import { subscribeToOneSignal, unsubscribeFromOneSignal, isOneSignalSubscribed } from "@/utils/onesignal";
 import { predictTrafficIntervals, groupIntervalsIntoRanges } from "@/utils/trafficPrediction";
 import Seo from "@/components/Seo";
@@ -1616,23 +1617,7 @@ const Index = () => {
       {/* Footer */}
       <footer className="container max-w-2xl mx-auto px-4 py-6 text-center text-sm text-muted-foreground space-y-3">
         {/* Support Section */}
-        <div id="jak-korzystac" className="bg-card rounded-lg p-6 border border-border space-y-4 mb-6">
-          <h3 className="text-lg font-semibold text-foreground">
-            Nie chcę tracić życia w korkach, dlatego
-          </h3>
-          <div className="flex justify-center items-center gap-6 py-4">
-            <ThumbsUp className="w-12 h-12 text-primary" />
-            <Coffee className="w-12 h-12 text-primary" />
-            <Pizza className="w-12 h-12 text-primary" />
-          </div>
-          <Button
-            onClick={() => window.open('https://suppi.pl/ejedzie', '_blank')}
-            className="w-full h-14 text-lg font-bold"
-            size="lg"
-          >
-            Wspieram rozwój strony
-          </Button>
-        </div>
+        <SupportCard />
 
         {/* Use Cases */}
         <section className="bg-card rounded-lg p-6 border border-border space-y-4">

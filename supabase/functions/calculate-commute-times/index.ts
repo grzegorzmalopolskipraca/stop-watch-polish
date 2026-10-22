@@ -291,35 +291,42 @@ async function getTravelDuration(
   supabase: any,
   _trafficApi: TrafficApiType,
   requestCache: Map<string, { durationMinutes: number; cachedAt: number }>,
+  bypassCache = false,
 ): Promise<number | null> {
   const cacheKey = createRouteCacheKey(originLat, originLng, destLat, destLng);
   const now = Date.now();
-  const inRequestCache = requestCache.get(cacheKey);
-  if (inRequestCache && now - inRequestCache.cachedAt < ROUTE_CACHE_TTL_MS) {
-    console.log(`[${SERVICE_NAME}] In-request route cache HIT (${cacheKey})`);
-    return inRequestCache.durationMinutes;
+  if (!bypassCache) {
+    const inRequestCache = requestCache.get(cacheKey);
+    if (inRequestCache && now - inRequestCache.cachedAt < ROUTE_CACHE_TTL_MS) {
+      console.log(`[${SERVICE_NAME}] In-request route cache HIT (${cacheKey})`);
+      return inRequestCache.durationMinutes;
+    }
+
+    // Reuse the same route cache as street traffic and the automated monitor.
+    // It is deliberately shorter than the street cache so commute estimates
+    // remain current across the 10-minute cron schedule.
+    const { data: cachedRoute, error: cacheReadError } = await supabase
+      .from('traffic_cache')
+      .select('traffic_data, cached_at')
+      .eq('route_key', cacheKey)
+      .maybeSingle();
+
+    if (cacheReadError) {
+      console.warn(`[${SERVICE_NAME}] Could not read route cache:`, cacheReadError.message);
+    } else if (cachedRoute) {
+      const cachedAt = new Date(cachedRoute.cached_at).getTime();
+      const durationSeconds = cachedRoute.traffic_data?.routes?.[0]?.legs?.[0]?.duration_in_traffic?.value;
+      if (now - cachedAt < ROUTE_CACHE_TTL_MS && typeof durationSeconds === 'number' && durationSeconds > 0) {
+        const durationMinutes = Math.round(durationSeconds / 60);
+        requestCache.set(cacheKey, { durationMinutes, cachedAt });
+        console.log(`[${SERVICE_NAME}] Shared route cache HIT (age ${Math.round((now - cachedAt) / 1000)}s)`);
+        return durationMinutes;
+      }
+    }
   }
 
-  // Reuse the same route cache as street traffic and the automated monitor.
-  // It is deliberately shorter than the street cache so commute estimates
-  // remain current across the 10-minute cron schedule.
-  const { data: cachedRoute, error: cacheReadError } = await supabase
-    .from('traffic_cache')
-    .select('traffic_data, cached_at')
-    .eq('route_key', cacheKey)
-    .maybeSingle();
-
-  if (cacheReadError) {
-    console.warn(`[${SERVICE_NAME}] Could not read route cache:`, cacheReadError.message);
-  } else if (cachedRoute) {
-    const cachedAt = new Date(cachedRoute.cached_at).getTime();
-    const durationSeconds = cachedRoute.traffic_data?.routes?.[0]?.legs?.[0]?.duration_in_traffic?.value;
-    if (now - cachedAt < ROUTE_CACHE_TTL_MS && typeof durationSeconds === 'number' && durationSeconds > 0) {
-      const durationMinutes = Math.round(durationSeconds / 60);
-      requestCache.set(cacheKey, { durationMinutes, cachedAt });
-      console.log(`[${SERVICE_NAME}] Shared route cache HIT (age ${Math.round((now - cachedAt) / 1000)}s)`);
-      return durationMinutes;
-    }
+  if (bypassCache) {
+    console.log(`[${SERVICE_NAME}] Explicit user refresh; bypassing route cache (${cacheKey})`);
   }
 
   const locations = `${originLat},${originLng}:${destLat},${destLng}`;
@@ -488,13 +495,16 @@ serve(async (req) => {
     // Parse request body to check for manual/force call and traffic API preference
     let isManualCall = false;
     let fillMissing = false;
+    let refreshCurrentSlot = false;
     let requestedTrafficApi: TrafficApiType | null = null;
+    let manualUserId: string | null = null;
     try {
       const body = await req.text();
       if (body) {
         const parsed = JSON.parse(body);
         isManualCall = parsed.force === true;
-        fillMissing = parsed.fillMissing === true || isManualCall; // Always fill missing on manual calls
+        refreshCurrentSlot = isManualCall && parsed.refreshCurrentSlot === true;
+        fillMissing = parsed.fillMissing === true || (isManualCall && !refreshCurrentSlot);
         if (parsed.trafficApi) {
           requestedTrafficApi = parsed.trafficApi as TrafficApiType;
         }
@@ -503,7 +513,30 @@ serve(async (req) => {
       // Body parsing failed, treat as CRON call
     }
 
-    console.log(`Request type: ${isManualCall ? 'MANUAL' : 'CRON'}, fillMissing: ${fillMissing}, requestedTrafficApi: ${requestedTrafficApi || 'from_profile'}`);
+    if (isManualCall) {
+      const authorization = req.headers.get('Authorization');
+      const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY');
+      const accessToken = authorization?.match(/^Bearer\s+(.+)$/i)?.[1];
+
+      if (!accessToken || !supabaseAnonKey) {
+        return new Response(
+          JSON.stringify({ error: 'Authentication required for manual commute refresh' }),
+          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+
+      const authClient = createClient(supabaseUrl, supabaseAnonKey);
+      const { data: { user }, error: authError } = await authClient.auth.getUser(accessToken);
+      if (authError || !user) {
+        return new Response(
+          JSON.stringify({ error: 'Invalid session for manual commute refresh' }),
+          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+      manualUserId = user.id;
+    }
+
+    console.log(`Request type: ${isManualCall ? 'MANUAL' : 'CRON'}, fillMissing: ${fillMissing}, refreshCurrentSlot: ${refreshCurrentSlot}, requestedTrafficApi: ${requestedTrafficApi || 'from_profile'}`);
     
     
     // Only check interval for CRON calls, not manual calls
@@ -539,11 +572,15 @@ serve(async (req) => {
     console.log(`Running commute time calculation at ${currentTime} (Poland time) on day ${currentDayOfWeek} (${today})`);
 
     // Get all profiles with both home and work addresses set
-    const { data: profiles, error: profilesError } = await supabase
+    let profilesQuery = supabase
       .from('profiles')
       .select('*')
       .not('home_lat', 'is', null)
       .not('work_lat', 'is', null);
+    if (manualUserId) {
+      profilesQuery = profilesQuery.eq('user_id', manualUserId);
+    }
+    const { data: profiles, error: profilesError } = await profilesQuery;
 
     if (profilesError) {
       console.error('Error fetching profiles:', profilesError);
@@ -569,6 +606,8 @@ serve(async (req) => {
     let processedCount = 0;
     const errors: string[] = [];
     const processedSlots: string[] = [];
+    let currentSlotAvailable = false;
+    let commuteDayConfigured = false;
     const requestRouteCache = new Map<string, { durationMinutes: number; cachedAt: number }>();
 
     for (const profile of profiles as Profile[]) {
@@ -599,12 +638,21 @@ serve(async (req) => {
         console.log(`User ${profile.user_id}: No commute scheduled for day ${currentDayOfWeek}`);
         continue;
       }
+      commuteDayConfigured = true;
       
       // Determine which slots to process
       let toWorkSlots: string[] = [];
       let fromWorkSlots: string[] = [];
 
-      if (fillMissing) {
+      if (refreshCurrentSlot) {
+        if (isTimeInRange(currentTime, schedule.to_work_start, schedule.to_work_end)) {
+          toWorkSlots = [currentTime];
+        }
+        if (isTimeInRange(currentTime, schedule.from_work_start, schedule.from_work_end)) {
+          fromWorkSlots = [currentTime];
+        }
+        currentSlotAvailable ||= toWorkSlots.length > 0 || fromWorkSlots.length > 0;
+      } else if (fillMissing) {
         // Fill all missing slots up to current time
         const missing = await getMissingSlots(supabase, profile.user_id, today, currentDayOfWeek, schedule, currentTime);
         toWorkSlots = missing.toWork;
@@ -640,7 +688,8 @@ serve(async (req) => {
           tomtomApiKey,
           supabase,
           userTrafficApi,
-          requestRouteCache
+          requestRouteCache,
+          refreshCurrentSlot,
         );
         
         if (duration !== null) {
@@ -674,6 +723,7 @@ serve(async (req) => {
           }
         } else {
           console.log(`Failed to get to_work duration for user ${profile.user_id} at ${timeSlot}`);
+          errors.push(`User ${profile.user_id} to_work ${timeSlot}: TomTom returned no travel duration`);
         }
         
         // Small delay between API calls to avoid rate limiting
@@ -694,7 +744,8 @@ serve(async (req) => {
           tomtomApiKey,
           supabase,
           userTrafficApi,
-          requestRouteCache
+          requestRouteCache,
+          refreshCurrentSlot,
         );
         
         if (duration !== null) {
@@ -728,6 +779,7 @@ serve(async (req) => {
           }
         } else {
           console.log(`Failed to get from_work duration for user ${profile.user_id} at ${timeSlot}`);
+          errors.push(`User ${profile.user_id} from_work ${timeSlot}: TomTom returned no travel duration`);
         }
         
         // Small delay between API calls to avoid rate limiting
@@ -748,6 +800,8 @@ serve(async (req) => {
         message: "Commute times calculated",
         processed: processedCount,
         slots: processedSlots,
+        noCommuteToday: refreshCurrentSlot && !commuteDayConfigured,
+        outsideScheduleWindow: refreshCurrentSlot && commuteDayConfigured && !currentSlotAvailable,
         errors: errors.length > 0 ? errors : undefined,
         currentTime,
         currentDay: currentDayOfWeek,

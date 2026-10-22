@@ -11,6 +11,8 @@ import { User, Session } from '@supabase/supabase-js';
 import MapLocationPicker from '@/components/MapLocationPicker';
 import Seo from "@/components/Seo";
 import { Slider } from '@/components/ui/slider';
+import { getBestTravelTimes, type CommuteTravelTimeRecord } from '@/utils/commuteTravelTimes';
+import SupportCard from '@/components/SupportCard';
 
 interface CommuteSchedule {
   id: string;
@@ -28,13 +30,9 @@ interface AddressLocation {
   lng: number;
 }
 
-interface TravelTime {
-  departure_time: string;
-  travel_duration_minutes: number;
-  direction: 'to_work' | 'from_work';
+interface TravelTime extends CommuteTravelTimeRecord {
   travel_date: string;
   calculated_at: string;
-  day_of_week: number;
 }
 
 const DAYS_PL = ['Niedziela', 'Poniedziałek', 'Wtorek', 'Środa', 'Czwartek', 'Piątek', 'Sobota'];
@@ -189,10 +187,10 @@ const Konto = () => {
     setRefreshingTimes(true);
     
     try {
-      // Call the edge function with force=true to bypass interval check and fill missing slots
+      // Refresh only the current slot inside the configured commute window.
       // Always use the TomTom traffic provider.
       const { data, error } = await supabase.functions.invoke('calculate-commute-times', {
-        body: { force: true, fillMissing: true, trafficApi: 'tomtom' }
+        body: { force: true, refreshCurrentSlot: true, trafficApi: 'tomtom' }
       });
       
       if (error) {
@@ -210,14 +208,32 @@ const Konto = () => {
       // Reload travel times from database
       await loadTravelTimes(user.id);
       
-      const slotsInfo = data?.slots?.length > 0 
-        ? `Obliczono ${data.processed} czasów (TomTom Traffic): ${data.slots.join(', ')}.`
-        : `Obliczono ${data?.processed || 0} czasów dojazdu (TomTom Traffic).`;
-      
-      toast({
-        title: 'Odświeżono',
-        description: slotsInfo,
-      });
+      if (data?.noCommuteToday) {
+        toast({
+          title: 'Brak dojazdu w dzisiejszym harmonogramie',
+          description: 'Wyniki dla tego dnia pochodzą z wcześniejszych odczytów. Nowe pojawią się w wybrane dni.',
+        });
+      } else if (data?.outsideScheduleWindow) {
+        toast({
+          title: 'Poza ustawionym przedziałem',
+          description: 'Nowe czasy są mierzone na bieżąco w ustawionych godzinach wyjazdu i powrotu. Spróbuj ponownie w tym przedziale.',
+        });
+      } else if (data?.errors?.length && !data?.processed) {
+        toast({
+          title: 'Nie udało się odświeżyć czasów',
+          description: 'TomTom nie zwrócił aktualnego czasu przejazdu. Spróbuj ponownie za chwilę.',
+          variant: 'destructive',
+        });
+      } else {
+        const slotsInfo = data?.slots?.length > 0
+          ? `Zaktualizowano ${data.processed} odczytów (TomTom Traffic): ${data.slots.join(', ')}.`
+          : `Zaktualizowano ${data?.processed || 0} odczytów (TomTom Traffic).`;
+
+        toast({
+          title: 'Czasy odświeżone',
+          description: slotsInfo,
+        });
+      }
     } catch (error) {
       console.error('Error refreshing travel times:', error);
       toast({
@@ -460,19 +476,6 @@ const Konto = () => {
     if (persist) void saveSchedule(nextSchedule);
   };
 
-  const getBestTravelTimes = (direction: TravelTime['direction'], dayOfWeek: number) => {
-    const dayTimes = travelTimes
-      .filter(time => time.direction === direction && time.day_of_week === dayOfWeek)
-      .sort((a, b) => a.travel_duration_minutes - b.travel_duration_minutes || a.departure_time.localeCompare(b.departure_time));
-    const seenDepartureTimes = new Set<string>();
-    return dayTimes.filter(time => {
-      const departureTime = time.departure_time.slice(0, 5);
-      if (seenDepartureTimes.has(departureTime)) return false;
-      seenDepartureTimes.add(departureTime);
-      return true;
-    }).slice(0, 3);
-  };
-
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -510,7 +513,7 @@ const Konto = () => {
 
         {/* Address Card */}
         <Card>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-4 pt-5 sm:pt-6">
             <div className="space-y-2">
               <Label htmlFor="home-address" className="flex items-center gap-2 text-sm">
                 <MapPin className="w-4 h-4 text-muted-foreground shrink-0" />
@@ -610,7 +613,7 @@ const Konto = () => {
 
         {/* Shared weekly schedule */}
         <Card>
-          <CardContent className="space-y-5 px-4 sm:px-6">
+          <CardContent className="space-y-5 px-4 pt-5 sm:px-6 sm:pt-6">
             <div className="space-y-3">
               <p className="text-sm font-medium">W jakie dni jeździsz do pracy:</p>
               <div className="grid grid-cols-7 gap-2">
@@ -727,7 +730,7 @@ const Konto = () => {
                 className="flex items-center gap-2 w-full sm:w-auto"
               >
                 <RefreshCw className={`w-4 h-4 ${refreshingTimes ? 'animate-spin' : ''}`} />
-                Oblicz czasy
+                {refreshingTimes ? 'Odświeżanie…' : 'Odśwież czasy'}
               </Button>
             </div>
           </CardHeader>
@@ -761,8 +764,18 @@ const Konto = () => {
                   .filter(day => day.is_commute_day || travelTimes.some(time => time.day_of_week === day.day_of_week))
                   .sort((a, b) => WEEKDAYS_FIRST.findIndex(item => item.day === a.day_of_week) - WEEKDAYS_FIRST.findIndex(item => item.day === b.day_of_week))
                   .map(day => {
-                    const toWork = getBestTravelTimes('to_work', day.day_of_week);
-                    const fromWork = getBestTravelTimes('from_work', day.day_of_week);
+                    const toWork = getBestTravelTimes(
+                      'to_work',
+                      day.day_of_week,
+                      day.to_work_start,
+                      day.to_work_end,
+                    );
+                    const fromWork = getBestTravelTimes(
+                      'from_work',
+                      day.day_of_week,
+                      day.from_work_start,
+                      day.from_work_end,
+                    );
                     const renderTimes = (times: TravelTime[], direction: 'to_work' | 'from_work') => (
                       <div className={`min-w-0 rounded-lg px-2 py-2 sm:px-3 ${direction === 'to_work' ? 'bg-blue-500/5' : 'bg-orange-500/5'}`}>
                         {times.length ? (
@@ -790,6 +803,10 @@ const Konto = () => {
           </CardContent>
         </Card>
       </main>
+
+      <div className="max-w-4xl mx-auto px-3 sm:px-4">
+        <SupportCard />
+      </div>
 
       {/* Footer */}
       <footer className="max-w-4xl mx-auto p-3 sm:p-4 mt-6 sm:mt-8 text-center text-xs sm:text-sm text-muted-foreground">

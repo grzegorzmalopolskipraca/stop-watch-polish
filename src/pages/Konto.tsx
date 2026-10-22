@@ -765,16 +765,18 @@ const Konto = () => {
                   .sort((a, b) => WEEKDAYS_FIRST.findIndex(item => item.day === a.day_of_week) - WEEKDAYS_FIRST.findIndex(item => item.day === b.day_of_week))
                   .map(day => {
                     const toWork = getBestTravelTimes(
+                      travelTimes,
                       'to_work',
                       day.day_of_week,
-                      day.to_work_start,
-                      day.to_work_end,
+                      day.to_work_start ?? '00:00',
+                      day.to_work_end ?? '23:59',
                     );
                     const fromWork = getBestTravelTimes(
+                      travelTimes,
                       'from_work',
                       day.day_of_week,
-                      day.from_work_start,
-                      day.from_work_end,
+                      day.from_work_start ?? '00:00',
+                      day.from_work_end ?? '23:59',
                     );
                     const renderTimes = (times: TravelTime[], direction: 'to_work' | 'from_work') => (
                       <div className={`min-w-0 rounded-lg px-2 py-2 sm:px-3 ${direction === 'to_work' ? 'bg-blue-500/5' : 'bg-orange-500/5'}`}>

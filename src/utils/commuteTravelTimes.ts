@@ -13,12 +13,14 @@ export function getBestTravelTimes<T extends CommuteTravelTimeRecord>(
   windowEnd: string,
   limit = 3,
 ): T[] {
+  if (!Array.isArray(records) || !windowStart || !windowEnd) return [];
   const start = windowStart.slice(0, 5);
   const end = windowEnd.slice(0, 5);
   if (start > end || limit <= 0) return [];
 
   const sorted = records
     .filter(record => {
+      if (!record?.departure_time) return false;
       const departureTime = record.departure_time.slice(0, 5);
       return record.direction === direction
         && record.day_of_week === dayOfWeek

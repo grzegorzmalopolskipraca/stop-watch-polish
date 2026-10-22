@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { LogOut, Save, MapPin, Briefcase, Clock, Search, CheckCircle, Loader2, RefreshCw, Map, Crosshair, Car } from 'lucide-react';
+import { LogOut, Save, MapPin, Briefcase, Search, CheckCircle, Loader2, RefreshCw, Map, Crosshair, Car } from 'lucide-react';
 import { User, Session } from '@supabase/supabase-js';
 import MapLocationPicker from '@/components/MapLocationPicker';
 import Seo from "@/components/Seo";
@@ -744,63 +744,62 @@ const Konto = () => {
                   Najpierw zweryfikuj i zapisz adresy domu i pracy, aby zobaczyć czasy dojazdu.
                 </p>
               </div>
-            ) : travelTimes.length === 0 ? (
-              <div className="text-center py-5 space-y-2">
-                <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
-                  <Clock className="w-8 h-8 text-primary/50" />
-                </div>
-                <p className="text-muted-foreground text-sm px-4">
-                  Kliknij „Oblicz czasy”, aby rozpocząć zbieranie danych dla każdego dnia.
-                </p>
-              </div>
             ) : (
-              <div className="divide-y divide-border">
-                <div className="grid grid-cols-[64px_1fr_1fr] items-center gap-2 pb-2 text-[11px] font-medium text-muted-foreground sm:grid-cols-[100px_1fr_1fr] sm:text-xs">
-                  <span>Dzień</span>
-                  <span>Do pracy · godz. / min</span>
-                  <span>Z pracy · godz. / min</span>
+              <>
+                <div className="divide-y divide-border">
+                  <div className="grid grid-cols-[64px_1fr_1fr] items-center gap-2 pb-2 text-[11px] font-medium text-muted-foreground sm:grid-cols-[100px_1fr_1fr] sm:text-xs">
+                    <span>Dzień</span>
+                    <span>Do pracy · godz. / min</span>
+                    <span>Z pracy · godz. / min</span>
+                  </div>
+                  {[...schedule]
+                    .sort((a, b) => WEEKDAYS_FIRST.findIndex(item => item.day === a.day_of_week) - WEEKDAYS_FIRST.findIndex(item => item.day === b.day_of_week))
+                    .map(day => {
+                      const toWork = getBestTravelTimes(
+                        travelTimes,
+                        'to_work',
+                        day.day_of_week,
+                        day.to_work_start ?? '00:00',
+                        day.to_work_end ?? '23:59',
+                      );
+                      const fromWork = getBestTravelTimes(
+                        travelTimes,
+                        'from_work',
+                        day.day_of_week,
+                        day.from_work_start ?? '00:00',
+                        day.from_work_end ?? '23:59',
+                      );
+                      const renderTimes = (times: TravelTime[], direction: 'to_work' | 'from_work') => (
+                        <div className={`min-w-0 rounded-lg px-2 py-2 sm:px-3 ${direction === 'to_work' ? 'bg-blue-500/5' : 'bg-orange-500/5'}`}>
+                          {times.length ? (
+                            <ol className="space-y-1">
+                              {times.map((time, index) => (
+                                <li key={`${time.departure_time}-${time.travel_duration_minutes}`} className={`flex items-center justify-between gap-1 rounded px-1.5 py-0.5 text-xs sm:text-sm ${index === 0 ? 'bg-green-600/10 font-semibold text-green-700 dark:text-green-400' : 'text-foreground'}`}>
+                                  <span>{time.departure_time.slice(0, 5)}</span>
+                                  <span className="whitespace-nowrap text-[10px] font-normal text-muted-foreground sm:text-xs">{time.travel_duration_minutes} min</span>
+                                </li>
+                              ))}
+                            </ol>
+                          ) : (
+                            <span className="whitespace-nowrap text-[10px] text-muted-foreground sm:text-xs">
+                              {day.is_commute_day ? 'Zbieram dane' : 'Dzień wolny'}
+                            </span>
+                          )}
+                        </div>
+                      );
+                      return (
+                        <div key={day.id} className="grid grid-cols-[64px_1fr_1fr] items-center gap-2 py-2.5 sm:grid-cols-[100px_1fr_1fr]">
+                          <span className="text-xs font-semibold sm:text-sm">{DAYS_PL[day.day_of_week]}</span>
+                          {renderTimes(toWork, 'to_work')}
+                          {renderTimes(fromWork, 'from_work')}
+                        </div>
+                      );
+                    })}
                 </div>
-                {schedule
-                  .filter(day => day.is_commute_day || travelTimes.some(time => time.day_of_week === day.day_of_week))
-                  .sort((a, b) => WEEKDAYS_FIRST.findIndex(item => item.day === a.day_of_week) - WEEKDAYS_FIRST.findIndex(item => item.day === b.day_of_week))
-                  .map(day => {
-                    const toWork = getBestTravelTimes(
-                      travelTimes,
-                      'to_work',
-                      day.day_of_week,
-                      day.to_work_start ?? '00:00',
-                      day.to_work_end ?? '23:59',
-                    );
-                    const fromWork = getBestTravelTimes(
-                      travelTimes,
-                      'from_work',
-                      day.day_of_week,
-                      day.from_work_start ?? '00:00',
-                      day.from_work_end ?? '23:59',
-                    );
-                    const renderTimes = (times: TravelTime[], direction: 'to_work' | 'from_work') => (
-                      <div className={`min-w-0 rounded-lg px-2 py-2 sm:px-3 ${direction === 'to_work' ? 'bg-blue-500/5' : 'bg-orange-500/5'}`}>
-                        {times.length ? (
-                          <ol className="space-y-1">
-                            {times.map((time, index) => (
-                              <li key={`${time.departure_time}-${time.travel_duration_minutes}`} className={`flex items-center justify-between gap-1 rounded px-1.5 py-0.5 text-xs sm:text-sm ${index === 0 ? 'bg-green-600/10 font-semibold text-green-700 dark:text-green-400' : 'text-foreground'}`}>
-                                <span>{time.departure_time.slice(0, 5)}</span>
-                                <span className="whitespace-nowrap text-[10px] font-normal text-muted-foreground sm:text-xs">{time.travel_duration_minutes} min</span>
-                              </li>
-                            ))}
-                          </ol>
-                        ) : <span className="text-sm text-muted-foreground">—</span>}
-                      </div>
-                    );
-                    return (
-                      <div key={day.id} className="grid grid-cols-[64px_1fr_1fr] items-center gap-2 py-2.5 sm:grid-cols-[100px_1fr_1fr]">
-                        <span className="text-xs font-semibold sm:text-sm">{DAYS_PL[day.day_of_week]}</span>
-                        {renderTimes(toWork, 'to_work')}
-                        {renderTimes(fromWork, 'from_work')}
-                      </div>
-                    );
-                  })}
-              </div>
+                <p className="mt-4 rounded-md bg-muted/50 px-3 py-3 text-xs leading-relaxed text-muted-foreground sm:text-sm">
+                  Przez pierwszy tydzień od rejestracji aplikacja zbiera rzeczywiste czasy przejazdu w wybrane dni i godziny. W kolejnych tygodniach możesz korzystać z pomiarów zebranych dla całego tygodnia, porównywać czasy i wybierać najlepsze godziny wyjazdu.
+                </p>
+              </>
             )}
           </CardContent>
         </Card>
